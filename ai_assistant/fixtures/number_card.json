@@ -1,0 +1,56 @@
+[
+  {
+    "doctype": "Number Card",
+    "name": "AI - Sales This Month",
+    "label": "Sales This Month",
+    "method": "ai_assistant.api.dashboard.get_kpi_sales_month",
+    "is_public": 1,
+    "module": "AI Assistant",
+    "color": "#7C3AED"
+  },
+  {
+    "doctype": "Number Card",
+    "name": "AI - Pending Quotations",
+    "label": "Pending Quotations",
+    "method": "ai_assistant.api.dashboard.get_kpi_pending_quotations",
+    "is_public": 1,
+    "module": "AI Assistant",
+    "color": "#F59E0B"
+  },
+  {
+    "doctype": "Number Card",
+    "name": "AI - Overdue Invoices",
+    "label": "Overdue Invoices",
+    "method": "ai_assistant.api.dashboard.get_kpi_overdue_count",
+    "is_public": 1,
+    "module": "AI Assistant",
+    "color": "#EF4444"
+  },
+  {
+    "doctype": "Number Card",
+    "name": "AI - Low Stock Items",
+    "label": "Low Stock Items",
+    "method": "ai_assistant.api.dashboard.get_kpi_low_stock",
+    "is_public": 1,
+    "module": "AI Assistant",
+    "color": "#F97316"
+  },
+  {
+    "doctype": "Number Card",
+    "name": "AI - New Customers",
+    "label": "New Customers",
+    "method": "ai_assistant.api.dashboard.get_kpi_new_customers",
+    "is_public": 1,
+    "module": "AI Assistant",
+    "color": "#10B981"
+  },
+  {
+    "doctype": "Number Card",
+    "name": "AI - Open Job Cards",
+    "label": "Open Job Cards",
+    "method": "ai_assistant.api.dashboard.get_kpi_open_jobs",
+    "is_public": 1,
+    "module": "AI Assistant",
+    "color": "#3B82F6"
+  }
+]

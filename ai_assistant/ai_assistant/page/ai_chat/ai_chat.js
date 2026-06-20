@@ -60,77 +60,125 @@ class AIChatPage {
 		`);
 	}
 
+	_sidebar_groups() {
+		return [
+			{
+				label: "📊 " + __("Business Intelligence"),
+				items: [
+					{ icon: "🧠", label: __("Business Analysis"),    msg: "Analyze my business and give me recommendations" },
+					{ icon: "🌅", label: __("Daily Summary"),         msg: "Give me the management daily summary" },
+					{ icon: "📈", label: __("Sales Trend"),           msg: "Show me the monthly sales trend for 6 months" },
+					{ icon: "🏆", label: __("Top Customers"),         msg: "Show top customers this month" },
+					{ icon: "🛍️", label: __("Top Selling Items"),    msg: "Show top selling items this month" },
+				],
+			},
+			{
+				label: "💰 " + __("Collections & AR"),
+				items: [
+					{ icon: "⚠️",  label: __("Overdue Invoices"),     msg: "Show overdue invoices" },
+					{ icon: "🎯", label: __("Follow-Up List"),        msg: "Who needs follow-up? Show me follow-up opportunities" },
+					{ icon: "💸", label: __("Overdue Customers"),     msg: "Show customers with overdue balance" },
+					{ icon: "📄", label: __("Pending Quotations"),    msg: "Show pending quotations" },
+				],
+			},
+			{
+				label: "📦 " + __("Operations"),
+				items: [
+					{ icon: "📦", label: __("Stock Alerts"),          msg: "Show stock alerts and low stock items" },
+					{ icon: "🔧", label: __("Open Job Cards"),        msg: "Show open workshop job cards" },
+					{ icon: "💤", label: __("Inactive Customers"),    msg: "Show inactive customers in the last 60 days" },
+				],
+			},
+			{
+				label: "⚡ " + __("Quick Actions"),
+				items: [
+					{ icon: "👤", label: __("New Customer"),          msg: "Create customer " },
+					{ icon: "📄", label: __("New Quotation"),         msg: "Create quotation for customer " },
+					{ icon: "🔧", label: __("Diagnose Vehicle"),      msg: "Diagnose Toyota Camry 2020 with check engine light" },
+				],
+			},
+		];
+	}
+
 	_render() {
+		const sidebarHtml = this._sidebar_groups().map(group => `
+			<div class="ai-sb-group">
+				<div class="ai-sb-group-label">${group.label}</div>
+				${group.items.map(item => `
+					<button class="ai-sb-btn" data-msg="${frappe.utils.escape_html(item.msg)}">
+						<span class="ai-sb-icon">${item.icon}</span>
+						<span class="ai-sb-text">${item.label}</span>
+					</button>`).join("")}
+			</div>`).join("");
+
 		const html = `
-		<div class="ai-chat-container">
+		<div class="ai-chat-wrapper">
 
-			<!-- Header bar -->
-			<div class="ai-chat-header">
-				<div class="ai-chat-header-left">
-					<span class="ai-avatar">🤖</span>
-					<div>
-						<div class="ai-chat-title">${__("AI Assistant")}</div>
-						<div class="ai-chat-subtitle" id="ai-model-label">${__("Powered by ERPNext AI")}</div>
+			<!-- ── Permanent Left Sidebar ── -->
+			<div class="ai-sidebar" id="ai-sidebar">
+				<div class="ai-sb-header">
+					<span>⚡ ${__("Quick Actions")}</span>
+					<button class="ai-sb-toggle" id="ai-sb-toggle" title="${__("Collapse")}">‹</button>
+				</div>
+				<div class="ai-sb-body" id="ai-sb-body">
+					${sidebarHtml}
+				</div>
+			</div>
+
+			<!-- ── Chat Panel ── -->
+			<div class="ai-chat-container">
+
+				<!-- Header -->
+				<div class="ai-chat-header">
+					<div class="ai-chat-header-left">
+						<button class="ai-sb-expand-btn hidden" id="ai-sb-expand-btn" title="${__("Open Quick Actions")}">☰</button>
+						<span class="ai-avatar">🤖</span>
+						<div>
+							<div class="ai-chat-title">${__("AI Assistant")}</div>
+							<div class="ai-chat-subtitle" id="ai-model-label">${__("Powered by ERPNext AI")}</div>
+						</div>
+					</div>
+					<div class="ai-chat-header-right">
+						<span class="ai-usage-badge" id="ai-usage-badge" title="${__("Monthly usage")}"></span>
+						<button class="btn btn-xs btn-default" id="ai-clear-btn">${__("Clear Chat")}</button>
+						<a href="/app/ai-settings" class="btn btn-xs btn-default">⚙ ${__("Settings")}</a>
 					</div>
 				</div>
-				<div class="ai-chat-header-right">
-					<span class="ai-usage-badge" id="ai-usage-badge" title="${__("Monthly usage")}"></span>
-					<button class="btn btn-xs btn-default ai-clear-btn" id="ai-clear-btn">
-						${__("Clear Chat")}
+
+				<!-- Messages -->
+				<div class="ai-messages" id="ai-messages">
+					<div class="ai-welcome-msg">
+						<div class="ai-welcome-icon">✨</div>
+						<h4>${__("How can I help you today?")}</h4>
+						<p>${__("Use the quick-action buttons on the left, or type your question below.")}</p>
+					</div>
+				</div>
+
+				<!-- Typing indicator -->
+				<div class="ai-typing-indicator hidden" id="ai-typing">
+					<span></span><span></span><span></span>
+				</div>
+
+				<!-- Input area -->
+				<div class="ai-input-area">
+					<textarea id="ai-input" class="ai-input" rows="1"
+						placeholder="${__("Type your message… (Enter to send, Shift+Enter for new line)")}"></textarea>
+					<button class="ai-send-btn" id="ai-send-btn" disabled>
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<line x1="22" y1="2" x2="11" y2="13"></line>
+							<polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+						</svg>
 					</button>
-					<a href="/app/ai-settings" class="btn btn-xs btn-default">
-						⚙ ${__("Settings")}
-					</a>
 				</div>
-			</div>
 
-			<!-- Message list -->
-			<div class="ai-messages" id="ai-messages">
-				<div class="ai-welcome-msg">
-					<div class="ai-welcome-icon">✨</div>
-					<h4>${__("How can I help you today?")}</h4>
-					<p>${__("I can analyze your business, create documents, and diagnose vehicle issues — just ask in plain English or Urdu.")}</p>
-					<div class="ai-suggestions">
-						<button class="ai-suggestion-chip" data-msg="Analyze my business and give me recommendations">📊 Business Analysis</button>
-						<button class="ai-suggestion-chip" data-msg="Give me the management daily summary">🌅 Daily Summary</button>
-						<button class="ai-suggestion-chip" data-msg="Who needs follow-up? Show me follow-up opportunities">🎯 Follow-Up Opportunities</button>
-						<button class="ai-suggestion-chip" data-msg="Show overdue invoices">💰 Overdue Invoices</button>
-						<button class="ai-suggestion-chip" data-msg="Show stock alerts and low stock items">📦 Stock Alerts</button>
-						<button class="ai-suggestion-chip" data-msg="Create customer ABC Trading with phone 55001234">👤 Create Customer</button>
-						<button class="ai-suggestion-chip" data-msg="Show pending quotations">📄 Pending Quotations</button>
-						<button class="ai-suggestion-chip" data-msg="Diagnose Toyota Camry 2020 with check engine light and rough idle">🔧 Diagnose Vehicle</button>
-					</div>
-				</div>
-			</div>
-
-			<!-- Typing indicator -->
-			<div class="ai-typing-indicator hidden" id="ai-typing">
-				<span></span><span></span><span></span>
-			</div>
-
-			<!-- Input area -->
-			<div class="ai-input-area">
-				<textarea
-					id="ai-input"
-					class="ai-input"
-					rows="1"
-					placeholder="${__("Type your message in English or Urdu… (Enter to send, Shift+Enter for new line)")}"
-				></textarea>
-				<button class="ai-send-btn" id="ai-send-btn" disabled>
-					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-						<line x1="22" y1="2" x2="11" y2="13"></line>
-						<polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-					</svg>
-				</button>
-			</div>
-
-		</div>`;
+			</div><!-- end .ai-chat-container -->
+		</div><!-- end .ai-chat-wrapper -->`;
 
 		$(this.wrapper).find(".page-content").html(html);
 
 		this.$messages = $("#ai-messages");
-		this.$input = $("#ai-input");
-		this.$send = $("#ai-send-btn");
+		this.$input    = $("#ai-input");
+		this.$send     = $("#ai-send-btn");
 
 		this._bind_events();
 	}
@@ -151,15 +199,31 @@ class AIChatPage {
 		});
 
 		this.$send.on("click", () => this._send());
-
 		$("#ai-clear-btn").on("click", () => this._clear());
 
-		// Suggestion chips
-		$(document).on("click", ".ai-suggestion-chip", (e) => {
+		// Sidebar quick-action buttons
+		$(document).on("click", ".ai-sb-btn", (e) => {
 			const msg = $(e.currentTarget).data("msg");
-			this.$input.val(msg).trigger("input");
-			this._send();
+			this.$input.val(msg).trigger("input").focus();
+			// Auto-send only if message is complete (doesn't end with space)
+			if (!msg.endsWith(" ")) {
+				this._send();
+			}
 		});
+
+		// Sidebar collapse / expand toggle
+		$("#ai-sb-toggle").on("click", () => this._collapse_sidebar());
+		$("#ai-sb-expand-btn").on("click", () => this._expand_sidebar());
+	}
+
+	_collapse_sidebar() {
+		$("#ai-sidebar").addClass("ai-sidebar--collapsed");
+		$("#ai-sb-expand-btn").removeClass("hidden");
+	}
+
+	_expand_sidebar() {
+		$("#ai-sidebar").removeClass("ai-sidebar--collapsed");
+		$("#ai-sb-expand-btn").addClass("hidden");
 	}
 
 	_auto_resize() {
@@ -1045,7 +1109,7 @@ class AIChatPage {
 		this.$messages.html(`
 			<div class="ai-welcome-msg">
 				<div class="ai-welcome-icon">✨</div>
-				<h4>${__("Chat cleared. How can I help you?")}</h4>
+				<h4>${__("Chat cleared. Use the sidebar or type a question below.")}</h4>
 			</div>
 		`);
 		this.$input.val("").css("height", "auto");

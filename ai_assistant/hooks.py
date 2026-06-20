@@ -8,8 +8,12 @@ app_license = "mit"
 required_apps = ["erpnext"]
 
 fixtures = [
-	{"dt": "Workspace", "filters": [["module", "=", "AI Assistant"]]},
+	{"dt": "Workspace",   "filters": [["module", "=", "AI Assistant"]]},
+	{"dt": "Number Card", "filters": [["module", "=", "AI Assistant"]]},
 ]
+
+after_install  = "ai_assistant.setup.create_dashboard"
+after_migrate  = "ai_assistant.setup.create_dashboard"
 
 add_to_apps_screen = [
 	{
