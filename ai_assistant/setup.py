@@ -9,8 +9,24 @@ import frappe
 
 def create_dashboard():
     """Create the AI Assistant Dashboard with Number Cards. Called after migrate."""
+    _fix_workspace_title()
     _ensure_number_cards()
     _ensure_dashboard()
+
+
+def _fix_workspace_title():
+    """Patch: workspace JSON imported without title causes all sidebar items to go blank.
+    frappe.router.slug(null) throws TypeError; make_sidebar() crashes before removing
+    the skeleton, so every workspace in the sidebar stays gray forever.
+    """
+    if not frappe.db.exists("Workspace", "AI Assistant"):
+        return
+    current = frappe.db.get_value("Workspace", "AI Assistant", "title")
+    if not current:
+        frappe.db.set_value(
+            "Workspace", "AI Assistant", "title", "AI Assistant", update_modified=False
+        )
+        frappe.db.commit()
 
 
 def _ensure_number_cards():
