@@ -212,6 +212,11 @@ class AIChatPage {
 		this.$input    = $("#ai-input");
 		this.$send     = $("#ai-send-btn");
 
+		// Force the messages area to scroll — critical for chat usability.
+		// Without overflow-y:auto + flex:1, messages clip silently and can't scroll.
+		this.$messages.css({ flex: "1 1 0", overflowY: "auto", overflowX: "hidden",
+			minHeight: 0, display: "flex", flexDirection: "column" });
+
 		this._bind_events();
 	}
 
@@ -1134,8 +1139,11 @@ class AIChatPage {
 	}
 
 	_scroll_to_bottom() {
-		const el = this.$messages[0];
-		if (el) el.scrollTop = el.scrollHeight;
+		// Use rAF so the DOM has been painted before we measure scrollHeight.
+		requestAnimationFrame(() => {
+			const el = this.$messages[0];
+			if (el) el.scrollTop = el.scrollHeight;
+		});
 	}
 
 	_clear() {
