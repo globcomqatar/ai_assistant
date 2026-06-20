@@ -1,0 +1,129 @@
+{
+ "actions": [],
+ "allow_import": 0,
+ "autoname": "AI-LOG-.YYYY.-.MM.-.######",
+ "creation": "2026-06-20 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "user",
+  "timestamp",
+  "status",
+  "column_break_header",
+  "tool_used",
+  "tokens_used",
+  "cost",
+  "section_prompt",
+  "prompt",
+  "column_break_prompt",
+  "response",
+  "section_block",
+  "blocked_reason"
+ ],
+ "fields": [
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "User",
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "fieldname": "timestamp",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Timestamp",
+   "reqd": 1
+  },
+  {
+   "default": "Success",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Success\nFailed\nBlocked\nPending"
+  },
+  {
+   "fieldname": "column_break_header",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "tool_used",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Tool Used"
+  },
+  {
+   "default": "0",
+   "fieldname": "tokens_used",
+   "fieldtype": "Int",
+   "label": "Tokens Used"
+  },
+  {
+   "default": "0",
+   "fieldname": "cost",
+   "fieldtype": "Currency",
+   "label": "Estimated Cost (USD)"
+  },
+  {
+   "fieldname": "section_prompt",
+   "fieldtype": "Section Break",
+   "label": "Conversation"
+  },
+  {
+   "fieldname": "prompt",
+   "fieldtype": "Long Text",
+   "label": "User Prompt"
+  },
+  {
+   "fieldname": "column_break_prompt",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "response",
+   "fieldtype": "Long Text",
+   "label": "AI Response"
+  },
+  {
+   "fieldname": "section_block",
+   "fieldtype": "Section Break",
+   "label": "Block Reason",
+   "depends_on": "eval:doc.status == 'Blocked'"
+  },
+  {
+   "fieldname": "blocked_reason",
+   "fieldtype": "Small Text",
+   "label": "Blocked Reason",
+   "depends_on": "eval:doc.status == 'Blocked'"
+  }
+ ],
+ "modified": "2026-06-20 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "AI Assistant",
+ "name": "AI Usage Log",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 0,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "read": 1,
+   "role": "All",
+   "write": 0,
+   "if_owner": 1
+  }
+ ],
+ "search_fields": "user,status,tool_used",
+ "sort_field": "timestamp",
+ "sort_order": "DESC",
+ "title_field": "user",
+ "track_changes": 0
+}

@@ -1,0 +1,1395 @@
+"""
+Business Intelligence tools for the AI Assistant.
+
+Features implemented:
+  Feature 1 — Business Analysis Engine
+  Feature 2 — Management Daily Summary
+  Feature 3 — Customer Follow-Up Assistant
+  Feature 4 — Workshop Service Advisor / Vehicle Diagnostics
+
+All tools return {"status": "ok"|"error", "message": str, ...data}.
+SQL is used only where Frappe ORM cannot perform the required aggregation.
+"""
+
+from __future__ import annotations
+
+import frappe
+from frappe.utils import (
+    today, add_days, flt, getdate, add_months,
+    get_first_day, get_last_day, date_diff, nowdate,
+)
+
+
+# ── Internal helpers ──────────────────────────────────────────────────────────
+
+def _month_range(months_ago: int = 0):
+    """Return (first_day, last_day) for the month N months ago."""
+    base = getdate(add_months(today(), -months_ago))
+    return str(get_first_day(base)), str(get_last_day(base))
+
+
+def _sql_sum(table: str, field: str, where: str, params: tuple) -> float:
+    rows = frappe.db.sql(
+        f"SELECT COALESCE(SUM({field}), 0) AS v FROM {table} WHERE {where}",
+        params, as_dict=True,
+    )
+    return float((rows[0] or {}).get("v", 0))
+
+
+def _sql_count(table: str, where: str, params: tuple) -> int:
+    rows = frappe.db.sql(
+        f"SELECT COUNT(*) AS c FROM {table} WHERE {where}",
+        params, as_dict=True,
+    )
+    return int((rows[0] or {}).get("c", 0))
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  FEATURE 1 — BUSINESS ANALYSIS ENGINE                                       ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+def get_monthly_sales_trend(months: int = 6) -> dict:
+    """Monthly sales totals + invoice counts for the past N months."""
+    months = max(1, min(months, 24))
+    trend = []
+    for i in range(months - 1, -1, -1):
+        m_start, m_end = _month_range(i)
+        rows = frappe.db.sql("""
+            SELECT COALESCE(SUM(grand_total), 0) AS total,
+                   COUNT(*) AS cnt
+            FROM `tabSales Invoice`
+            WHERE docstatus = 1
+              AND posting_date BETWEEN %s AND %s
+        """, (m_start, m_end), as_dict=True)
+        row = rows[0] if rows else {}
+        from datetime import datetime
+        label = datetime.strptime(m_start, "%Y-%m-%d").strftime("%b %Y")
+        trend.append({
+            "month": label,
+            "start": m_start,
+            "end": m_end,
+            "total_sales": float(row.get("total", 0)),
+            "invoice_count": int(row.get("cnt", 0)),
+        })
+
+    current = trend[-1]["total_sales"] if trend else 0
+    previous = trend[-2]["total_sales"] if len(trend) >= 2 else 0
+    growth = round((current - previous) / previous * 100, 1) if previous else 0
+
+    return {
+        "status": "ok",
+        "months": months,
+        "trend": trend,
+        "current_month_sales": current,
+        "previous_month_sales": previous,
+        "growth_vs_last_month": growth,
+        "message": f"Sales trend for {months} months. Current month: {current:,.0f}. Growth: {growth:+.1f}%.",
+    }
+
+
+def get_top_customers(period_days: int = 30, limit: int = 10) -> dict:
+    """Top customers by sales value in the last N days."""
+    from_date = add_days(today(), -period_days)
+    rows = frappe.db.sql("""
+        SELECT customer,
+               SUM(grand_total)  AS total_sales,
+               COUNT(*)          AS invoice_count,
+               MAX(posting_date) AS last_invoice_date
+        FROM `tabSales Invoice`
+        WHERE docstatus = 1 AND posting_date >= %s
+        GROUP BY customer
+        ORDER BY total_sales DESC
+        LIMIT %s
+    """, (from_date, limit), as_dict=True)
+    return {
+        "status": "ok",
+        "period_days": period_days,
+        "from_date": from_date,
+        "count": len(rows),
+        "customers": [dict(r) for r in rows],
+        "message": f"Top {len(rows)} customers in the last {period_days} days.",
+    }
+
+
+def get_top_selling_items(period_days: int = 30, limit: int = 10) -> dict:
+    """Top selling items by revenue in the last N days."""
+    from_date = add_days(today(), -period_days)
+    rows = frappe.db.sql("""
+        SELECT sii.item_code,
+               sii.item_name,
+               SUM(sii.qty)    AS total_qty,
+               SUM(sii.amount) AS total_amount
+        FROM `tabSales Invoice Item` sii
+        INNER JOIN `tabSales Invoice` si ON si.name = sii.parent
+        WHERE si.docstatus = 1 AND si.posting_date >= %s
+        GROUP BY sii.item_code, sii.item_name
+        ORDER BY total_amount DESC
+        LIMIT %s
+    """, (from_date, limit), as_dict=True)
+    return {
+        "status": "ok",
+        "period_days": period_days,
+        "from_date": from_date,
+        "count": len(rows),
+        "items": [dict(r) for r in rows],
+        "message": f"Top {len(rows)} items by revenue in the last {period_days} days.",
+    }
+
+
+def get_pending_quotations(days_old: int = 0) -> dict:
+    """Open quotations not yet converted; optionally filter by age."""
+    filters: dict = {
+        "docstatus": ["in", [0, 1]],
+        "status": ["in", ["Open", "Draft"]],
+    }
+    if days_old:
+        filters["transaction_date"] = ["<=", add_days(today(), -days_old)]
+
+    rows = frappe.get_all(
+        "Quotation",
+        filters=filters,
+        fields=["name", "party_name", "transaction_date", "valid_till",
+                "grand_total", "status"],
+        order_by="transaction_date asc",
+        limit=50,
+    )
+    expiring = [r for r in rows
+                if r.get("valid_till") and str(r["valid_till"]) <= add_days(today(), 7)]
+    total_value = sum(flt(r.get("grand_total")) for r in rows)
+    return {
+        "status": "ok",
+        "total_pending": len(rows),
+        "expiring_soon_count": len(expiring),
+        "total_value": total_value,
+        "quotations": rows,
+        "expiring_soon": expiring,
+        "message": f"{len(rows)} pending quotations worth {total_value:,.0f}. {len(expiring)} expiring within 7 days.",
+    }
+
+
+def get_overdue_invoices() -> dict:
+    """All unpaid invoices past their due date."""
+    rows = frappe.get_all(
+        "Sales Invoice",
+        filters={
+            "docstatus": 1,
+            "outstanding_amount": [">", 0],
+            "due_date": ["<", today()],
+        },
+        fields=["name", "customer", "posting_date", "due_date",
+                "grand_total", "outstanding_amount"],
+        order_by="due_date asc",
+        limit=50,
+    )
+    for r in rows:
+        if r.get("due_date"):
+            r["days_overdue"] = date_diff(today(), str(r["due_date"]))
+    total_overdue = sum(flt(r.get("outstanding_amount")) for r in rows)
+    return {
+        "status": "ok",
+        "overdue_count": len(rows),
+        "total_overdue_amount": total_overdue,
+        "invoices": rows,
+        "message": f"{len(rows)} overdue invoices totaling {total_overdue:,.0f}.",
+    }
+
+
+def get_stock_alerts() -> dict:
+    """Items below safety stock level and items with reserved but zero actual qty."""
+    low = frappe.db.sql("""
+        SELECT b.item_code, i.item_name, b.warehouse,
+               b.actual_qty, i.safety_stock,
+               ROUND(b.actual_qty / i.safety_stock * 100, 0) AS stock_pct
+        FROM `tabBin` b
+        INNER JOIN `tabItem` i ON i.name = b.item_code
+        WHERE i.is_stock_item = 1
+          AND i.safety_stock > 0
+          AND b.actual_qty <= i.safety_stock
+          AND i.disabled = 0
+        ORDER BY stock_pct ASC
+        LIMIT 20
+    """, as_dict=True)
+
+    out_of_stock = frappe.db.sql("""
+        SELECT b.item_code, i.item_name, b.warehouse,
+               b.actual_qty, b.reserved_qty
+        FROM `tabBin` b
+        INNER JOIN `tabItem` i ON i.name = b.item_code
+        WHERE i.is_stock_item = 1
+          AND b.actual_qty <= 0
+          AND b.reserved_qty > 0
+          AND i.disabled = 0
+        ORDER BY b.reserved_qty DESC
+        LIMIT 15
+    """, as_dict=True)
+
+    return {
+        "status": "ok",
+        "low_stock_count": len(low),
+        "out_of_stock_count": len(out_of_stock),
+        "critical_items": [dict(r) for r in low],
+        "out_of_stock_items": [dict(r) for r in out_of_stock],
+        "message": f"{len(low)} items below safety stock. {len(out_of_stock)} items out of stock with pending demand.",
+    }
+
+
+def get_open_job_cards(status: str = "", limit: int = 20) -> dict:
+    """Open workshop job cards with delay detection."""
+    if frappe.db.exists("DocType", "Workshop Job Card"):
+        try:
+            f: dict = {}
+            if status:
+                f["status"] = status
+            else:
+                f["status"] = ["in", ["Open", "In Progress"]]
+            cards = frappe.get_all(
+                "Workshop Job Card",
+                filters=f,
+                fields=["name", "vehicle", "customer", "complaint",
+                        "status", "technician", "date", "creation"],
+                limit=limit,
+            )
+            delayed = [c for c in cards
+                       if c.get("date") and date_diff(today(), str(c["date"])) > 2]
+            return {
+                "status": "ok",
+                "source": "Workshop Job Card",
+                "total_open": len(cards),
+                "delayed_count": len(delayed),
+                "job_cards": cards,
+                "delayed_jobs": delayed,
+                "message": f"{len(cards)} open jobs. {len(delayed)} delayed beyond 2 days.",
+            }
+        except Exception as e:
+            return {
+                "status": "ok",
+                "source": "Workshop Job Card",
+                "total_open": 0,
+                "delayed_count": 0,
+                "job_cards": [],
+                "delayed_jobs": [],
+                "message": f"Workshop Job Card query error: {e}",
+            }
+
+    # Fallback to Maintenance Visit
+    visits = frappe.get_all(
+        "Maintenance Visit",
+        filters={"completion_status": ["in", ["Partially Completed", "Not Started"]]},
+        fields=["name", "customer", "maint_date", "purpose"],
+        order_by="maint_date asc",
+        limit=limit,
+    )
+    return {
+        "status": "ok",
+        "source": "Maintenance Visit",
+        "total_open": len(visits),
+        "delayed_count": 0,
+        "job_cards": visits,
+        "delayed_jobs": [],
+        "message": f"{len(visits)} open maintenance visits.",
+    }
+
+
+def analyze_business() -> dict:
+    """
+    Comprehensive business intelligence snapshot.
+    Aggregates sales, quotations, AR, stock and workshop data into a
+    single report with AI-ready recommendations.
+    """
+    t = today()
+    m_start, _ = _month_range(0)
+    pm_start, pm_end = _month_range(1)
+
+    # Sales
+    sales_curr = _sql_sum("`tabSales Invoice`", "`grand_total`",
+                          "docstatus=1 AND posting_date>=%s", (m_start,))
+    sales_prev = _sql_sum("`tabSales Invoice`", "`grand_total`",
+                          "docstatus=1 AND posting_date BETWEEN %s AND %s",
+                          (pm_start, pm_end))
+    sales_growth = round((sales_curr - sales_prev) / sales_prev * 100, 1) if sales_prev else 0
+
+    # Collections today
+    collected_today = _sql_sum("`tabPayment Entry`", "`paid_amount`",
+                               "docstatus=1 AND payment_type='Receive' AND posting_date=%s", (t,))
+
+    # Quotations
+    pending_q = frappe.db.count("Quotation", {
+        "docstatus": ["in", [0, 1]], "status": ["in", ["Open", "Draft"]]
+    })
+    expiring_q = frappe.db.count("Quotation", {
+        "docstatus": ["in", [0, 1]], "status": ["in", ["Open", "Draft"]],
+        "valid_till": ["between", [t, add_days(t, 7)]],
+    })
+
+    # Overdue AR
+    overdue_rows = frappe.get_all(
+        "Sales Invoice",
+        filters={"docstatus": 1, "outstanding_amount": [">", 0], "due_date": ["<", t]},
+        fields=["outstanding_amount"],
+    )
+    overdue_count = len(overdue_rows)
+    overdue_amount = sum(flt(r.get("outstanding_amount")) for r in overdue_rows)
+
+    # Due this week
+    due_week = frappe.db.count("Sales Invoice", {
+        "docstatus": 1,
+        "outstanding_amount": [">", 0],
+        "due_date": ["between", [t, add_days(t, 7)]],
+    })
+
+    # Stock alerts
+    stock_alert_rows = frappe.db.sql("""
+        SELECT COUNT(*) AS c
+        FROM `tabBin` b
+        INNER JOIN `tabItem` i ON i.name = b.item_code
+        WHERE i.is_stock_item=1 AND i.safety_stock>0
+          AND b.actual_qty <= i.safety_stock AND i.disabled=0
+    """, as_dict=True)
+    critical_stock = int((stock_alert_rows[0] or {}).get("c", 0))
+
+    # Workshop
+    open_jobs = 0
+    delayed_jobs = 0
+    if frappe.db.exists("DocType", "Workshop Job Card"):
+        try:
+            open_jobs = frappe.db.count("Workshop Job Card",
+                                        {"status": ["in", ["Open", "In Progress"]]})
+            dj = frappe.db.sql("""
+                SELECT COUNT(*) AS c FROM `tabWorkshop Job Card`
+                WHERE status IN ('Open','In Progress')
+                  AND DATEDIFF(CURDATE(), date) > 2
+            """, as_dict=True)
+            delayed_jobs = int((dj[0] or {}).get("c", 0))
+        except Exception:
+            pass
+
+    # Top customers this month
+    top_customers = frappe.db.sql("""
+        SELECT customer, SUM(grand_total) AS total
+        FROM `tabSales Invoice`
+        WHERE docstatus=1 AND posting_date >= %s
+        GROUP BY customer ORDER BY total DESC LIMIT 5
+    """, (m_start,), as_dict=True)
+
+    # New customers this month
+    new_customers = frappe.db.count("Customer", {"creation": [">=", m_start]})
+
+    # ── Build prioritised recommendations ──────────────────────────────
+    recs = []
+    if sales_growth < -15:
+        recs.append({
+            "priority": "critical",
+            "text": f"Sales are down {abs(sales_growth):.0f}% vs last month — review pricing, pipeline, and lost deals.",
+        })
+    elif sales_growth < -5:
+        recs.append({
+            "priority": "warning",
+            "text": f"Sales declined {abs(sales_growth):.0f}% vs last month — increase follow-up on pending quotations.",
+        })
+    if overdue_count >= 5:
+        recs.append({
+            "priority": "critical",
+            "text": f"{overdue_count} overdue invoices worth {overdue_amount:,.0f} — initiate collection immediately.",
+        })
+    elif overdue_count > 0:
+        recs.append({
+            "priority": "warning",
+            "text": f"{overdue_count} overdue invoices totaling {overdue_amount:,.0f} — follow up with customers.",
+        })
+    if pending_q > 10:
+        recs.append({
+            "priority": "warning",
+            "text": f"{pending_q} unconverted quotations — prioritise conversion calls.",
+        })
+    if expiring_q:
+        recs.append({
+            "priority": "warning",
+            "text": f"{expiring_q} quotations expiring within 7 days — follow up urgently.",
+        })
+    if critical_stock > 3:
+        recs.append({
+            "priority": "warning",
+            "text": f"{critical_stock} items critically low — raise material requests now.",
+        })
+    if delayed_jobs > 0:
+        recs.append({
+            "priority": "info",
+            "text": f"{delayed_jobs} workshop jobs are delayed beyond 2 days — check technician assignments.",
+        })
+    if due_week:
+        recs.append({
+            "priority": "info",
+            "text": f"{due_week} invoices due within 7 days — prepare collection reminders.",
+        })
+    if not recs:
+        recs.append({
+            "priority": "ok",
+            "text": "Business is running well. Keep monitoring KPIs daily.",
+        })
+
+    return {
+        "status": "ok",
+        "analysis_date": t,
+        # KPIs
+        "sales_this_month": sales_curr,
+        "sales_last_month": sales_prev,
+        "sales_growth": sales_growth,
+        "collected_today": collected_today,
+        # Pipeline
+        "pending_quotations": pending_q,
+        "expiring_quotations": expiring_q,
+        # AR
+        "overdue_invoice_count": overdue_count,
+        "overdue_invoice_amount": overdue_amount,
+        "invoices_due_this_week": due_week,
+        # Operations
+        "critical_stock_items": critical_stock,
+        "open_job_cards": open_jobs,
+        "delayed_job_cards": delayed_jobs,
+        # Context
+        "new_customers_this_month": new_customers,
+        "top_customers": [dict(r) for r in top_customers],
+        # Intelligence
+        "recommendations": recs,
+        "message": (
+            f"Business analysis for {t}. "
+            f"Sales: {sales_curr:,.0f} ({sales_growth:+.1f}% vs last month). "
+            f"Overdue: {overdue_count} invoices, {overdue_amount:,.0f}. "
+            f"{len(recs)} recommendation(s)."
+        ),
+    }
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  FEATURE 2 — MANAGEMENT DAILY SUMMARY                                       ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+def get_management_summary() -> dict:
+    """
+    Full management daily briefing.
+    Sections: Sales, Collections, Quotations, Invoices, Inventory, Workshop,
+              New Customers, and Prioritised Action Items.
+    """
+    from datetime import datetime
+    t = today()
+    m_start, _ = _month_range(0)
+    pm_start, pm_end = _month_range(1)
+    week_start = str(getdate(t) - __import__("datetime").timedelta(days=getdate(t).weekday()))
+
+    # ── Sales ─────────────────────────────────────────────────────────
+    def _sales(f, t2):
+        r = frappe.db.sql("""
+            SELECT COALESCE(SUM(grand_total), 0) t, COUNT(*) c
+            FROM `tabSales Invoice`
+            WHERE docstatus=1 AND posting_date BETWEEN %s AND %s
+        """, (f, t2), as_dict=True)
+        row = r[0] if r else {}
+        return float(row.get("t", 0)), int(row.get("c", 0))
+
+    s_today, c_today = _sales(t, t)
+    s_week, c_week = _sales(week_start, t)
+    s_month, c_month = _sales(m_start, t)
+    s_last, _ = _sales(pm_start, pm_end)
+    growth = round((s_month - s_last) / s_last * 100, 1) if s_last else 0
+
+    collected_today = _sql_sum("`tabPayment Entry`", "`paid_amount`",
+                               "docstatus=1 AND payment_type='Receive' AND posting_date=%s", (t,))
+
+    # ── Quotations ────────────────────────────────────────────────────
+    pending_q = frappe.get_all("Quotation",
+        filters={"docstatus": ["in", [0, 1]], "status": ["in", ["Open", "Draft"]]},
+        fields=["name", "party_name", "valid_till", "grand_total"],
+    )
+    expiring_q = [q for q in pending_q
+                  if q.get("valid_till") and str(q["valid_till"]) <= add_days(t, 7)]
+
+    # ── Invoices ──────────────────────────────────────────────────────
+    overdue_inv = frappe.get_all("Sales Invoice",
+        filters={"docstatus": 1, "outstanding_amount": [">", 0], "due_date": ["<", t]},
+        fields=["name", "customer", "outstanding_amount", "due_date"],
+    )
+    due_today_inv = frappe.get_all("Sales Invoice",
+        filters={"docstatus": 1, "outstanding_amount": [">", 0], "due_date": t},
+        fields=["name", "customer", "outstanding_amount"],
+    )
+
+    # ── Inventory ─────────────────────────────────────────────────────
+    low_stock_r = frappe.db.sql("""
+        SELECT COUNT(*) c FROM `tabBin` b
+        INNER JOIN `tabItem` i ON i.name=b.item_code
+        WHERE i.is_stock_item=1 AND i.safety_stock>0
+          AND b.actual_qty<=i.safety_stock AND i.disabled=0
+    """, as_dict=True)
+    low_stock_count = int((low_stock_r[0] or {}).get("c", 0))
+
+    fast_items = frappe.db.sql("""
+        SELECT sii.item_code, sii.item_name, SUM(sii.qty) AS qty_sold
+        FROM `tabSales Invoice Item` sii
+        INNER JOIN `tabSales Invoice` si ON si.name=sii.parent
+        WHERE si.docstatus=1 AND si.posting_date>=%s
+        GROUP BY sii.item_code, sii.item_name
+        ORDER BY qty_sold DESC LIMIT 5
+    """, (m_start,), as_dict=True)
+
+    # ── Workshop ──────────────────────────────────────────────────────
+    open_jobs = delayed_jobs = 0
+    if frappe.db.exists("DocType", "Workshop Job Card"):
+        try:
+            open_jobs = frappe.db.count("Workshop Job Card",
+                                        {"status": ["in", ["Open", "In Progress"]]})
+            dj = frappe.db.sql("""
+                SELECT COUNT(*) c FROM `tabWorkshop Job Card`
+                WHERE status IN ('Open','In Progress') AND DATEDIFF(CURDATE(), date) > 2
+            """, as_dict=True)
+            delayed_jobs = int((dj[0] or {}).get("c", 0))
+        except Exception:
+            pass
+
+    # ── New Customers ─────────────────────────────────────────────────
+    new_customers = frappe.db.count("Customer", {"creation": [">=", m_start]})
+
+    # ── Action Priorities ─────────────────────────────────────────────
+    priorities = []
+    if overdue_inv:
+        top3 = sorted(overdue_inv, key=lambda x: -flt(x.get("outstanding_amount")))[:3]
+        for inv in top3:
+            priorities.append({
+                "type": "collect",
+                "text": f"Collect {flt(inv['outstanding_amount']):,.0f} from {inv['customer']} ({inv['name']})",
+                "doctype": "Sales Invoice", "doc": inv["name"],
+            })
+    for q in expiring_q[:3]:
+        priorities.append({
+            "type": "followup",
+            "text": f"Follow up {q['name']} for {q['party_name']} — expires {q['valid_till']}",
+            "doctype": "Quotation", "doc": q["name"],
+        })
+    if low_stock_count:
+        priorities.append({
+            "type": "stock",
+            "text": f"Replenish {low_stock_count} low-stock items",
+        })
+    if delayed_jobs:
+        priorities.append({
+            "type": "workshop",
+            "text": f"Review {delayed_jobs} delayed workshop jobs",
+        })
+
+    hour = datetime.now().hour
+    greeting = "Good Morning" if hour < 12 else ("Good Afternoon" if hour < 17 else "Good Evening")
+
+    return {
+        "status": "ok",
+        "greeting": greeting,
+        "date": t,
+        "sales": {
+            "today": s_today,
+            "today_count": c_today,
+            "this_week": s_week,
+            "week_count": c_week,
+            "this_month": s_month,
+            "month_count": c_month,
+            "last_month": s_last,
+            "growth_pct": growth,
+            "collected_today": collected_today,
+        },
+        "quotations": {
+            "pending_count": len(pending_q),
+            "pending_value": sum(flt(q.get("grand_total")) for q in pending_q),
+            "expiring_soon": len(expiring_q),
+        },
+        "invoices": {
+            "overdue_count": len(overdue_inv),
+            "overdue_amount": sum(flt(r.get("outstanding_amount")) for r in overdue_inv),
+            "due_today_count": len(due_today_inv),
+            "due_today_amount": sum(flt(r.get("outstanding_amount")) for r in due_today_inv),
+        },
+        "inventory": {
+            "low_stock_count": low_stock_count,
+            "fast_moving_items": [dict(r) for r in fast_items],
+        },
+        "workshop": {
+            "open_jobs": open_jobs,
+            "delayed_jobs": delayed_jobs,
+        },
+        "customers": {
+            "new_this_month": new_customers,
+        },
+        "priorities": priorities,
+        "message": (
+            f"{greeting}! Today's sales: {s_today:,.0f}. "
+            f"Month: {s_month:,.0f} ({growth:+.1f}%). "
+            f"Overdue: {len(overdue_inv)} invoices. "
+            f"Pending quotations: {len(pending_q)}."
+        ),
+    }
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  FEATURE 3 — CUSTOMER FOLLOW-UP ASSISTANT                                   ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+def get_inactive_customers(days_inactive: int = 60) -> dict:
+    """Customers who have had no Sales Invoice in the last N days."""
+    cutoff = add_days(today(), -days_inactive)
+
+    # Active customers — had an invoice in the window
+    active = frappe.db.sql("""
+        SELECT DISTINCT customer
+        FROM `tabSales Invoice`
+        WHERE docstatus=1 AND posting_date >= %s
+    """, (cutoff,), as_dict=True)
+    active_set = {r["customer"] for r in active}
+
+    all_customers = frappe.get_all(
+        "Customer",
+        fields=["name", "customer_name", "mobile_no", "customer_group"],
+        limit=300,
+    )
+    inactive = []
+    for c in all_customers:
+        if c["name"] in active_set:
+            continue
+        last = frappe.db.get_value(
+            "Sales Invoice", {"customer": c["name"], "docstatus": 1},
+            "posting_date", order_by="posting_date desc",
+        )
+        c["last_purchase_date"] = str(last) if last else "Never"
+        c["days_inactive"] = date_diff(today(), str(last)) if last else 9999
+        inactive.append(c)
+
+    inactive.sort(key=lambda x: -(x.get("days_inactive") or 0))
+    inactive = inactive[:30]
+
+    return {
+        "status": "ok",
+        "threshold_days": days_inactive,
+        "inactive_count": len(inactive),
+        "customers": inactive,
+        "message": f"{len(inactive)} customers inactive for {days_inactive}+ days.",
+    }
+
+
+def get_unconverted_quotations(days_old: int = 14) -> dict:
+    """Open quotations older than N days that have never become a Sales Order."""
+    cutoff = add_days(today(), -days_old)
+    rows = frappe.get_all(
+        "Quotation",
+        filters={
+            "docstatus": ["in", [0, 1]],
+            "status": ["in", ["Open", "Draft"]],
+            "transaction_date": ["<=", cutoff],
+        },
+        fields=["name", "party_name", "transaction_date", "valid_till",
+                "grand_total", "status"],
+        order_by="grand_total desc",
+        limit=30,
+    )
+    for r in rows:
+        if r.get("transaction_date"):
+            r["days_old"] = date_diff(today(), str(r["transaction_date"]))
+    total_value = sum(flt(r.get("grand_total")) for r in rows)
+    return {
+        "status": "ok",
+        "threshold_days": days_old,
+        "count": len(rows),
+        "total_value": total_value,
+        "quotations": rows,
+        "message": f"{len(rows)} unconverted quotations older than {days_old} days worth {total_value:,.0f}.",
+    }
+
+
+def get_customers_with_overdue_balance() -> dict:
+    """Customers with outstanding invoices past due date, grouped and ranked."""
+    rows = frappe.db.sql("""
+        SELECT customer,
+               COUNT(*)                AS invoice_count,
+               SUM(outstanding_amount) AS total_outstanding,
+               MIN(due_date)           AS oldest_due_date,
+               DATEDIFF(CURDATE(), MIN(due_date)) AS max_days_overdue
+        FROM `tabSales Invoice`
+        WHERE docstatus=1
+          AND outstanding_amount > 0
+          AND due_date < CURDATE()
+        GROUP BY customer
+        ORDER BY total_outstanding DESC
+        LIMIT 20
+    """, as_dict=True)
+    total = sum(flt(r.get("total_outstanding")) for r in rows)
+    return {
+        "status": "ok",
+        "customer_count": len(rows),
+        "total_overdue": total,
+        "customers": [dict(r) for r in rows],
+        "message": f"{len(rows)} customers with overdue balances totaling {total:,.0f}.",
+    }
+
+
+def get_customers_without_recent_orders(days: int = 90) -> dict:
+    """High-value customers who have not purchased in the last N days."""
+    cutoff = add_days(today(), -days)
+
+    # Customers who purchased before the cutoff (lapsed)
+    lapsed = frappe.db.sql("""
+        SELECT si.customer,
+               MAX(si.posting_date)  AS last_purchase,
+               SUM(si.grand_total)   AS lifetime_value,
+               COUNT(*)              AS total_invoices
+        FROM `tabSales Invoice` si
+        WHERE si.docstatus=1 AND si.posting_date < %s
+        GROUP BY si.customer
+    """, (cutoff,), as_dict=True)
+
+    # Customers who DID buy recently (exclude from lapsed)
+    recent = frappe.db.sql("""
+        SELECT DISTINCT customer FROM `tabSales Invoice`
+        WHERE docstatus=1 AND posting_date >= %s
+    """, (cutoff,), as_dict=True)
+    recent_set = {r["customer"] for r in recent}
+
+    result = []
+    for r in lapsed:
+        if r["customer"] in recent_set:
+            continue
+        r["days_since_purchase"] = date_diff(today(), str(r["last_purchase"]))
+        result.append(dict(r))
+
+    result.sort(key=lambda x: -flt(x.get("lifetime_value", 0)))
+    result = result[:20]
+
+    return {
+        "status": "ok",
+        "threshold_days": days,
+        "count": len(result),
+        "customers": result,
+        "message": f"{len(result)} previously active customers haven't ordered in {days}+ days.",
+    }
+
+
+def get_followup_opportunities() -> dict:
+    """
+    Composite follow-up analysis. Returns prioritised action items
+    across overdue payments, stale quotations, and lapsed customers.
+    """
+    opportunities = []
+
+    # 1 — Overdue balances (HIGH)
+    overdue = frappe.db.sql("""
+        SELECT customer,
+               SUM(outstanding_amount) AS total_owed,
+               COUNT(*)                AS inv_count,
+               DATEDIFF(CURDATE(), MIN(due_date)) AS days_overdue
+        FROM `tabSales Invoice`
+        WHERE docstatus=1 AND outstanding_amount>0 AND due_date < CURDATE()
+        GROUP BY customer ORDER BY total_owed DESC LIMIT 10
+    """, as_dict=True)
+    for r in overdue:
+        opportunities.append({
+            "type": "overdue_payment",
+            "priority": "high",
+            "customer": r["customer"],
+            "reason": f"Overdue balance {flt(r['total_owed']):,.0f} ({r['inv_count']} invoices, {r.get('days_overdue',0)} days overdue)",
+            "suggested_action": "Call customer and arrange payment",
+            "potential_value": flt(r["total_owed"]),
+            "quick_actions": ["record_payment", "create_issue"],
+        })
+
+    # 2 — Old high-value quotations (HIGH/MEDIUM)
+    old_q = frappe.get_all("Quotation",
+        filters={"docstatus": ["in", [0, 1]], "status": ["in", ["Open", "Draft"]],
+                 "transaction_date": ["<=", add_days(today(), -7)]},
+        fields=["name", "party_name", "grand_total", "transaction_date", "valid_till"],
+        order_by="grand_total desc", limit=10,
+    )
+    for q in old_q:
+        expiring = q.get("valid_till") and str(q["valid_till"]) <= add_days(today(), 3)
+        opportunities.append({
+            "type": "unconverted_quotation",
+            "priority": "high" if expiring else "medium",
+            "customer": q["party_name"],
+            "reason": f"Quotation {q['name']} worth {flt(q['grand_total']):,.0f} pending since {q['transaction_date']}",
+            "suggested_action": "Follow up and close as order",
+            "quotation": q["name"],
+            "potential_value": flt(q["grand_total"]),
+            "expiring_soon": bool(expiring),
+            "quick_actions": ["convert_quotation_to_sales_order", "create_task"],
+        })
+
+    # 3 — Lapsed high-value customers (MEDIUM)
+    cutoff90 = add_days(today(), -90)
+    recent_buyers = frappe.db.sql(
+        "SELECT DISTINCT customer FROM `tabSales Invoice` WHERE docstatus=1 AND posting_date>=%s",
+        (cutoff90,), as_dict=True,
+    )
+    recent_set = {r["customer"] for r in recent_buyers}
+    lapsed = frappe.db.sql("""
+        SELECT customer, MAX(posting_date) AS last_date, SUM(grand_total) AS ltv
+        FROM `tabSales Invoice` WHERE docstatus=1 AND posting_date < %s
+        GROUP BY customer ORDER BY ltv DESC LIMIT 5
+    """, (cutoff90,), as_dict=True)
+    for r in lapsed:
+        if r["customer"] not in recent_set:
+            opportunities.append({
+                "type": "lapsed_customer",
+                "priority": "medium",
+                "customer": r["customer"],
+                "reason": f"No order since {r['last_date']}. Lifetime value: {flt(r['ltv']):,.0f}",
+                "suggested_action": "Re-engage with call or new quotation",
+                "potential_value": 0,
+                "quick_actions": ["create_quotation", "create_task"],
+            })
+
+    # Sort: high first, then by potential_value
+    order = {"high": 0, "medium": 1, "low": 2}
+    opportunities.sort(key=lambda o: (order.get(o.get("priority", "low"), 2),
+                                       -o.get("potential_value", 0)))
+
+    return {
+        "status": "ok",
+        "total_opportunities": len(opportunities),
+        "high_priority": sum(1 for o in opportunities if o.get("priority") == "high"),
+        "medium_priority": sum(1 for o in opportunities if o.get("priority") == "medium"),
+        "total_potential_value": sum(o.get("potential_value", 0) for o in opportunities),
+        "opportunities": opportunities,
+        "message": (
+            f"{len(opportunities)} follow-up opportunities. "
+            f"{sum(1 for o in opportunities if o['priority']=='high')} high priority. "
+            f"Potential value: {sum(o.get('potential_value',0) for o in opportunities):,.0f}."
+        ),
+    }
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  FEATURE 4 — WORKSHOP SERVICE ADVISOR / VEHICLE DIAGNOSTICS                 ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+_SYMPTOM_KB: dict[str, dict] = {
+    # ── Engine ────────────────────────────────────────────────────────
+    "check engine light": {
+        "possible_causes": [
+            "Oxygen sensor failure", "Catalytic converter degraded",
+            "Mass airflow sensor dirty/faulty", "Spark plug or ignition coil failure",
+            "Loose or damaged fuel cap", "EGR valve issue",
+        ],
+        "recommended_checks": [
+            "OBD-II scan for fault codes",
+            "Inspect oxygen sensors",
+            "Check fuel cap seal",
+            "Inspect spark plugs and ignition coils",
+            "Test mass airflow sensor",
+        ],
+        "recommended_parts": [
+            "OBD-II Scanner (diagnostic)",
+            "Oxygen Sensor",
+            "Spark Plugs Set",
+            "Ignition Coil",
+            "Fuel Cap",
+            "MAF Sensor Cleaner",
+        ],
+        "estimated_labour_hours": 1.5,
+    },
+    "engine vibration": {
+        "possible_causes": [
+            "Worn or fouled spark plugs",
+            "Faulty ignition coil",
+            "Clogged fuel injectors",
+            "Vacuum leak",
+            "Damaged engine mount",
+            "Loose or broken drive belt",
+        ],
+        "recommended_checks": [
+            "Spark plug condition and gap check",
+            "Ignition coil resistance test",
+            "Fuel injector cleaning / test",
+            "Vacuum hose inspection",
+            "Engine mount visual inspection",
+            "Belt tension and condition check",
+        ],
+        "recommended_parts": [
+            "Spark Plugs Set",
+            "Ignition Coil",
+            "Fuel Injector Cleaner",
+            "Engine Mount",
+            "Drive Belt",
+        ],
+        "estimated_labour_hours": 2.5,
+    },
+    "poor fuel economy": {
+        "possible_causes": [
+            "Dirty or failing oxygen sensor",
+            "Clogged air filter",
+            "Worn spark plugs causing misfires",
+            "Fuel injectors leaking or dirty",
+            "Tyre under-inflation",
+            "Thermostat stuck open",
+        ],
+        "recommended_checks": [
+            "Read live O2 sensor data via OBD",
+            "Inspect and replace air filter",
+            "Check spark plug condition",
+            "Fuel injector flow test",
+            "Tyre pressure check (all 4 wheels)",
+            "Coolant temperature monitoring",
+        ],
+        "recommended_parts": [
+            "Oxygen Sensor",
+            "Air Filter",
+            "Spark Plugs Set",
+            "Fuel System Cleaner",
+            "Thermostat",
+        ],
+        "estimated_labour_hours": 2.0,
+    },
+    "engine overheating": {
+        "possible_causes": [
+            "Coolant leak (hose, gasket, or radiator)",
+            "Thermostat stuck closed",
+            "Failing water pump",
+            "Blocked or damaged radiator",
+            "Blown head gasket",
+            "Faulty cooling fan",
+        ],
+        "recommended_checks": [
+            "Check coolant level and inspect for leaks",
+            "Pressure test cooling system",
+            "Test thermostat operation",
+            "Inspect water pump for leaks/noise",
+            "Radiator flow test",
+            "Head gasket compression test",
+        ],
+        "recommended_parts": [
+            "Coolant / Antifreeze",
+            "Thermostat",
+            "Water Pump",
+            "Radiator Hoses",
+            "Radiator Cap",
+            "Coolant Temperature Sensor",
+        ],
+        "estimated_labour_hours": 3.0,
+    },
+    "oil leak": {
+        "possible_causes": [
+            "Degraded valve cover gasket",
+            "Crankshaft or camshaft seal failure",
+            "Damaged oil pan or drain plug",
+            "Failing oil pressure sensor",
+        ],
+        "recommended_checks": [
+            "Identify leak source with UV dye or degreasing + visual",
+            "Inspect valve cover gasket",
+            "Check all seals and gaskets",
+            "Inspect oil drain plug threads",
+        ],
+        "recommended_parts": [
+            "Valve Cover Gasket",
+            "Crankshaft Seal",
+            "Oil Pan Gasket",
+            "Oil Drain Plug",
+            "Engine Oil",
+        ],
+        "estimated_labour_hours": 2.5,
+    },
+    # ── Brakes ────────────────────────────────────────────────────────
+    "brakes squeaking": {
+        "possible_causes": [
+            "Worn brake pads (wear indicator contact)",
+            "Glazed rotors",
+            "Dust or debris between pad and rotor",
+            "Low-quality brake pads",
+        ],
+        "recommended_checks": [
+            "Measure brake pad thickness",
+            "Inspect rotor surface for scoring/glazing",
+            "Check caliper slide pins for corrosion",
+        ],
+        "recommended_parts": [
+            "Brake Pads (front set)",
+            "Brake Pads (rear set)",
+            "Brake Rotors",
+            "Brake Cleaner",
+            "Caliper Slide Pin Grease",
+        ],
+        "estimated_labour_hours": 2.0,
+    },
+    "brakes grinding": {
+        "possible_causes": [
+            "Completely worn brake pads (metal on metal)",
+            "Loose or missing rotor hardware",
+            "Foreign object lodged in caliper",
+        ],
+        "recommended_checks": [
+            "Immediate wheel removal for pad/rotor inspection",
+            "Measure rotor thickness",
+            "Inspect caliper pistons",
+        ],
+        "recommended_parts": [
+            "Brake Pads Set",
+            "Brake Rotors (likely damaged)",
+            "Brake Fluid",
+            "Caliper Rebuild Kit",
+        ],
+        "estimated_labour_hours": 2.5,
+        "urgency": "immediate",
+    },
+    "brake pedal soft / spongy": {
+        "possible_causes": [
+            "Air in brake lines",
+            "Brake fluid leak",
+            "Failing brake master cylinder",
+            "Deteriorated brake hoses",
+        ],
+        "recommended_checks": [
+            "Inspect all brake lines and hoses for leaks",
+            "Check brake fluid level and colour",
+            "Bleed brake system",
+            "Test master cylinder operation",
+        ],
+        "recommended_parts": [
+            "Brake Fluid (DOT 4)",
+            "Brake Hose Set",
+            "Brake Master Cylinder",
+        ],
+        "estimated_labour_hours": 2.0,
+        "urgency": "immediate",
+    },
+    # ── Suspension / Steering ─────────────────────────────────────────
+    "vibration at speed": {
+        "possible_causes": [
+            "Wheel imbalance",
+            "Bent or damaged rim",
+            "Worn or loose wheel hub bearing",
+            "Worn CV joint or driveshaft",
+            "Suspension component wear (tie rod, ball joint)",
+        ],
+        "recommended_checks": [
+            "Wheel balance and alignment check",
+            "Visual inspection of rims for bending",
+            "Hub bearing play test",
+            "CV joint boot inspection",
+            "Steering component inspection",
+        ],
+        "recommended_parts": [
+            "Wheel Balancing (service)",
+            "Wheel Bearing Hub Assembly",
+            "CV Axle / Driveshaft",
+            "Tie Rod End",
+            "Ball Joint",
+        ],
+        "estimated_labour_hours": 2.0,
+    },
+    "steering pulling": {
+        "possible_causes": [
+            "Wheel alignment out of spec",
+            "Uneven tyre pressure",
+            "Worn tie rod ends",
+            "Brake caliper sticking (one side dragging)",
+            "Wheel bearing play",
+        ],
+        "recommended_checks": [
+            "4-wheel alignment measurement",
+            "Check tyre pressures (all wheels)",
+            "Inspect tie rod ends for play",
+            "Check brake caliper for binding",
+            "Hub bearing check",
+        ],
+        "recommended_parts": [
+            "Wheel Alignment (service)",
+            "Tie Rod Ends",
+            "Tyres (if uneven wear pattern)",
+        ],
+        "estimated_labour_hours": 1.5,
+    },
+    "clunking noise suspension": {
+        "possible_causes": [
+            "Worn shock absorbers or struts",
+            "Loose sway bar link or end links",
+            "Worn control arm bushings",
+            "Damaged strut mount bearing",
+            "Loose ball joint",
+        ],
+        "recommended_checks": [
+            "Bounce test on each corner",
+            "Inspect shock / strut for leaks",
+            "Check sway bar links",
+            "Inspect bushings with pry bar",
+            "Ball joint play test",
+        ],
+        "recommended_parts": [
+            "Shock Absorbers / Struts (pair)",
+            "Sway Bar Links",
+            "Control Arm Bushings",
+            "Strut Mount Bearing",
+            "Ball Joints",
+        ],
+        "estimated_labour_hours": 3.0,
+    },
+    # ── Electrical ────────────────────────────────────────────────────
+    "battery warning light": {
+        "possible_causes": [
+            "Failing alternator",
+            "Weak or dead battery",
+            "Loose or corroded battery terminals",
+            "Broken serpentine belt (drives alternator)",
+        ],
+        "recommended_checks": [
+            "Battery load test",
+            "Alternator output voltage test (should be 13.8–14.4V)",
+            "Inspect serpentine belt tension and condition",
+            "Clean and tighten battery terminals",
+        ],
+        "recommended_parts": [
+            "Car Battery",
+            "Alternator",
+            "Serpentine Belt",
+            "Battery Terminal Connectors",
+        ],
+        "estimated_labour_hours": 1.5,
+    },
+    "ac not cooling": {
+        "possible_causes": [
+            "Low refrigerant level (leak)",
+            "Faulty AC compressor or clutch",
+            "Blocked condenser",
+            "Faulty expansion valve",
+            "Blower motor failure",
+        ],
+        "recommended_checks": [
+            "AC system pressure test",
+            "Leak detection dye test",
+            "Inspect condenser for blockage",
+            "Test compressor clutch engagement",
+            "Check cabin air filter",
+        ],
+        "recommended_parts": [
+            "AC Refrigerant R134a",
+            "AC Compressor",
+            "Cabin Air Filter",
+            "Expansion Valve",
+            "AC Leak Sealant (temporary)",
+        ],
+        "estimated_labour_hours": 2.5,
+    },
+    # ── Transmission ──────────────────────────────────────────────────
+    "transmission slipping": {
+        "possible_causes": [
+            "Low transmission fluid",
+            "Worn clutch pack (automatic)",
+            "Faulty solenoid",
+            "Torque converter failure",
+        ],
+        "recommended_checks": [
+            "Transmission fluid level and colour check",
+            "Transmission fault code scan",
+            "Fluid pressure test",
+            "Road test under load",
+        ],
+        "recommended_parts": [
+            "Automatic Transmission Fluid",
+            "Transmission Filter Kit",
+            "Solenoid Pack",
+        ],
+        "estimated_labour_hours": 3.5,
+    },
+}
+
+# Aliases map — common user phrasing → KB key
+_ALIASES: dict[str, str] = {
+    "engine light": "check engine light",
+    "cel": "check engine light",
+    "mil": "check engine light",
+    "shaking": "engine vibration",
+    "vibration": "engine vibration",
+    "rough idle": "engine vibration",
+    "fuel consumption": "poor fuel economy",
+    "high fuel consumption": "poor fuel economy",
+    "fuel economy": "poor fuel economy",
+    "bad mpg": "poor fuel economy",
+    "overheating": "engine overheating",
+    "temperature light": "engine overheating",
+    "temp warning": "engine overheating",
+    "oil leaking": "oil leak",
+    "oil puddle": "oil leak",
+    "squeaking brakes": "brakes squeaking",
+    "brake squeal": "brakes squeaking",
+    "grinding brakes": "brakes grinding",
+    "brake grinding": "brakes grinding",
+    "spongy brake": "brake pedal soft / spongy",
+    "soft brake": "brake pedal soft / spongy",
+    "brake soft": "brake pedal soft / spongy",
+    "shakes at speed": "vibration at speed",
+    "highway vibration": "vibration at speed",
+    "pulls to one side": "steering pulling",
+    "car pulling": "steering pulling",
+    "clunking": "clunking noise suspension",
+    "banging noise": "clunking noise suspension",
+    "suspension noise": "clunking noise suspension",
+    "battery light": "battery warning light",
+    "no start": "battery warning light",
+    "dead battery": "battery warning light",
+    "air conditioning": "ac not cooling",
+    "ac not working": "ac not cooling",
+    "no cold air": "ac not cooling",
+    "gear slipping": "transmission slipping",
+    "slipping gears": "transmission slipping",
+    "transmission": "transmission slipping",
+}
+
+# Generic recommendations by vehicle make (manufacturer-specific notes)
+_MAKE_NOTES: dict[str, str] = {
+    "toyota": "Toyota vehicles have strong reliability records; focus on genuine Toyota/OEM parts.",
+    "honda": "Honda VTEC engines are sensitive to oil quality — use specified viscosity grade.",
+    "nissan": "Nissan CVT transmissions require CVT-specific fluid; avoid generic ATF.",
+    "hyundai": "Hyundai offers extended powertrain warranty — check warranty coverage before repair.",
+    "kia": "Kia Theta II engine recall may apply — verify serial number.",
+    "ford": "Ford EcoBoost engines can develop carbon buildup — walnut blasting recommended every 60k km.",
+    "gm": "GM AFM lifter failures common on V8 models — check for GM TSB.",
+    "chevrolet": "Same as GM: AFM deactivation issues on 5.3L/6.2L engines.",
+    "bmw": "BMW requires OEM-spec engine oil (LL-01/LL-04); generic oil shortens engine life.",
+    "mercedes": "Mercedes-Benz requires MB-approved fluids; use dealer-grade diagnostics (Xentry).",
+    "audi": "Audi DSG/S-tronic fluid intervals are critical — check manufacturer schedule.",
+    "volkswagen": "VW PD/TDI injectors are expensive; verify injector seals before diagnostics.",
+    "mitsubishi": "Mitsubishi CVT (INVECS-III) requires CVT-J4 fluid specifically.",
+    "mazda": "Mazda SkyActiv engines specify 0W-20 oil; heavier grades reduce efficiency.",
+    "subaru": "Subaru boxer engines prone to head gasket issues (EJ series) — pressure test recommended.",
+    "jeep": "Jeep 3.6L Pentastar engines: check valve train noise and oil consumption.",
+}
+
+
+def diagnose_vehicle_issue(
+    vehicle_make: str = "",
+    vehicle_model: str = "",
+    symptoms: list | None = None,
+    year: int = 0,
+) -> dict:
+    """
+    AI-powered vehicle diagnostics.
+
+    Matches reported symptoms against the knowledge base and returns:
+    possible_causes, recommended_checks, recommended_parts, estimated_labour_hours,
+    plus an optional workshop quotation suggestion.
+    """
+    if not symptoms:
+        return {
+            "status": "error",
+            "message": "Please describe the symptom(s) you are experiencing.",
+        }
+
+    symptoms = [str(s).lower().strip() for s in symptoms]
+
+    # Match symptoms to KB entries
+    matched_keys: list[str] = []
+    for symptom in symptoms:
+        # Direct match
+        if symptom in _SYMPTOM_KB:
+            matched_keys.append(symptom)
+            continue
+        # Alias match
+        if symptom in _ALIASES and _ALIASES[symptom] in _SYMPTOM_KB:
+            matched_keys.append(_ALIASES[symptom])
+            continue
+        # Partial / substring match in KB keys
+        for kb_key in _SYMPTOM_KB:
+            if symptom in kb_key or kb_key in symptom:
+                matched_keys.append(kb_key)
+                break
+        # Partial match in aliases
+        else:
+            for alias, kb_key in _ALIASES.items():
+                if symptom in alias or alias in symptom:
+                    if kb_key in _SYMPTOM_KB:
+                        matched_keys.append(kb_key)
+                        break
+
+    matched_keys = list(dict.fromkeys(matched_keys))  # deduplicate preserving order
+
+    if not matched_keys:
+        return {
+            "status": "ok",
+            "vehicle": f"{year} {vehicle_make} {vehicle_model}".strip(),
+            "symptoms_received": symptoms,
+            "matched": False,
+            "possible_causes": [
+                "Unable to match symptoms to known patterns.",
+                "Recommend OBD scan to retrieve fault codes.",
+            ],
+            "recommended_checks": [
+                "Full OBD-II diagnostic scan",
+                "Visual inspection by qualified technician",
+            ],
+            "recommended_parts": [],
+            "estimated_labour_hours": 1.0,
+            "make_note": _MAKE_NOTES.get(vehicle_make.lower(), ""),
+            "message": f"Symptoms logged for {vehicle_make} {vehicle_model}. Recommend OBD scan as first step.",
+        }
+
+    # Aggregate from all matched entries
+    all_causes: list[str] = []
+    all_checks: list[str] = []
+    all_parts: list[str] = []
+    total_hours = 0.0
+    urgency = ""
+
+    for key in matched_keys:
+        entry = _SYMPTOM_KB[key]
+        all_causes.extend(entry.get("possible_causes", []))
+        all_checks.extend(entry.get("recommended_checks", []))
+        all_parts.extend(entry.get("recommended_parts", []))
+        total_hours += entry.get("estimated_labour_hours", 1.0)
+        if entry.get("urgency") == "immediate":
+            urgency = "immediate"
+
+    # Deduplicate while preserving order
+    def _dedup(lst: list) -> list:
+        seen: set = set()
+        out = []
+        for x in lst:
+            if x not in seen:
+                seen.add(x)
+                out.append(x)
+        return out
+
+    possible_causes = _dedup(all_causes)[:8]
+    recommended_checks = _dedup(all_checks)[:8]
+    recommended_parts = _dedup(all_parts)[:10]
+
+    # Check if any parts exist in ERPNext Item master
+    erp_parts = []
+    for part in recommended_parts:
+        matches = frappe.get_all("Item",
+            filters=[["item_name", "like", f"%{part.split('(')[0].strip()}%"],
+                     ["disabled", "=", 0]],
+            fields=["name", "item_name", "standard_rate"],
+            limit=1)
+        if matches:
+            erp_parts.append(matches[0])
+
+    make_lower = vehicle_make.lower()
+    make_note = _MAKE_NOTES.get(make_lower, "")
+    if not make_note:
+        for mk, note in _MAKE_NOTES.items():
+            if mk in make_lower or make_lower in mk:
+                make_note = note
+                break
+
+    vehicle_str = " ".join(filter(None, [str(year) if year else "", vehicle_make, vehicle_model]))
+
+    return {
+        "status": "ok",
+        "vehicle": vehicle_str.strip(),
+        "symptoms_received": symptoms,
+        "symptoms_matched": matched_keys,
+        "matched": True,
+        "urgency": urgency or "routine",
+        "possible_causes": possible_causes,
+        "recommended_checks": recommended_checks,
+        "recommended_parts": recommended_parts,
+        "erp_parts_available": erp_parts,
+        "estimated_labour_hours": round(total_hours, 1),
+        "make_note": make_note,
+        "message": (
+            f"Diagnosis for {vehicle_str}. "
+            f"{len(possible_causes)} possible causes identified. "
+            f"Estimated labour: {round(total_hours, 1)} hours. "
+            + (f"⚠ URGENT — {urgency} attention needed." if urgency == "immediate" else "")
+        ),
+    }
