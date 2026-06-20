@@ -117,7 +117,7 @@ class AIChatPage {
 		<div class="ai-layout" id="ai-layout">
 
 			<!-- ── Left Navigation Sidebar ── -->
-			<aside class="ai-sn" id="ai-sidebar">
+			<div class="ai-sn" id="ai-sidebar">
 				<header class="ai-sn-hdr">
 					<div class="ai-sn-brand">
 						<span class="ai-sn-brand-icon">⚡</span>
@@ -132,7 +132,7 @@ class AIChatPage {
 				<div class="ai-sn-scroll" id="ai-sb-body">
 					${sidebarHtml}
 				</div>
-			</aside>
+			</div><!-- end .ai-sn -->
 
 			<!-- ── Chat Panel ── -->
 			<div class="ai-chat-container">
