@@ -191,6 +191,23 @@ class AIChatPage {
 
 		$(this.wrapper).find(".page-content").html(html);
 
+		// Force layout via inline styles — bypasses any CSS cascade issues
+		// with Frappe/Bootstrap parent container rules.
+		const vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
+		const layoutH = (vh - 120) + "px";
+		const $layout  = $("#ai-layout");
+		const $sidebar = $("#ai-sidebar");
+		const $chat    = $(".ai-chat-container");
+
+		$layout.css({ position: "relative", width: "100%", height: layoutH, overflow: "hidden" });
+		$sidebar.css({ position: "absolute", top: 0, left: 0, bottom: 0, width: "230px",
+			background: "linear-gradient(180deg,#1e1b4b 0%,#2d2467 100%)",
+			display: "flex", flexDirection: "column", overflow: "hidden",
+			borderRadius: "10px 0 0 10px", zIndex: 1 });
+		$chat.css({ position: "absolute", top: 0, left: "230px", right: 0, bottom: 0,
+			display: "flex", flexDirection: "column", overflow: "hidden",
+			background: "var(--card-bg)", borderRadius: "0 10px 10px 0" });
+
 		this.$messages = $("#ai-messages");
 		this.$input    = $("#ai-input");
 		this.$send     = $("#ai-send-btn");
@@ -232,12 +249,14 @@ class AIChatPage {
 	}
 
 	_collapse_sidebar() {
-		$("#ai-layout").addClass("ai-layout--collapsed");
+		$("#ai-sidebar").css({ left: "-230px", width: "0" });
+		$(".ai-chat-container").css({ left: "0", borderRadius: "10px" });
 		$("#ai-sb-expand-btn").removeClass("hidden");
 	}
 
 	_expand_sidebar() {
-		$("#ai-layout").removeClass("ai-layout--collapsed");
+		$("#ai-sidebar").css({ left: "0", width: "230px" });
+		$(".ai-chat-container").css({ left: "230px", borderRadius: "0 10px 10px 0" });
 		$("#ai-sb-expand-btn").addClass("hidden");
 	}
 

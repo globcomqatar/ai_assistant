@@ -15,32 +15,42 @@
 .ai-disabled-icon { font-size: 4rem; margin-bottom: 16px; }
 
 /* ═══════════════════════════════════════════════════════════
-   OUTER PAGE GRID  (sidebar left + chat right)
-   Uses CSS Grid — more reliable than flex for sidebar layouts
+   OUTER LAYOUT — position: relative container
+   Absolute positioning for sidebar + chat avoids ALL CSS Grid
+   specificity battles with Frappe / Bootstrap parent rules.
    ══════════════════════════════════════════════════════════ */
 .ai-layout {
-	display: grid !important;
-	grid-template-columns: 230px 1fr !important;
-	height: calc(100vh - 120px);
-	overflow: hidden;
+	position: relative !important;
+	width: 100% !important;
+	height: calc(100vh - 120px) !important;
+	overflow: hidden !important;
 	border-radius: 10px;
 	border: 1px solid var(--border-color);
 	box-shadow: 0 2px 16px rgba(0,0,0,0.06);
 }
 
-.ai-layout--collapsed {
-	grid-template-columns: 0px 1fr !important;
-}
-
 /* ═══════════════════════════════════════════════════════════
-   LEFT NAVIGATION SIDEBAR
+   LEFT NAVIGATION SIDEBAR — absolutely pinned to left edge
    ══════════════════════════════════════════════════════════ */
 .ai-sn {
+	position: absolute !important;
+	top: 0 !important;
+	left: 0 !important;
+	bottom: 0 !important;
+	width: 230px !important;
 	background: linear-gradient(180deg, #1e1b4b 0%, #2d2467 100%) !important;
 	display: flex !important;
 	flex-direction: column !important;
 	overflow: hidden !important;
 	border-radius: 10px 0 0 10px;
+	transition: left 0.22s ease, width 0.22s ease;
+	z-index: 1;
+}
+
+/* Collapsed: slide sidebar off-screen */
+.ai-layout--collapsed .ai-sn {
+	left: -230px !important;
+	width: 0 !important;
 }
 
 /* Sidebar header bar */
@@ -200,19 +210,25 @@
 	margin-top: 4px;
 }
 
-/* ── Chat container (right panel) ─────────────────────────── */
+/* ── Chat container — fills the space right of the sidebar ── */
 .ai-chat-container {
-	display: flex;
-	flex-direction: column;
-	overflow: hidden;
+	position: absolute !important;
+	top: 0 !important;
+	left: 230px !important;
+	right: 0 !important;
+	bottom: 0 !important;
+	display: flex !important;
+	flex-direction: column !important;
+	overflow: hidden !important;
 	background: var(--card-bg);
 	border-radius: 0 10px 10px 0;
-	min-width: 0;
+	transition: left 0.22s ease;
 }
 
-/* Fully rounded when sidebar is collapsed */
+/* When collapsed: chat fills the full width */
 .ai-layout--collapsed .ai-chat-container {
-	border-radius: 10px;
+	left: 0 !important;
+	border-radius: 10px !important;
 }
 
 /* ── Header ───────────────────────────────────────────────── */
