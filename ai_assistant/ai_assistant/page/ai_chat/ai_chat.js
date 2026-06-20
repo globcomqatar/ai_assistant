@@ -102,28 +102,37 @@ class AIChatPage {
 
 	_render() {
 		const sidebarHtml = this._sidebar_groups().map(group => `
-			<div class="ai-sb-group">
-				<div class="ai-sb-group-label">${group.label}</div>
-				${group.items.map(item => `
-					<button class="ai-sb-btn" data-msg="${frappe.utils.escape_html(item.msg)}">
-						<span class="ai-sb-icon">${item.icon}</span>
-						<span class="ai-sb-text">${item.label}</span>
-					</button>`).join("")}
+			<div class="ai-sn-section">
+				<div class="ai-sn-section-label">${group.label}</div>
+				<div class="ai-sn-items">
+					${group.items.map(item => `
+						<button class="ai-sn-item" data-msg="${frappe.utils.escape_html(item.msg)}">
+							<span class="ai-sn-ico">${item.icon}</span>
+							<span class="ai-sn-lbl">${item.label}</span>
+						</button>`).join("")}
+				</div>
 			</div>`).join("");
 
 		const html = `
-		<div class="ai-chat-wrapper">
+		<div class="ai-layout" id="ai-layout">
 
-			<!-- ── Permanent Left Sidebar ── -->
-			<div class="ai-sidebar" id="ai-sidebar">
-				<div class="ai-sb-header">
-					<span>⚡ ${__("Quick Actions")}</span>
-					<button class="ai-sb-toggle" id="ai-sb-toggle" title="${__("Collapse")}">‹</button>
-				</div>
-				<div class="ai-sb-body" id="ai-sb-body">
+			<!-- ── Left Navigation Sidebar ── -->
+			<aside class="ai-sn" id="ai-sidebar">
+				<header class="ai-sn-hdr">
+					<div class="ai-sn-brand">
+						<span class="ai-sn-brand-icon">⚡</span>
+						<span class="ai-sn-brand-text">${__("Quick Actions")}</span>
+					</div>
+					<button class="ai-sn-close-btn" id="ai-sb-toggle" title="${__("Collapse sidebar")}">
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+							<polyline points="15 18 9 12 15 6"></polyline>
+						</svg>
+					</button>
+				</header>
+				<div class="ai-sn-scroll" id="ai-sb-body">
 					${sidebarHtml}
 				</div>
-			</div>
+			</aside>
 
 			<!-- ── Chat Panel ── -->
 			<div class="ai-chat-container">
@@ -131,7 +140,13 @@ class AIChatPage {
 				<!-- Header -->
 				<div class="ai-chat-header">
 					<div class="ai-chat-header-left">
-						<button class="ai-sb-expand-btn hidden" id="ai-sb-expand-btn" title="${__("Open Quick Actions")}">☰</button>
+						<button class="ai-sn-open-btn hidden" id="ai-sb-expand-btn" title="${__("Open Quick Actions")}">
+							<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+								<line x1="3" y1="12" x2="21" y2="12"></line>
+								<line x1="3" y1="6" x2="21" y2="6"></line>
+								<line x1="3" y1="18" x2="21" y2="18"></line>
+							</svg>
+						</button>
 						<span class="ai-avatar">🤖</span>
 						<div>
 							<div class="ai-chat-title">${__("AI Assistant")}</div>
@@ -172,7 +187,7 @@ class AIChatPage {
 				</div>
 
 			</div><!-- end .ai-chat-container -->
-		</div><!-- end .ai-chat-wrapper -->`;
+		</div><!-- end .ai-layout -->`;
 
 		$(this.wrapper).find(".page-content").html(html);
 
@@ -202,7 +217,7 @@ class AIChatPage {
 		$("#ai-clear-btn").on("click", () => this._clear());
 
 		// Sidebar quick-action buttons
-		$(document).on("click", ".ai-sb-btn", (e) => {
+		$(document).on("click", ".ai-sn-item", (e) => {
 			const msg = $(e.currentTarget).data("msg");
 			this.$input.val(msg).trigger("input").focus();
 			// Auto-send only if message is complete (doesn't end with space)
@@ -217,12 +232,12 @@ class AIChatPage {
 	}
 
 	_collapse_sidebar() {
-		$("#ai-sidebar").addClass("ai-sidebar--collapsed");
+		$("#ai-layout").addClass("ai-layout--collapsed");
 		$("#ai-sb-expand-btn").removeClass("hidden");
 	}
 
 	_expand_sidebar() {
-		$("#ai-sidebar").removeClass("ai-sidebar--collapsed");
+		$("#ai-layout").removeClass("ai-layout--collapsed");
 		$("#ai-sb-expand-btn").addClass("hidden");
 	}
 
