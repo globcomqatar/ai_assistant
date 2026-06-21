@@ -116,6 +116,9 @@ class AIChatPage {
 		const html = `
 		<div class="ai-layout" id="ai-layout">
 
+			<!-- Mobile sidebar backdrop -->
+			<div class="ai-sb-backdrop hidden" id="ai-sb-backdrop"></div>
+
 			<!-- ── Left Navigation Sidebar ── -->
 			<div class="ai-sn" id="ai-sidebar">
 				<header class="ai-sn-hdr">
@@ -155,8 +158,14 @@ class AIChatPage {
 					</div>
 					<div class="ai-chat-header-right">
 						<span class="ai-usage-badge" id="ai-usage-badge" title="${__("Monthly usage")}"></span>
-						<button class="btn btn-xs btn-default" id="ai-clear-btn">${__("Clear Chat")}</button>
-						<a href="/app/ai-settings" class="btn btn-xs btn-default">⚙ ${__("Settings")}</a>
+						<button class="btn btn-xs btn-default" id="ai-clear-btn">
+							<span class="ai-btn-icon">🗑</span>
+							<span class="ai-btn-text">${__("Clear Chat")}</span>
+						</button>
+						<a href="/app/ai-settings" class="btn btn-xs btn-default">
+							<span class="ai-btn-icon">⚙</span>
+							<span class="ai-btn-text"> ${__("Settings")}</span>
+						</a>
 					</div>
 				</div>
 
@@ -191,31 +200,66 @@ class AIChatPage {
 
 		$(this.wrapper).find(".page-content").html(html);
 
-		// Force layout via inline styles — bypasses any CSS cascade issues
-		// with Frappe/Bootstrap parent container rules.
-		const layoutH = "80vh";
-		const $layout  = $("#ai-layout");
-		const $sidebar = $("#ai-sidebar");
-		const $chat    = $(".ai-chat-container");
-
-		$layout.css({ position: "relative", width: "100%", height: layoutH, overflow: "hidden" });
-		$sidebar.css({ position: "absolute", top: 0, left: 0, bottom: 0, width: "230px",
-			background: "linear-gradient(180deg,#1e1b4b 0%,#2d2467 100%)",
-			display: "flex", flexDirection: "column", overflow: "hidden",
-			borderRadius: "10px 0 0 10px", zIndex: 1 });
-		$chat.css({ position: "absolute", top: 0, left: "230px", right: 0, bottom: 0,
-			display: "flex", flexDirection: "column", overflow: "hidden",
-			background: "var(--card-bg)", borderRadius: "0 10px 10px 0" });
-
 		this.$messages = $("#ai-messages");
 		this.$input    = $("#ai-input");
 		this.$send     = $("#ai-send-btn");
 
-		// Force the messages area to scroll — critical for chat usability.
+		this._apply_layout();
+
+		// Re-apply layout on window resize
+		$(window).off("resize.ai_chat").on("resize.ai_chat", frappe.utils.debounce(() => {
+			this._apply_layout();
+		}, 200));
+
+		this._bind_events();
+	}
+
+	_is_mobile()  { return window.innerWidth < 768; }
+	_is_tablet()  { return window.innerWidth >= 768 && window.innerWidth < 1024; }
+	_is_overlay() { return window.innerWidth < 1024; }
+
+	_apply_layout() {
+		const mobile  = this._is_mobile();
+		const overlay = this._is_overlay();
+		const $layout  = $("#ai-layout");
+		const $sidebar = $("#ai-sidebar");
+		const $chat    = $(".ai-chat-container");
+
+		// Height: taller on mobile to use more screen real estate
+		const layoutH = mobile ? "calc(100svh - 110px)" : "80vh";
+
+		$layout.css({ position: "relative", width: "100%", height: layoutH, overflow: "hidden" });
+
+		$sidebar.css({
+			position: "absolute", top: 0, bottom: 0,
+			width: "230px",
+			background: "linear-gradient(180deg,#1e1b4b 0%,#2d2467 100%)",
+			display: "flex", flexDirection: "column", overflow: "hidden",
+			borderRadius: "10px 0 0 10px",
+			// Overlay on tablet/mobile — sits above chat with its own z-index
+			zIndex: overlay ? 20 : 1
+		});
+
+		// Force messages scroll
 		this.$messages.css({ flex: "1 1 0", overflowY: "scroll", overflowX: "hidden",
 			minHeight: 0, display: "inline-block", width: "100%" });
 
-		this._bind_events();
+		if (overlay) {
+			// Sidebar starts collapsed on tablet/mobile
+			$sidebar.css({ left: "-230px" });
+			$chat.css({ position: "absolute", top: 0, left: "0", right: 0, bottom: 0,
+				display: "flex", flexDirection: "column", overflow: "hidden",
+				background: "var(--card-bg)", borderRadius: "10px" });
+			$("#ai-sb-expand-btn").removeClass("hidden");
+		} else {
+			// Desktop: sidebar pushes chat
+			$sidebar.css({ left: "0" });
+			$chat.css({ position: "absolute", top: 0, left: "230px", right: 0, bottom: 0,
+				display: "flex", flexDirection: "column", overflow: "hidden",
+				background: "var(--card-bg)", borderRadius: "0 10px 10px 0" });
+			$("#ai-sb-expand-btn").addClass("hidden");
+			$("#ai-sb-backdrop").addClass("hidden");
+		}
 	}
 
 	// ── Events ─────────────────────────────────────────────────────────────────
@@ -249,18 +293,35 @@ class AIChatPage {
 		// Sidebar collapse / expand toggle
 		$("#ai-sb-toggle").on("click", () => this._collapse_sidebar());
 		$("#ai-sb-expand-btn").on("click", () => this._expand_sidebar());
+
+		// Backdrop click closes sidebar on overlay mode
+		$("#ai-sb-backdrop").on("click", () => this._collapse_sidebar());
+
+		// Auto-close sidebar on mobile after clicking a quick-action
+		$(document).on("click.ai_sidebar", ".ai-sn-item", () => {
+			if (this._is_overlay()) this._collapse_sidebar();
+		});
 	}
 
 	_collapse_sidebar() {
-		$("#ai-sidebar").css({ left: "-230px", width: "0" });
-		$(".ai-chat-container").css({ left: "0", borderRadius: "10px" });
+		$("#ai-sidebar").css({ left: "-230px" });
 		$("#ai-sb-expand-btn").removeClass("hidden");
+		if (this._is_overlay()) {
+			$("#ai-sb-backdrop").addClass("hidden");
+		} else {
+			$(".ai-chat-container").css({ left: "0", borderRadius: "10px" });
+		}
 	}
 
 	_expand_sidebar() {
-		$("#ai-sidebar").css({ left: "0", width: "230px" });
-		$(".ai-chat-container").css({ left: "230px", borderRadius: "0 10px 10px 0" });
+		$("#ai-sidebar").css({ left: "0" });
 		$("#ai-sb-expand-btn").addClass("hidden");
+		if (this._is_overlay()) {
+			// Overlay: sidebar floats above chat, show backdrop
+			$("#ai-sb-backdrop").removeClass("hidden");
+		} else {
+			$(".ai-chat-container").css({ left: "230px", borderRadius: "0 10px 10px 0" });
+		}
 	}
 
 	_auto_resize() {

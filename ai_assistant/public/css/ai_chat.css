@@ -791,3 +791,133 @@
 	border-radius: 6px;
 	border-left: 3px solid #3b82f6;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE — Mobile backdrop overlay
+   ══════════════════════════════════════════════════════════ */
+.ai-sb-backdrop {
+	position: absolute;
+	inset: 0;
+	background: rgba(0,0,0,0.45);
+	z-index: 15;
+	border-radius: 10px;
+}
+.ai-sb-backdrop.hidden { display: none !important; }
+
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE — MacBook / small laptop  (1024px – 1279px)
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 1279px) and (min-width: 1024px) {
+	.ai-sn { width: 210px !important; }
+	.ai-layout--collapsed .ai-sn { left: -210px !important; }
+	.ai-chat-header { padding: 10px 14px; }
+	.ai-chat-title  { font-size: 0.92rem; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE — iPad / tablet  (768px – 1023px)
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 1023px) {
+	/* Sidebar floats over chat as a drawer */
+	.ai-sn {
+		z-index: 20 !important;
+		border-radius: 10px 0 0 10px !important;
+		box-shadow: 4px 0 24px rgba(0,0,0,0.3);
+	}
+
+	/* Chat always fills full width */
+	.ai-chat-container {
+		left: 0 !important;
+		border-radius: 10px !important;
+	}
+
+	/* Header compact */
+	.ai-chat-header    { padding: 10px 14px; }
+	.ai-chat-title     { font-size: 0.9rem; }
+	.ai-chat-subtitle  { font-size: 0.68rem; }
+	.ai-avatar         { font-size: 1.5rem; }
+
+	/* Smaller header buttons */
+	.ai-chat-header-right .btn { font-size: 0.72rem; padding: 3px 8px; }
+
+	/* Suggestion chips wrap nicely */
+	.ai-suggestions { gap: 6px; }
+
+	/* Tables scroll horizontally instead of overflowing */
+	.ai-result-body  { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+	.ai-mini-table   { min-width: 480px; }
+
+	/* KPI grid: 3 columns on tablet */
+	.ai-kpi-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE — iPhone / mobile  (< 768px)
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 767px) {
+	.ai-layout {
+		border-radius: 8px !important;
+		border-left: none;
+		border-right: none;
+	}
+
+	/* Sidebar full-height drawer */
+	.ai-sn {
+		width: 82vw !important;
+		max-width: 300px !important;
+		border-radius: 0 !important;
+	}
+
+	/* Compact header */
+	.ai-chat-header  { padding: 8px 10px; gap: 8px; }
+	.ai-chat-title   { font-size: 0.82rem; }
+	.ai-chat-subtitle { display: none; }
+	.ai-avatar       { font-size: 1.3rem; }
+	.ai-chat-header-left { gap: 8px; }
+
+	/* Show only icon on small buttons */
+	.ai-btn-text { display: none; }
+	.ai-btn-icon { font-size: 1rem; }
+	.ai-chat-header-right .btn { padding: 4px 8px; min-width: 32px; }
+
+	/* Hide usage badge to save space */
+	.ai-usage-badge { display: none; }
+
+	/* Messages area */
+	.ai-messages { padding: 12px 10px; gap: 10px; }
+
+	/* Bubbles */
+	.ai-msg-bubble { font-size: 0.845rem; padding: 8px 12px; }
+
+	/* Input */
+	.ai-input-area { padding: 8px 10px; gap: 6px; }
+	.ai-input      { font-size: 0.875rem; padding: 9px 12px; }
+	.ai-send-btn   { width: 38px; height: 38px; }
+
+	/* Welcome */
+	.ai-welcome-msg    { padding: 24px 16px; }
+	.ai-welcome-icon   { font-size: 2rem; }
+	.ai-welcome-msg h4 { font-size: 1rem; }
+	.ai-welcome-msg p  { font-size: 0.8rem; }
+	.ai-suggestion-chip { font-size: 0.75rem; padding: 5px 11px; }
+
+	/* Tables */
+	.ai-result-body { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+	.ai-mini-table  { min-width: 380px; }
+
+	/* KPI grid: 2 columns on mobile */
+	.ai-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+
+	/* Result cards */
+	.ai-result-card-header { padding: 8px 12px; }
+	.ai-result-body        { padding: 10px 12px; }
+
+	/* KV grid: single column on mobile */
+	.ai-kv-grid { grid-template-columns: 1fr; }
+
+	/* Opportunity cards */
+	.ai-opp-actions .btn { font-size: 0.72rem; padding: 3px 8px; }
+
+	/* FAB: smaller on mobile */
+	.ai-launcher-fab { width: 46px; height: 46px; font-size: 1.2rem; bottom: 16px; right: 16px; }
+}
