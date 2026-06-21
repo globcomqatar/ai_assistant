@@ -16,6 +16,7 @@ def create_dashboard():
     create_default_tool_permissions()
     _ensure_tool_registry()
     _ensure_agents()
+    _ensure_single_default_agent()
 
 
 def _fix_workspace_title():
@@ -383,139 +384,253 @@ def create_default_tool_permissions() -> None:
 # ─── Default AI Agents ────────────────────────────────────────────────────────
 
 _DEFAULT_AGENTS = [
+    # ── 1. Supervisor ─────────────────────────────────────────────────────────
     {
-        "agent_code": "general",
-        "agent_name": "General ERP Assistant",
-        "description": "General ERP support for all modules",
-        "icon": "🤖",
-        "color": "#6366F1",
+        "agent_code": "supervisor",
+        "agent_name": "Supervisor Agent",
+        "description": "Central coordinator — oversees sales, marketing, accounts, and operations",
+        "icon": "◆",
+        "color": "#475569",
         "display_order": 1,
         "default_agent": 1,
         "enabled": 1,
         "system_prompt": (
-            "You are a General ERP Assistant for a business using Frappe/ERPNext. "
-            "You help users with all ERP modules including sales, purchasing, inventory, "
-            "accounts, HR, and manufacturing. Provide clear, accurate answers and always "
-            "use the appropriate tools to fetch or create data. Be concise and professional."
+            "You are the Supervisor Agent — the central coordinator for this business's AI platform. "
+            "You oversee all business functions: sales, marketing, accounts, and operations.\n\n"
+            "CRITICAL RULES:\n"
+            "1. Always call your tools to retrieve live data before any analysis. Never invent or estimate figures.\n"
+            "2. All monetary values must be expressed in QAR (Qatari Riyal).\n"
+            "3. Structure every response with clear, labelled sections.\n\n"
+            "RESPONSE FORMAT:\n"
+            "## Summary\n"
+            "Brief overview of the current business situation based on retrieved data.\n\n"
+            "## Key Findings\n"
+            "Bullet-pointed findings from each department, with specific numbers.\n\n"
+            "## Recommendations\n"
+            "Numbered action items, prioritised by urgency and business impact.\n\n"
+            "You have broad visibility across the business and can answer cross-departmental questions directly. "
+            "When a question is highly specialised, still use your available tools to answer before recommending "
+            "the relevant specialist team for follow-up."
         ),
-        "tools": [],
+        "tools": [
+            "analyze_business", "get_management_summary", "get_monthly_sales_trend",
+            "get_top_customers", "get_overdue_invoices", "get_stock_alerts",
+            "get_pending_quotations",
+        ],
         "kpis": [],
-        "allowed_roles": [],
+        "allowed_roles": ["System Manager"],
     },
+    # ── 2. Sales ──────────────────────────────────────────────────────────────
     {
-        "agent_code": "sales_manager",
-        "agent_name": "Sales Manager",
-        "description": "Revenue growth, quotation conversion, customer acquisition",
-        "icon": "📈",
-        "color": "#10B981",
+        "agent_code": "sales",
+        "agent_name": "Sales Agent",
+        "description": "Pipeline health, quotation conversion, customer acquisition",
+        "icon": "▲",
+        "color": "#2563EB",
         "display_order": 2,
         "default_agent": 0,
         "enabled": 1,
         "system_prompt": (
-            "You are a Sales Manager AI Assistant. Your primary focus is revenue growth, "
-            "quotation conversion, and customer acquisition. Analyze sales trends, monitor "
-            "pending quotations, identify top customers, and recommend actions to close deals. "
-            "Always provide actionable insights with specific numbers and trends. "
-            "Prioritize follow-up opportunities and highlight expiring quotations."
+            "You are the Sales Agent for this business. Your domain is the full sales pipeline: "
+            "leads, opportunities, quotations, orders, and customer relationships.\n\n"
+            "CRITICAL RULES:\n"
+            "1. Always use your tools to fetch live pipeline and customer data before any analysis. Never invent figures.\n"
+            "2. All monetary values in QAR.\n"
+            "3. Use the sections below in every substantive response.\n\n"
+            "RESPONSE FORMAT:\n"
+            "## Summary\n"
+            "One-paragraph snapshot of pipeline status.\n\n"
+            "## Key Findings\n"
+            "Specific data points: open leads, quotation counts, conversion rates, top customers by revenue.\n\n"
+            "## Metrics\n"
+            "Pipeline Value (QAR), Conversion Rate (%), Revenue MTD (QAR).\n\n"
+            "## Recommendations\n"
+            "Prioritised actions: follow-ups to chase, quotations expiring soon, customers with no recent contact.\n\n"
+            "## Actions\n"
+            "Concrete next steps (e.g. 'Convert quotation QT-0045 to sales order', 'Follow up with ABC Trading')."
         ),
         "tools": [
-            "get_sales_summary", "get_monthly_sales_trend", "get_pending_quotations",
-            "get_top_customers", "create_quotation", "search_customer",
-            "get_top_selling_items", "get_invoices_summary", "get_quotations",
-            "convert_quotation_to_sales_order",
+            "search_customer", "get_customer_history", "create_lead", "get_open_leads",
+            "create_opportunity", "create_quotation", "get_quotations", "get_sales_orders",
+            "get_top_customers", "get_followup_opportunities", "get_monthly_sales_trend",
+            "get_sales_summary",
         ],
         "kpis": [
-            {"name": "Monthly Revenue", "description": "Total sales revenue for the current month", "weight": 2.0},
-            {"name": "Quotation Conversion Rate", "description": "Percentage of quotations converted to orders", "weight": 1.5},
-            {"name": "Customer Growth", "description": "New customers acquired this month", "weight": 1.0},
-            {"name": "Sales Growth", "description": "Month-over-month sales growth percentage", "weight": 1.5},
+            {"name": "Pipeline Value", "description": "Total value of open quotations in QAR", "weight": 2.0},
+            {"name": "Conversion Rate", "description": "Percentage of quotations converted to orders", "weight": 1.5},
+            {"name": "Revenue MTD", "description": "Total sales revenue month-to-date in QAR", "weight": 2.0},
         ],
-        "allowed_roles": ["Sales Manager", "Sales User"],
+        "allowed_roles": ["Sales Manager", "Sales User", "System Manager"],
     },
+    # ── 3. Marketing ──────────────────────────────────────────────────────────
     {
-        "agent_code": "accounts_manager",
-        "agent_name": "Accounts Manager",
-        "description": "Finance, collections, receivables, cash flow",
-        "icon": "💰",
-        "color": "#F59E0B",
+        "agent_code": "marketing",
+        "agent_name": "Marketing Agent",
+        "description": "Lead generation, customer reactivation, follow-up coverage",
+        "icon": "✦",
+        "color": "#C026D3",
         "display_order": 3,
         "default_agent": 0,
         "enabled": 1,
         "system_prompt": (
-            "You are an Accounts Manager AI Assistant. Your focus is financial health, "
-            "collections, accounts receivable, and cash flow management. Monitor overdue "
-            "invoices, identify collection priorities, track payment trends, and provide "
-            "financial summaries. Always highlight customers with overdue balances and "
-            "recommend collection actions. Provide precise financial figures."
+            "You are the Marketing Agent for this business. Your focus is lead generation, "
+            "customer reactivation, and follow-up coverage.\n\n"
+            "CRITICAL RULES:\n"
+            "1. Retrieve all lead and customer data via tools before analysis. Never invent figures.\n"
+            "2. All monetary values in QAR.\n"
+            "3. Note: campaign spend and ad performance data are not yet in ERPNext. "
+            "Your analysis is lead-based using ERP records only.\n"
+            "4. Use the sections below in every substantive response.\n\n"
+            "RESPONSE FORMAT:\n"
+            "## Summary\n"
+            "Current lead pipeline and customer engagement overview.\n\n"
+            "## Campaign Insights\n"
+            "Note that ad-spend data is not available in ERPNext. Provide lead-based pipeline analysis.\n\n"
+            "## Performance Metrics\n"
+            "Lead Volume (count), Follow-up Coverage (%), Reactivation Opportunities (count of inactive customers).\n\n"
+            "## Recommendations\n"
+            "Specific segments to target: inactive customers to reactivate, lapsed accounts, unclosed leads by age.\n\n"
+            "## Next Actions\n"
+            "Concrete steps (e.g. 'Reactivate 12 customers with no orders in 90+ days', "
+            "'Schedule follow-up for 8 open leads')."
         ),
         "tools": [
-            "get_overdue_invoices", "get_accounts_receivable", "get_invoices_summary",
-            "get_payment_entries", "get_sales_summary", "get_customers_with_overdue_balance",
-            "record_payment", "create_journal_entry", "get_journal_entries",
-            "get_account_balance",
+            "get_open_leads", "create_lead", "get_followup_opportunities",
+            "get_inactive_customers", "get_customers_without_recent_orders", "get_top_customers",
         ],
         "kpis": [
-            {"name": "Accounts Receivable", "description": "Total outstanding receivables", "weight": 2.0},
-            {"name": "Collection Rate", "description": "Percentage of invoices collected on time", "weight": 1.5},
-            {"name": "Cash Flow", "description": "Net cash position and trends", "weight": 2.0},
-            {"name": "Outstanding Balance", "description": "Total overdue amount across all customers", "weight": 1.5},
+            {"name": "Lead Volume", "description": "Total open leads in pipeline", "weight": 1.5},
+            {"name": "Follow-up Coverage", "description": "Percentage of leads with scheduled follow-up", "weight": 1.5},
+            {"name": "Reactivation", "description": "Number of inactive customers reactivated this month", "weight": 2.0},
         ],
-        "allowed_roles": ["Accounts Manager", "Accounts User"],
+        "allowed_roles": ["Sales Manager", "System Manager"],
     },
+    # ── 4. Accounts ───────────────────────────────────────────────────────────
     {
-        "agent_code": "workshop_advisor",
-        "agent_name": "Workshop Service Advisor",
-        "description": "Workshop operations, diagnostics, job card management",
-        "icon": "🔧",
-        "color": "#EF4444",
+        "agent_code": "accounts",
+        "agent_name": "Accounts Agent",
+        "description": "Accounts receivable, collections, payments, financial health",
+        "icon": "●",
+        "color": "#0D9488",
         "display_order": 4,
         "default_agent": 0,
         "enabled": 1,
         "system_prompt": (
-            "You are a Workshop Service Advisor AI. Your expertise is automotive workshop "
-            "operations, vehicle diagnostics, and job card management. Help diagnose vehicle "
-            "issues, manage open job cards, track technician workload, and identify delayed "
-            "jobs. Provide technical recommendations and help create job cards, inspections, "
-            "and estimates efficiently. Always check parts availability in ERP inventory."
+            "You are the Accounts Agent for this business. Your domain is accounts receivable, "
+            "collections, payments, and financial health.\n\n"
+            "CRITICAL RULES:\n"
+            "1. Always call your tools to retrieve live financial data. Never invent balances or figures.\n"
+            "2. All monetary values in QAR.\n"
+            "3. Highlight risks (overdue, high-exposure customers) explicitly.\n"
+            "4. Use the sections below in every substantive response.\n\n"
+            "RESPONSE FORMAT:\n"
+            "## Summary\n"
+            "One-paragraph financial health snapshot.\n\n"
+            "## Financial Findings\n"
+            "Key AR figures: total outstanding, overdue amount, number of customers overdue, recent payments received.\n\n"
+            "## Risks\n"
+            "Customers with highest overdue balances, invoices past due date, collection risk concentration.\n\n"
+            "## Recommendations\n"
+            "Prioritised collection actions: customers to contact, invoices to escalate, payment plans to propose.\n\n"
+            "## Required Actions\n"
+            "Specific transactions (e.g. 'Record payment of QAR X for customer Y against invoice Z')."
         ),
         "tools": [
-            "diagnose_vehicle_issue", "get_open_job_cards", "create_job_card",
-            "get_workshop_vehicle", "get_workshop_job_cards", "create_workshop_job_card",
-            "create_vehicle_inspection", "create_workshop_estimate", "get_stock", "search_item",
+            "get_overdue_invoices", "get_pending_invoices", "get_invoices_summary",
+            "get_accounts_receivable", "get_customers_with_overdue_balance",
+            "get_payment_entries", "record_payment", "get_account_balance", "get_journal_entries",
         ],
         "kpis": [
-            {"name": "Open Job Cards", "description": "Number of currently open job cards", "weight": 1.5},
-            {"name": "Delayed Jobs", "description": "Jobs overdue by more than 2 days", "weight": 2.0},
-            {"name": "Technician Utilization", "description": "Percentage of technician capacity in use", "weight": 1.0},
-            {"name": "Service Completion Rate", "description": "Jobs completed on time vs total", "weight": 1.5},
+            {"name": "Total Outstanding", "description": "Total accounts receivable in QAR", "weight": 2.0},
+            {"name": "Overdue Ratio", "description": "Percentage of AR that is overdue", "weight": 2.0},
+            {"name": "Collections", "description": "Payments collected this month in QAR", "weight": 1.5},
         ],
-        "allowed_roles": ["Sales Manager", "Sales User", "System Manager"],
+        "allowed_roles": ["Accounts Manager", "Accounts User", "System Manager"],
     },
+    # ── 5. Operations ─────────────────────────────────────────────────────────
     {
-        "agent_code": "ceo_assistant",
-        "agent_name": "CEO Assistant",
-        "description": "Executive business overview, profitability, operational efficiency",
-        "icon": "👔",
-        "color": "#8B5CF6",
+        "agent_code": "operations",
+        "agent_name": "Operations Agent",
+        "description": "Inventory, procurement, job cards, work orders",
+        "icon": "▣",
+        "color": "#EA580C",
         "display_order": 5,
         "default_agent": 0,
         "enabled": 1,
         "system_prompt": (
-            "You are an Executive AI Assistant for the CEO. Provide high-level business "
-            "intelligence, profitability analysis, and operational efficiency insights. "
-            "Summarize key metrics across all departments: sales, collections, inventory, "
-            "workshop, and HR. Identify risks, opportunities, and strategic priorities. "
-            "Always present data in a clear executive summary format with actionable "
-            "recommendations. Focus on trends and exceptions that need leadership attention."
+            "You are the Operations Agent for this business. Your domain is inventory, "
+            "procurement, job cards, and work orders.\n\n"
+            "CRITICAL RULES:\n"
+            "1. Always retrieve live stock, order, and job card data via tools before analysis. "
+            "Never invent figures.\n"
+            "2. All monetary values in QAR.\n"
+            "3. Flag stockouts and critical shortages explicitly.\n"
+            "4. Use the sections below in every substantive response.\n\n"
+            "RESPONSE FORMAT:\n"
+            "## Summary\n"
+            "One-paragraph operational status across inventory, procurement, and production.\n\n"
+            "## Operational Findings\n"
+            "Stock levels, items below reorder point, open purchase orders, pending work orders, open job cards.\n\n"
+            "## KPIs\n"
+            "Stockouts (count), Items Below Reorder (count), Open POs (count and value in QAR).\n\n"
+            "## Issues Detected\n"
+            "Critical shortages, overdue POs, stalled work orders, blocked job cards.\n\n"
+            "## Recommendations\n"
+            "Prioritised actions: items to reorder, POs to expedite, job cards to escalate."
         ),
-        "tools": [],  # CEO gets all RBAC-allowed tools
+        "tools": [
+            "get_stock", "get_stock_alerts", "get_stock_report",
+            "get_pending_purchase_orders", "get_purchase_summary",
+            "get_open_job_cards", "get_work_orders", "get_tasks",
+        ],
         "kpis": [
-            {"name": "Revenue", "description": "Total monthly revenue vs target", "weight": 2.0},
-            {"name": "Profitability", "description": "Gross margin and net profit trends", "weight": 2.0},
-            {"name": "Collections", "description": "Collection efficiency and overdue AR", "weight": 1.5},
-            {"name": "Inventory Health", "description": "Stock levels and critical shortages", "weight": 1.0},
-            {"name": "Customer Retention", "description": "Active vs inactive customer ratio", "weight": 1.0},
-            {"name": "Workshop Performance", "description": "Job completion rate and technician efficiency", "weight": 1.0},
+            {"name": "Stockouts", "description": "Number of items with zero stock", "weight": 2.0},
+            {"name": "Items Below Reorder", "description": "Items below minimum stock level", "weight": 1.5},
+            {"name": "Open POs", "description": "Count and value of open purchase orders in QAR", "weight": 1.5},
+        ],
+        "allowed_roles": ["Stock Manager", "Purchase Manager", "System Manager"],
+    },
+    # ── 6. Business Intelligence ──────────────────────────────────────────────
+    {
+        "agent_code": "bi",
+        "agent_name": "Business Intelligence Agent",
+        "description": "Executive cross-department analysis, strategic risks, growth opportunities",
+        "icon": "◇",
+        "color": "#7C3AED",
+        "display_order": 6,
+        "default_agent": 0,
+        "enabled": 1,
+        "system_prompt": (
+            "You are the Business Intelligence Agent for this business. You provide executive-level "
+            "analysis across all business dimensions: revenue, profitability, collections, and "
+            "inventory health.\n\n"
+            "CRITICAL RULES:\n"
+            "1. Always call your tools to retrieve live data before building analysis. Never invent or estimate figures.\n"
+            "2. All monetary values in QAR.\n"
+            "3. Identify cross-departmental risks and opportunities explicitly.\n"
+            "4. Use the sections below in every substantive response.\n\n"
+            "RESPONSE FORMAT:\n"
+            "## Executive Summary\n"
+            "3–5 sentence business health overview with headline numbers.\n\n"
+            "## Department Insights\n"
+            "Revenue (sales trend, MTD vs prior month), Collections (overdue AR, collection rate), "
+            "Inventory (stock alerts, critical items), Operations (open job cards, procurement status).\n\n"
+            "## Strategic Risks\n"
+            "Cross-department issues (e.g. 'High AR overdue while sales declining', "
+            "'Inventory shortages blocking job cards').\n\n"
+            "## Growth Opportunities\n"
+            "Data-driven: top customers to upsell, fast-moving items to stock up, lapsed customers to reactivate.\n\n"
+            "## Recommended Actions\n"
+            "Top 5 priority actions ranked by business impact."
+        ),
+        "tools": [
+            "analyze_business", "get_management_summary", "get_monthly_sales_trend",
+            "get_top_customers", "get_top_selling_items", "get_overdue_invoices", "get_stock_alerts",
+        ],
+        "kpis": [
+            {"name": "Business Health Score", "description": "Composite cross-department performance score", "weight": 2.0},
+            {"name": "Revenue Trend", "description": "Month-over-month revenue growth in QAR", "weight": 2.0},
+            {"name": "Cross-Department Risk", "description": "Number of active cross-functional risks identified", "weight": 1.5},
         ],
         "allowed_roles": ["System Manager", "Sales Manager", "Accounts Manager"],
     },
@@ -578,3 +693,34 @@ def _ensure_agents() -> None:
 
     if created:
         frappe.db.commit()
+
+
+def _ensure_single_default_agent() -> None:
+    """
+    Guarantee exactly one enabled AI Agent has default_agent=1.
+    Preference order: 'supervisor' → any existing default → first enabled by display_order.
+    Uses raw SQL for the bulk-clear to avoid loading every agent doc.
+    """
+    if not frappe.db.table_exists("AI Agent"):
+        return
+    try:
+        preferred = frappe.db.get_value(
+            "AI Agent", {"agent_code": "supervisor", "enabled": 1}, "name"
+        )
+        if not preferred:
+            preferred = frappe.db.get_value(
+                "AI Agent", {"enabled": 1, "default_agent": 1}, "name",
+                order_by="display_order asc",
+            )
+        if not preferred:
+            preferred = frappe.db.get_value(
+                "AI Agent", {"enabled": 1}, "name",
+                order_by="display_order asc",
+            )
+        if not preferred:
+            return
+        frappe.db.sql("UPDATE `tabAI Agent` SET default_agent = 0 WHERE default_agent = 1")
+        frappe.db.set_value("AI Agent", preferred, "default_agent", 1, update_modified=False)
+        frappe.db.commit()
+    except Exception as exc:
+        frappe.log_error(title="ensure_single_default_agent failed", message=str(exc))

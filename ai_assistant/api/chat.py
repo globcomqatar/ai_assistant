@@ -46,6 +46,21 @@ def send_message(message: str, history: str = "[]", current_agent: str = "genera
     # Step 4: Session safety — strips any session-level override for non-SM
     agent_code = get_session_agent(user, agent_code)
 
+    # Step 5: Auto-routing — System Manager + Auto mode only.
+    # Non-SM users are already locked to "general" by Steps 1–4; this block
+    # never fires for them.
+    routing_info: dict | None = None
+    from ai_assistant.api.agent_manager import _is_system_manager
+    if _is_system_manager(user):
+        try:
+            from ai_assistant.api import supervisor as _supervisor
+            if _supervisor.is_auto_routing_enabled():
+                routing_result = _supervisor.route_to_agent(message, user)
+                agent_code = routing_result["agent_code"]
+                routing_info = routing_result
+        except Exception as _exc:
+            frappe.log_error(title="Auto-routing Step 5 failed", message=str(_exc))
+
     try:
         hist: list[dict] = json.loads(history)
         if not isinstance(hist, list):
@@ -90,7 +105,7 @@ def send_message(message: str, history: str = "[]", current_agent: str = "genera
             usage = action["_meta"]
             break
 
-    return {"results": results, "ai_raw": ai_raw, "usage": usage}
+    return {"results": results, "ai_raw": ai_raw, "usage": usage, "routing": routing_info}
 
 
 @frappe.whitelist()

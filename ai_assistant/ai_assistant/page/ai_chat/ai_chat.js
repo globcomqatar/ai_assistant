@@ -392,9 +392,25 @@ class AIChatPage {
 	_handle_response(data, userMsg) {
 		const results = data.results || [];
 		const usage = data.usage || {};
+		const routing = data.routing || null;
 
 		// Push user turn to history
 		this.history.push({ role: "user", content: userMsg });
+
+		// Auto-routing note — shown when supervisor routed this message
+		if (routing && routing.auto && routing.agent_code) {
+			const candidate = (this.agents || []).find(a => a.agent_code === routing.agent_code);
+			const icon = candidate ? (candidate.icon || "🤖") : "🤖";
+			const name = frappe.utils.escape_html(routing.agent_name || routing.agent_code);
+			const reason = routing.reason ? ` — ${frappe.utils.escape_html(routing.reason)}` : "";
+			this.$messages.append(
+				`<div class="ai-routing-note">
+					<span class="ai-routing-note-icon">⚡</span>
+					${__("Supervisor routed to")} <strong>${name}</strong>${reason}
+				</div>`
+			);
+			this._switch_agent_silent(routing.agent_code, routing.agent_name || routing.agent_code, icon);
+		}
 
 		const replyParts = [];
 
@@ -1404,6 +1420,17 @@ class AIChatPage {
 		`);
 		this.$messages.append($systemMsg);
 		this._scroll_to_bottom();
+	}
+
+	// Updates active agent state + header without injecting a chat message.
+	// Used by auto-routing so the routing note row acts as the announcement.
+	_switch_agent_silent(agent_code, agent_name, icon) {
+		this.current_agent = agent_code;
+		if (this.agents && this.agents.length) {
+			this._render_agent_bar(this.agents);
+		}
+		$("#ai-agent-avatar").text(icon || "🤖");
+		$("#ai-agent-title").text(agent_name || __("AI Assistant"));
 	}
 
 	_load_usage() {

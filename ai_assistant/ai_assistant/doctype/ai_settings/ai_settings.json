@@ -33,6 +33,8 @@
   "col_break_limits",
   "allow_tool_execution",
   "fallback_mode",
+  "section_agents",
+  "agent_routing_mode",
   "section_system_prompt",
   "system_prompt_override"
  ],
@@ -241,6 +243,20 @@
    "fieldtype": "Select",
    "label": "Fallback Mode",
    "options": "auto\nstrict\nsafe"
+  },
+
+  {
+   "fieldname": "section_agents",
+   "fieldtype": "Section Break",
+   "label": "Multi-Agent"
+  },
+  {
+   "default": "Manual",
+   "fieldname": "agent_routing_mode",
+   "fieldtype": "Select",
+   "label": "Agent Routing Mode",
+   "options": "Manual\nAuto",
+   "description": "Manual: user picks an agent from the selector bar. Auto: the Supervisor Agent classifies each message and routes it to the most appropriate specialist agent automatically (System Manager only)."
   },
 
   {

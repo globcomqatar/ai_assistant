@@ -977,3 +977,20 @@
 	border-radius: 6px;
 	opacity: 0.8;
 }
+
+/* Auto-routing note — shown when Supervisor routes a message */
+.ai-routing-note {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 0.74rem;
+	color: var(--text-muted);
+	background: var(--card-bg);
+	border: 1px solid var(--border-color);
+	border-left: 3px solid #7C3AED;
+	border-radius: 6px;
+	padding: 5px 12px;
+	margin: 6px 0 2px;
+	font-style: italic;
+}
+.ai-routing-note-icon { font-style: normal; font-size: 0.85rem; }
