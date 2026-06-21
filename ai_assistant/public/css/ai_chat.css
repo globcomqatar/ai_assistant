@@ -920,4 +920,60 @@
 
 	/* FAB: smaller on mobile */
 	.ai-launcher-fab { width: 46px; height: 46px; font-size: 1.2rem; bottom: 16px; right: 16px; }
+
+	/* Mobile: agent bar */
+	.ai-agent-pill { font-size: 0.7rem; padding: 3px 8px; }
+	.ai-agent-pill-name { display: none; }
+	.ai-agent-pill.active .ai-agent-pill-name { display: inline; }
+}
+
+/* ── Agent selector bar ──────────────────────────────────────── */
+.ai-agent-bar {
+	display: flex;
+	align-items: center;
+	padding: 6px 12px;
+	background: var(--bg-color);
+	border-bottom: 1px solid var(--border-color);
+	overflow-x: auto;
+	flex-shrink: 0;
+	gap: 6px;
+	scrollbar-width: none;
+}
+.ai-agent-bar::-webkit-scrollbar { display: none; }
+.ai-agent-pills { display: flex; gap: 6px; }
+.ai-agent-pill {
+	display: flex; align-items: center; gap: 5px;
+	padding: 4px 10px; border-radius: 999px;
+	border: 1.5px solid var(--border-color);
+	background: var(--card-bg); color: var(--text-color);
+	font-size: 0.75rem; font-weight: 500; cursor: pointer;
+	white-space: nowrap; transition: all 0.15s;
+}
+.ai-agent-pill:hover { border-color: var(--agent-color, #2563EB); color: var(--agent-color, #2563EB); }
+.ai-agent-pill.active {
+	background: var(--agent-color, #2563EB);
+	border-color: var(--agent-color, #2563EB);
+	color: #fff;
+}
+.ai-agent-pill-icon { font-size: 0.9rem; }
+.ai-agent-pill-name { line-height: 1; }
+
+/* Active agent indicator in header */
+.ai-active-agent-badge {
+	display: flex; align-items: center; gap: 4px;
+	font-size: 0.68rem; opacity: 0.85;
+	background: rgba(255,255,255,0.15);
+	border-radius: 999px; padding: 1px 8px;
+}
+
+/* System message for agent switch */
+.ai-system-msg {
+	text-align: center;
+	font-size: 0.75rem;
+	color: var(--text-muted);
+	padding: 4px 12px;
+	margin: 4px 0;
+	background: var(--subtle-fg);
+	border-radius: 6px;
+	opacity: 0.8;
 }

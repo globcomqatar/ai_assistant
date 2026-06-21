@@ -59,6 +59,8 @@ def _write_log(
     requested_tool: str = "",
     permission_result: str = "N/A",
     user_roles: str = "",
+    agent_code: str = "",
+    agent_name: str = "",
 ) -> None:
     try:
         log = frappe.new_doc("AI Usage Log")
@@ -74,6 +76,8 @@ def _write_log(
         log.requested_tool = requested_tool
         log.permission_result = permission_result
         log.user_roles = user_roles
+        log.agent_code = agent_code
+        log.agent_name = agent_name
         log.flags.ignore_permissions = True
         log.insert()
         frappe.db.commit()
@@ -86,6 +90,7 @@ def execute_actions(
     user: str,
     prompt: str,
     ai_raw_response: str,
+    agent_code: str = "general",
 ) -> list[dict]:
     """
     Execute a list of AI-resolved action dicts.
@@ -105,16 +110,26 @@ def execute_actions(
     # Capture user roles once for all log entries in this request
     roles_str = ", ".join(get_user_roles(user))
 
+    # Resolve agent name for logging
+    _agent_name = ""
+    if agent_code and agent_code != "general":
+        try:
+            _agent_name = frappe.db.get_value("AI Agent", agent_code, "agent_name") or ""
+        except Exception:
+            pass
+
     # Budget check
     allowed, reason = _check_budget(user, settings)
     if not allowed:
         _write_log(user, prompt, ai_raw_response, "", tokens_total, cost_total,
-                   "Blocked", reason, user_roles=roles_str)
+                   "Blocked", reason, user_roles=roles_str,
+                   agent_code=agent_code, agent_name=_agent_name)
         return [{"intent": "blocked", "message": reason}]
 
     if not settings.allow_tool_execution:
         _write_log(user, prompt, ai_raw_response, "", tokens_total, cost_total,
-                   "Blocked", "Tool execution disabled in settings.", user_roles=roles_str)
+                   "Blocked", "Tool execution disabled in settings.", user_roles=roles_str,
+                   agent_code=agent_code, agent_name=_agent_name)
         return [{"intent": "blocked", "message": _("Tool execution is currently disabled by the administrator.")}]
 
     results: list[dict] = []
@@ -153,6 +168,8 @@ def execute_actions(
                 requested_tool=intent,
                 permission_result="Denied",
                 user_roles=roles_str,
+                agent_code=agent_code,
+                agent_name=_agent_name,
             )
             continue
         # ─────────────────────────────────────────────────────────────────────
@@ -197,6 +214,8 @@ def execute_actions(
             requested_tool=", ".join(a.get("intent", "") for a in actions if a.get("intent") != "reply"),
             permission_result="Allowed" if tools_used else "N/A",
             user_roles=roles_str,
+            agent_code=agent_code,
+            agent_name=_agent_name,
         )
 
     return results

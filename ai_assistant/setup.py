@@ -14,6 +14,7 @@ def create_dashboard():
     _ensure_dashboard_charts()
     _ensure_dashboard()
     create_default_tool_permissions()
+    _ensure_agents()
 
 
 def _fix_workspace_title():
@@ -290,6 +291,206 @@ def create_default_tool_permissions() -> None:
         doc.flags.ignore_mandatory = True
         doc.insert()
         created += 1
+
+    if created:
+        frappe.db.commit()
+
+
+# ─── Default AI Agents ────────────────────────────────────────────────────────
+
+_DEFAULT_AGENTS = [
+    {
+        "agent_code": "general",
+        "agent_name": "General ERP Assistant",
+        "description": "General ERP support for all modules",
+        "icon": "🤖",
+        "color": "#6366F1",
+        "display_order": 1,
+        "default_agent": 1,
+        "enabled": 1,
+        "system_prompt": (
+            "You are a General ERP Assistant for a business using Frappe/ERPNext. "
+            "You help users with all ERP modules including sales, purchasing, inventory, "
+            "accounts, HR, and manufacturing. Provide clear, accurate answers and always "
+            "use the appropriate tools to fetch or create data. Be concise and professional."
+        ),
+        "tools": [],
+        "kpis": [],
+        "allowed_roles": [],
+    },
+    {
+        "agent_code": "sales_manager",
+        "agent_name": "Sales Manager",
+        "description": "Revenue growth, quotation conversion, customer acquisition",
+        "icon": "📈",
+        "color": "#10B981",
+        "display_order": 2,
+        "default_agent": 0,
+        "enabled": 1,
+        "system_prompt": (
+            "You are a Sales Manager AI Assistant. Your primary focus is revenue growth, "
+            "quotation conversion, and customer acquisition. Analyze sales trends, monitor "
+            "pending quotations, identify top customers, and recommend actions to close deals. "
+            "Always provide actionable insights with specific numbers and trends. "
+            "Prioritize follow-up opportunities and highlight expiring quotations."
+        ),
+        "tools": [
+            "get_sales_summary", "get_monthly_sales_trend", "get_pending_quotations",
+            "get_top_customers", "create_quotation", "search_customer",
+            "get_top_selling_items", "get_invoices_summary", "get_quotations",
+            "convert_quotation_to_sales_order",
+        ],
+        "kpis": [
+            {"name": "Monthly Revenue", "description": "Total sales revenue for the current month", "weight": 2.0},
+            {"name": "Quotation Conversion Rate", "description": "Percentage of quotations converted to orders", "weight": 1.5},
+            {"name": "Customer Growth", "description": "New customers acquired this month", "weight": 1.0},
+            {"name": "Sales Growth", "description": "Month-over-month sales growth percentage", "weight": 1.5},
+        ],
+        "allowed_roles": ["Sales Manager", "Sales User"],
+    },
+    {
+        "agent_code": "accounts_manager",
+        "agent_name": "Accounts Manager",
+        "description": "Finance, collections, receivables, cash flow",
+        "icon": "💰",
+        "color": "#F59E0B",
+        "display_order": 3,
+        "default_agent": 0,
+        "enabled": 1,
+        "system_prompt": (
+            "You are an Accounts Manager AI Assistant. Your focus is financial health, "
+            "collections, accounts receivable, and cash flow management. Monitor overdue "
+            "invoices, identify collection priorities, track payment trends, and provide "
+            "financial summaries. Always highlight customers with overdue balances and "
+            "recommend collection actions. Provide precise financial figures."
+        ),
+        "tools": [
+            "get_overdue_invoices", "get_accounts_receivable", "get_invoices_summary",
+            "get_payment_entries", "get_sales_summary", "get_customers_with_overdue_balance",
+            "record_payment", "create_journal_entry", "get_journal_entries",
+            "get_account_balance",
+        ],
+        "kpis": [
+            {"name": "Accounts Receivable", "description": "Total outstanding receivables", "weight": 2.0},
+            {"name": "Collection Rate", "description": "Percentage of invoices collected on time", "weight": 1.5},
+            {"name": "Cash Flow", "description": "Net cash position and trends", "weight": 2.0},
+            {"name": "Outstanding Balance", "description": "Total overdue amount across all customers", "weight": 1.5},
+        ],
+        "allowed_roles": ["Accounts Manager", "Accounts User"],
+    },
+    {
+        "agent_code": "workshop_advisor",
+        "agent_name": "Workshop Service Advisor",
+        "description": "Workshop operations, diagnostics, job card management",
+        "icon": "🔧",
+        "color": "#EF4444",
+        "display_order": 4,
+        "default_agent": 0,
+        "enabled": 1,
+        "system_prompt": (
+            "You are a Workshop Service Advisor AI. Your expertise is automotive workshop "
+            "operations, vehicle diagnostics, and job card management. Help diagnose vehicle "
+            "issues, manage open job cards, track technician workload, and identify delayed "
+            "jobs. Provide technical recommendations and help create job cards, inspections, "
+            "and estimates efficiently. Always check parts availability in ERP inventory."
+        ),
+        "tools": [
+            "diagnose_vehicle_issue", "get_open_job_cards", "create_job_card",
+            "get_workshop_vehicle", "get_workshop_job_cards", "create_workshop_job_card",
+            "create_vehicle_inspection", "create_workshop_estimate", "get_stock", "search_item",
+        ],
+        "kpis": [
+            {"name": "Open Job Cards", "description": "Number of currently open job cards", "weight": 1.5},
+            {"name": "Delayed Jobs", "description": "Jobs overdue by more than 2 days", "weight": 2.0},
+            {"name": "Technician Utilization", "description": "Percentage of technician capacity in use", "weight": 1.0},
+            {"name": "Service Completion Rate", "description": "Jobs completed on time vs total", "weight": 1.5},
+        ],
+        "allowed_roles": ["Sales Manager", "Sales User", "System Manager"],
+    },
+    {
+        "agent_code": "ceo_assistant",
+        "agent_name": "CEO Assistant",
+        "description": "Executive business overview, profitability, operational efficiency",
+        "icon": "👔",
+        "color": "#8B5CF6",
+        "display_order": 5,
+        "default_agent": 0,
+        "enabled": 1,
+        "system_prompt": (
+            "You are an Executive AI Assistant for the CEO. Provide high-level business "
+            "intelligence, profitability analysis, and operational efficiency insights. "
+            "Summarize key metrics across all departments: sales, collections, inventory, "
+            "workshop, and HR. Identify risks, opportunities, and strategic priorities. "
+            "Always present data in a clear executive summary format with actionable "
+            "recommendations. Focus on trends and exceptions that need leadership attention."
+        ),
+        "tools": [],  # CEO gets all RBAC-allowed tools
+        "kpis": [
+            {"name": "Revenue", "description": "Total monthly revenue vs target", "weight": 2.0},
+            {"name": "Profitability", "description": "Gross margin and net profit trends", "weight": 2.0},
+            {"name": "Collections", "description": "Collection efficiency and overdue AR", "weight": 1.5},
+            {"name": "Inventory Health", "description": "Stock levels and critical shortages", "weight": 1.0},
+            {"name": "Customer Retention", "description": "Active vs inactive customer ratio", "weight": 1.0},
+            {"name": "Workshop Performance", "description": "Job completion rate and technician efficiency", "weight": 1.0},
+        ],
+        "allowed_roles": ["System Manager", "Sales Manager", "Accounts Manager"],
+    },
+]
+
+
+def _ensure_agents() -> None:
+    """
+    Idempotent: create default AI Agent records if the DocType exists and records are missing.
+    Existing records are left unchanged so admins can customize them.
+    """
+    # Only run if the DocType exists in the DB (i.e., after first migrate)
+    try:
+        if not frappe.db.table_exists("AI Agent"):
+            return
+    except Exception:
+        return
+
+    created = 0
+    for agent_data in _DEFAULT_AGENTS:
+        agent_code = agent_data["agent_code"]
+        if frappe.db.exists("AI Agent", agent_code):
+            continue
+
+        doc = frappe.new_doc("AI Agent")
+        doc.agent_code    = agent_code
+        doc.agent_name    = agent_data["agent_name"]
+        doc.description   = agent_data.get("description", "")
+        doc.icon          = agent_data.get("icon", "🤖")
+        doc.color         = agent_data.get("color", "#2563EB")
+        doc.display_order = agent_data.get("display_order", 99)
+        doc.default_agent = agent_data.get("default_agent", 0)
+        doc.enabled       = agent_data.get("enabled", 1)
+        doc.system_prompt = agent_data.get("system_prompt", "")
+
+        for tool_name in (agent_data.get("tools") or []):
+            doc.append("tools", {"tool_name": tool_name, "enabled": 1, "priority": 10})
+
+        for kpi in (agent_data.get("kpis") or []):
+            doc.append("kpis", {
+                "kpi_name":    kpi["name"],
+                "description": kpi.get("description", ""),
+                "weight":      kpi.get("weight", 1.0),
+                "enabled":     1,
+            })
+
+        for role in (agent_data.get("allowed_roles") or []):
+            doc.append("allowed_roles", {"role": role})
+
+        doc.flags.ignore_permissions = True
+        doc.flags.ignore_mandatory   = True
+        try:
+            doc.insert()
+            created += 1
+        except Exception as exc:
+            frappe.log_error(
+                title=f"AI Agent seed failed: {agent_code}",
+                message=str(exc),
+            )
 
     if created:
         frappe.db.commit()

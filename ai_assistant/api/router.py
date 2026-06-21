@@ -2,16 +2,8 @@
 router.py — sends user messages to the configured AI provider and returns
 structured JSON tool-call(s) or a plain text reply.
 
-The AI is instructed to ALWAYS respond in JSON.  Two valid shapes:
-
-  Single action:
-    {"intent": "create_customer", "parameters": {"name": "ABC Trading"}}
-
-  Multiple actions:
-    [{"intent": "...", "parameters": {...}}, ...]
-
-  Clarification / info (no action needed):
-    {"intent": "reply", "message": "Here is the information you asked for..."}
+Supports Multi-Agent Framework: pass agent_code to route() to activate
+a specialized agent with its own prompt, tools, and KPIs.
 """
 
 from __future__ import annotations
@@ -24,7 +16,7 @@ from ai_assistant.api.tools import TOOLS_SCHEMA
 from ai_assistant.providers import get_provider
 from ai_assistant.api.permission_manager import get_permitted_tools_schema
 
-_DEFAULT_SYSTEM_PROMPT = """You are an ERPNext AI assistant and Business Intelligence Copilot for a business using Frappe/ERPNext.
+_BASE_SYSTEM_PROMPT = """You are an ERPNext AI assistant and Business Intelligence Copilot for a business using Frappe/ERPNext.
 
 IMPORTANT: You MUST respond with ONLY valid JSON. No markdown. No explanation. No extra text.
 
@@ -69,94 +61,105 @@ Business Intelligence routing rules (apply BEFORE any other rule):
 """
 
 
-def build_system_prompt(user: str | None = None) -> str:
-	settings = frappe.get_single("AI Settings")
-	if settings.system_prompt_override:
-		return settings.system_prompt_override
+def build_system_prompt(user: str | None = None, agent_code: str | None = None) -> str:
+    """
+    Build the final system prompt for the AI.
 
-	# Filter tools to only what this user is permitted to use
-	schema = get_permitted_tools_schema(user) if user else TOOLS_SCHEMA
-	tools_text = "\n".join(f"- {t['name']}: {t['description']}" for t in schema)
-	return _DEFAULT_SYSTEM_PROMPT.format(tools=tools_text)
+    1. If AI Settings has a system_prompt_override, that wins (ignores agent).
+    2. Otherwise: RBAC-filter tools → agent-filter tools → merge agent prompt.
+    """
+    settings = frappe.get_single("AI Settings")
+    if settings.system_prompt_override:
+        return settings.system_prompt_override
+
+    # RBAC-filter first
+    schema = get_permitted_tools_schema(user) if user else TOOLS_SCHEMA
+
+    # Agent-filter second (intersection with agent's tool list)
+    if agent_code and agent_code != "general":
+        try:
+            from ai_assistant.api.agent_manager import filter_tools_for_agent
+            schema = filter_tools_for_agent(agent_code, schema)
+        except Exception:
+            pass
+
+    tools_text = "\n".join(f"- {t['name']}: {t['description']}" for t in schema)
+    base = _BASE_SYSTEM_PROMPT.format(tools=tools_text)
+
+    # Merge agent system prompt on top
+    if agent_code and agent_code != "general":
+        try:
+            from ai_assistant.api.agent_manager import build_agent_system_prompt
+            return build_agent_system_prompt(agent_code, user or "", base)
+        except Exception:
+            pass
+
+    return base
 
 
 def _extract_json(raw: str) -> str:
-	"""
-	Return the first valid JSON object or array from raw text.
-	Handles markdown code fences and mixed prose + JSON.
-	"""
-	# Strip markdown fences: ```json ... ``` or ``` ... ```
-	clean = re.sub(r"```(?:json)?\s*\n?(.*?)\n?\s*```", r"\1", raw, flags=re.DOTALL).strip()
-
-	# If the whole string is valid JSON, return immediately
-	try:
-		json.loads(clean)
-		return clean
-	except json.JSONDecodeError:
-		pass
-
-	# Scan for first { or [ and extract the balanced block
-	for open_ch, close_ch in [('{', '}'), ('[', ']')]:
-		start = clean.find(open_ch)
-		if start == -1:
-			continue
-		depth = 0
-		for i, ch in enumerate(clean[start:], start):
-			if ch == open_ch:
-				depth += 1
-			elif ch == close_ch:
-				depth -= 1
-			if depth == 0:
-				candidate = clean[start : i + 1]
-				try:
-					json.loads(candidate)
-					return candidate
-				except json.JSONDecodeError:
-					break
-
-	return clean  # return as-is; caller will wrap as plain reply
+    clean = re.sub(r"```(?:json)?\s*\n?(.*?)\n?\s*```", r"\1", raw, flags=re.DOTALL).strip()
+    try:
+        json.loads(clean)
+        return clean
+    except json.JSONDecodeError:
+        pass
+    for open_ch, close_ch in [('{', '}'), ('[', ']')]:
+        start = clean.find(open_ch)
+        if start == -1:
+            continue
+        depth = 0
+        for i, ch in enumerate(clean[start:], start):
+            if ch == open_ch:
+                depth += 1
+            elif ch == close_ch:
+                depth -= 1
+            if depth == 0:
+                candidate = clean[start : i + 1]
+                try:
+                    json.loads(candidate)
+                    return candidate
+                except json.JSONDecodeError:
+                    break
+    return clean
 
 
 def route(
-	messages: list[dict],
-	user: str | None = None,
+    messages: list[dict],
+    user: str | None = None,
+    agent_code: str | None = None,
 ) -> list[dict]:
-	"""
-	Send conversation history to the AI and return a list of action dicts.
+    """
+    Send conversation history to the AI and return a list of action dicts.
+    Pass agent_code to activate a specialized agent.
+    """
+    provider = get_provider()
+    system_prompt = build_system_prompt(user=user, agent_code=agent_code)
 
-	Each dict has "intent" and (optionally) "parameters" or "message".
-	The last item carries "_meta" with token/cost info.
-	"""
-	provider = get_provider()
-	system_prompt = build_system_prompt(user=user)
+    ai_response = provider.chat(messages=messages, system_prompt=system_prompt)
+    raw = ai_response.raw_text.strip()
 
-	ai_response = provider.chat(messages=messages, system_prompt=system_prompt)
+    _meta = {
+        "tokens": ai_response.tokens_total,
+        "cost":   ai_response.estimated_cost_usd,
+        "model":  ai_response.model,
+    }
 
-	raw = ai_response.raw_text.strip()
+    if not raw:
+        return [{"intent": "reply",
+                 "message": frappe._("The AI returned an empty response. Please try again."),
+                 "_meta": _meta}]
 
-	_meta = {
-		"tokens": ai_response.tokens_total,
-		"cost": ai_response.estimated_cost_usd,
-		"model": ai_response.model,
-	}
+    clean = _extract_json(raw)
+    try:
+        parsed = json.loads(clean)
+    except json.JSONDecodeError:
+        return [{"intent": "reply", "message": raw, "_meta": _meta}]
 
-	if not raw:
-		return [{"intent": "reply", "message": frappe._("The AI returned an empty response. Please try again."), "_meta": _meta}]
+    if isinstance(parsed, dict):
+        parsed = [parsed]
+    if not isinstance(parsed, list) or not parsed:
+        return [{"intent": "reply", "message": raw, "_meta": _meta}]
 
-	clean = _extract_json(raw)
-
-	try:
-		parsed = json.loads(clean)
-	except json.JSONDecodeError:
-		# Could not extract valid JSON — surface the raw text as a reply
-		return [{"intent": "reply", "message": raw, "_meta": _meta}]
-
-	# Normalise to list
-	if isinstance(parsed, dict):
-		parsed = [parsed]
-
-	if not isinstance(parsed, list) or not parsed:
-		return [{"intent": "reply", "message": raw, "_meta": _meta}]
-
-	parsed[-1]["_meta"] = _meta
-	return parsed
+    parsed[-1]["_meta"] = _meta
+    return parsed

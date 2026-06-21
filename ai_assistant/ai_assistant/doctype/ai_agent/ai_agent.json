@@ -1,0 +1,53 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:agent_code",
+ "creation": "2026-06-21 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "agent_name","agent_code","description","cb1","enabled","default_agent","display_order",
+  "section_appearance","icon","color",
+  "section_ai","system_prompt","cb2","model_override","temperature","max_tokens",
+  "section_tools","tools",
+  "section_kpis","kpis",
+  "section_access","allowed_roles"
+ ],
+ "fields": [
+  {"fieldname":"agent_name","fieldtype":"Data","label":"Agent Name","reqd":1,"in_list_view":1,"bold":1},
+  {"fieldname":"agent_code","fieldtype":"Data","label":"Agent Code","reqd":1,"unique":1,"in_list_view":1},
+  {"fieldname":"description","fieldtype":"Small Text","label":"Description"},
+  {"fieldname":"cb1","fieldtype":"Column Break"},
+  {"fieldname":"enabled","fieldtype":"Check","label":"Enabled","default":"1","in_list_view":1},
+  {"fieldname":"default_agent","fieldtype":"Check","label":"Default Agent"},
+  {"fieldname":"display_order","fieldtype":"Int","label":"Display Order"},
+  {"fieldname":"section_appearance","fieldtype":"Section Break","label":"Appearance"},
+  {"fieldname":"icon","fieldtype":"Data","label":"Icon (Emoji)"},
+  {"fieldname":"color","fieldtype":"Color","label":"Color"},
+  {"fieldname":"section_ai","fieldtype":"Section Break","label":"AI Configuration"},
+  {"fieldname":"system_prompt","fieldtype":"Long Text","label":"System Prompt"},
+  {"fieldname":"cb2","fieldtype":"Column Break"},
+  {"fieldname":"model_override","fieldtype":"Data","label":"Model Override"},
+  {"fieldname":"temperature","fieldtype":"Float","label":"Temperature"},
+  {"fieldname":"max_tokens","fieldtype":"Int","label":"Max Tokens"},
+  {"fieldname":"section_tools","fieldtype":"Section Break","label":"Agent Tools"},
+  {"fieldname":"tools","fieldtype":"Table","label":"Tools","options":"AI Agent Tool"},
+  {"fieldname":"section_kpis","fieldtype":"Section Break","label":"KPIs"},
+  {"fieldname":"kpis","fieldtype":"Table","label":"KPIs","options":"AI Agent KPI"},
+  {"fieldname":"section_access","fieldtype":"Section Break","label":"Access Control"},
+  {"fieldname":"allowed_roles","fieldtype":"Table","label":"Allowed Roles","options":"AI Agent Role"}
+ ],
+ "links": [],
+ "modified": "2026-06-21 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "AI Assistant",
+ "name": "AI Agent",
+ "owner": "Administrator",
+ "permissions": [
+  {"role":"System Manager","read":1,"write":1,"create":1,"delete":1},
+  {"role":"All","read":1}
+ ],
+ "sort_field": "display_order",
+ "sort_order": "ASC",
+ "track_changes": 1
+}

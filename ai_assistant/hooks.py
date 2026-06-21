@@ -11,6 +11,7 @@ fixtures = [
 	{"dt": "Workspace",          "filters": [["module", "=", "AI Assistant"]]},
 	{"dt": "Number Card",        "filters": [["module", "=", "AI Assistant"]]},
 	{"dt": "AI Tool Permission", "filters": [["name", "like", "%"]]},
+	{"dt": "AI Agent",           "filters": [["name", "like", "%"]]},
 ]
 
 after_install  = "ai_assistant.setup.create_dashboard"

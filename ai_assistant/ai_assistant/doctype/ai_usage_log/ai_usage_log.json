@@ -23,7 +23,10 @@
   "requested_tool",
   "permission_result",
   "column_break_rbac",
-  "user_roles"
+  "user_roles",
+  "section_agent",
+  "agent_name",
+  "agent_code"
  ],
  "fields": [
   {
@@ -129,6 +132,22 @@
    "fieldname": "user_roles",
    "fieldtype": "Small Text",
    "label": "User Roles"
+  },
+  {
+   "fieldname": "section_agent",
+   "fieldtype": "Section Break",
+   "label": "Agent Tracking"
+  },
+  {
+   "fieldname": "agent_name",
+   "fieldtype": "Data",
+   "label": "Agent Name",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "agent_code",
+   "fieldtype": "Data",
+   "label": "Agent Code"
   }
  ],
  "modified": "2026-06-21 00:00:00.000000",

@@ -24,6 +24,8 @@ class AIChatPage {
 		this.wrapper = wrapper;
 		this.history = []; // [{role, content}]
 		this.is_loading = false;
+		this.current_agent = "general";
+		this.agents = [];
 
 		this._check_settings_then_render();
 	}
@@ -41,6 +43,7 @@ class AIChatPage {
 				if (r.message && r.message.enabled) {
 					this._render();
 					this._load_usage();
+					this._load_agents();
 				} else {
 					this._render_disabled();
 				}
@@ -150,9 +153,9 @@ class AIChatPage {
 								<line x1="3" y1="18" x2="21" y2="18"></line>
 							</svg>
 						</button>
-						<span class="ai-avatar">🤖</span>
+						<span class="ai-avatar" id="ai-agent-avatar">🤖</span>
 						<div>
-							<div class="ai-chat-title">${__("AI Assistant")}</div>
+							<div class="ai-chat-title" id="ai-agent-title">${__("AI Assistant")}</div>
 							<div class="ai-chat-subtitle" id="ai-model-label">${__("Powered by ERPNext AI")}</div>
 						</div>
 					</div>
@@ -168,6 +171,9 @@ class AIChatPage {
 						</a>
 					</div>
 				</div>
+
+				<!-- Agent selector bar -->
+				<div class="ai-agent-bar" id="ai-agent-bar"></div>
 
 				<!-- Messages -->
 				<div class="ai-messages" id="ai-messages">
@@ -290,6 +296,12 @@ class AIChatPage {
 			}
 		});
 
+		// Agent pill clicks
+		$(document).on("click", ".ai-agent-pill", (e) => {
+			const agent_code = $(e.currentTarget).data("agent");
+			if (agent_code) this._switch_agent(agent_code);
+		});
+
 		// Sidebar collapse / expand toggle
 		$("#ai-sb-toggle").on("click", () => this._collapse_sidebar());
 		$("#ai-sb-expand-btn").on("click", () => this._expand_sidebar());
@@ -357,6 +369,7 @@ class AIChatPage {
 			args: {
 				message: msg,
 				history: JSON.stringify(this.history),
+				current_agent: this.current_agent || "general",
 			},
 			callback: (r) => {
 				this.is_loading = false;
@@ -1334,6 +1347,56 @@ class AIChatPage {
 		`);
 		this.$input.val("").css("height", "auto");
 		this.$send.prop("disabled", true);
+	}
+
+	// ── Agent selector ────────────────────────────────────────────────────────
+
+	_load_agents() {
+		frappe.call({
+			method: "ai_assistant.api.chat.get_agents",
+			callback: (r) => {
+				if (r.message && r.message.length) {
+					this.agents = r.message;
+					this._render_agent_bar(r.message);
+				}
+			},
+		});
+	}
+
+	_render_agent_bar(agents) {
+		const pills = agents.map(a => {
+			const isActive = a.agent_code === this.current_agent;
+			return `<button class="ai-agent-pill${isActive ? " active" : ""}"
+				data-agent="${frappe.utils.escape_html(a.agent_code)}"
+				style="--agent-color: ${frappe.utils.escape_html(a.color || "#2563EB")}"
+				title="${frappe.utils.escape_html(a.description || a.agent_name)}">
+				<span class="ai-agent-pill-icon">${a.icon || "🤖"}</span>
+				<span class="ai-agent-pill-name">${frappe.utils.escape_html(a.agent_name)}</span>
+			</button>`;
+		}).join("");
+		$("#ai-agent-bar").html(`<div class="ai-agent-pills">${pills}</div>`);
+	}
+
+	_switch_agent(agent_code) {
+		const agent = (this.agents || []).find(a => a.agent_code === agent_code);
+		if (!agent) return;
+
+		this.current_agent = agent_code;
+		this._render_agent_bar(this.agents);
+
+		// Update header avatar and title
+		$("#ai-agent-avatar").text(agent.icon || "🤖");
+		$("#ai-agent-title").text(agent.agent_name || __("AI Assistant"));
+
+		// Show a system message in chat
+		const switchMsg = `${agent.icon || "🤖"} ${__("Switched to")} <strong>${frappe.utils.escape_html(agent.agent_name)}</strong>`;
+		const $systemMsg = $(`
+			<div class="ai-system-msg">
+				${switchMsg}
+			</div>
+		`);
+		this.$messages.append($systemMsg);
+		this._scroll_to_bottom();
 	}
 
 	_load_usage() {

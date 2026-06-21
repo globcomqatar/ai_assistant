@@ -72,6 +72,17 @@
    "type": "Link"
   },
   {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "AI Agent",
+   "link_count": 0,
+   "link_to": "AI Agent",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
    "hidden": 0,
    "is_query_report": 0,
    "label": "AI Reports",
@@ -206,6 +217,17 @@
    "restrict_to_domain": "",
    "stats_filter": "",
    "type": "Dashboard"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "format": "{} Agents",
+   "icon": "octicon octicon-person",
+   "label": "AI Agent",
+   "link_to": "AI Agent",
+   "restrict_to_domain": "",
+   "stats_filter": "",
+   "type": "DocType"
   }
  ],
  "title": "AI Assistant"
