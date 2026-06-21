@@ -224,39 +224,39 @@ class AIChatPage {
 		const $layout  = $("#ai-layout");
 		const $sidebar = $("#ai-sidebar");
 		const $chat    = $(".ai-chat-container");
+		const sb       = $sidebar[0];
 
-		// Height: taller on mobile to use more screen real estate
 		const layoutH = mobile ? "calc(100svh - 110px)" : "80vh";
-
 		$layout.css({ position: "relative", width: "100%", height: layoutH, overflow: "hidden" });
 
+		// Set non-position sidebar styles (these don't conflict with CSS !important on left)
 		$sidebar.css({
-			position: "absolute", top: 0, bottom: 0,
-			width: "230px",
 			background: "linear-gradient(180deg,#1e1b4b 0%,#2d2467 100%)",
 			display: "flex", flexDirection: "column", overflow: "hidden",
-			borderRadius: "10px 0 0 10px",
-			// Overlay on tablet/mobile — sits above chat with its own z-index
-			zIndex: overlay ? 20 : 1
 		});
+		// zIndex must beat CSS z-index:1 on overlay
+		sb.style.setProperty("z-index", overlay ? "20" : "1", "important");
 
 		// Force messages scroll
 		this.$messages.css({ flex: "1 1 0", overflowY: "scroll", overflowX: "hidden",
 			minHeight: 0, display: "inline-block", width: "100%" });
 
 		if (overlay) {
-			// Sidebar starts collapsed on tablet/mobile
-			$sidebar.css({ left: "-230px" });
+			// Mobile/tablet: sidebar hidden off-screen, chat fills full width
+			sb.style.setProperty("left", "-110vw", "important");
 			$chat.css({ position: "absolute", top: 0, left: "0", right: 0, bottom: 0,
 				display: "flex", flexDirection: "column", overflow: "hidden",
 				background: "var(--card-bg)", borderRadius: "10px" });
+			$chat[0].style.setProperty("left", "0", "important");
 			$("#ai-sb-expand-btn").removeClass("hidden");
+			$("#ai-sb-backdrop").addClass("hidden");
 		} else {
-			// Desktop: sidebar pushes chat
-			$sidebar.css({ left: "0" });
-			$chat.css({ position: "absolute", top: 0, left: "230px", right: 0, bottom: 0,
+			// Desktop: sidebar pushes chat right
+			sb.style.setProperty("left", "0", "important");
+			$chat.css({ position: "absolute", top: 0, right: 0, bottom: 0,
 				display: "flex", flexDirection: "column", overflow: "hidden",
 				background: "var(--card-bg)", borderRadius: "0 10px 10px 0" });
+			$chat[0].style.setProperty("left", "230px", "important");
 			$("#ai-sb-expand-btn").addClass("hidden");
 			$("#ai-sb-backdrop").addClass("hidden");
 		}
@@ -304,23 +304,29 @@ class AIChatPage {
 	}
 
 	_collapse_sidebar() {
-		$("#ai-sidebar").css({ left: "-230px" });
+		const sb = document.getElementById("ai-sidebar");
+		// Use setProperty("important") to beat CSS left:0 !important
+		sb.style.setProperty("left", "-110vw", "important");
 		$("#ai-sb-expand-btn").removeClass("hidden");
-		if (this._is_overlay()) {
-			$("#ai-sb-backdrop").addClass("hidden");
-		} else {
-			$(".ai-chat-container").css({ left: "0", borderRadius: "10px" });
+		$("#ai-sb-backdrop").addClass("hidden");
+		if (!this._is_overlay()) {
+			const chat = document.querySelector(".ai-chat-container");
+			chat.style.setProperty("left", "0", "important");
+			$(".ai-chat-container").css({ borderRadius: "10px" });
 		}
 	}
 
 	_expand_sidebar() {
-		$("#ai-sidebar").css({ left: "0" });
+		const sb = document.getElementById("ai-sidebar");
+		sb.style.setProperty("left", "0", "important");
 		$("#ai-sb-expand-btn").addClass("hidden");
 		if (this._is_overlay()) {
-			// Overlay: sidebar floats above chat, show backdrop
+			// Overlay: sidebar floats above chat, show dark backdrop
 			$("#ai-sb-backdrop").removeClass("hidden");
 		} else {
-			$(".ai-chat-container").css({ left: "230px", borderRadius: "0 10px 10px 0" });
+			const chat = document.querySelector(".ai-chat-container");
+			chat.style.setProperty("left", "230px", "important");
+			$(".ai-chat-container").css({ borderRadius: "0 10px 10px 0" });
 		}
 	}
 
