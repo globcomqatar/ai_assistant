@@ -213,7 +213,7 @@ class AIChatPage {
 
 		// Force the messages area to scroll — critical for chat usability.
 		this.$messages.css({ flex: "1 1 0", overflowY: "scroll", overflowX: "hidden",
-			minHeight: 0, display: "flex", flexDirection: "column" });
+			minHeight: 0, display: "inline-block", width: "100%" });
 
 		this._bind_events();
 	}
@@ -424,6 +424,26 @@ class AIChatPage {
 			get_followup_opportunities: "🎯",
 			// Vehicle Diagnostics
 			diagnose_vehicle_issue: "🔧",
+			// HR & Employees
+			create_employee: "👤", get_employees: "👥",
+			create_leave_application: "🌴", get_leave_balance: "📅",
+			get_attendance_summary: "🗓️",
+			// Payroll
+			get_salary_slips: "💵", get_payroll_summary: "💰",
+			// Manufacturing
+			create_work_order: "🏭", get_work_orders: "🏭",
+			get_bom_list: "📋",
+			// Purchase Invoice & Receipt
+			create_purchase_invoice: "🧾", get_purchase_invoices: "🧾",
+			create_purchase_receipt: "📥",
+			// Stock Operations
+			create_stock_entry: "🔄",
+			// Item Management
+			create_item: "🏷️", get_items: "🏷️",
+			// Task Management
+			get_tasks: "✅", update_task_status: "✅",
+			// Expense Claims
+			create_expense_claim: "💳", get_expense_claims: "💳",
 		}[intent] || "✅";
 
 		const title = intent.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -544,6 +564,50 @@ class AIChatPage {
 				["customer","lifetime_value","last_purchase","days_since_purchase"],
 				["Customer","Lifetime Value","Last Order","Days Since"]);
 
+		// ── HR & Employees renderers ─────────────────────────────────
+		} else if (intent === "get_employees" && result.employees) {
+			detail = this._render_doc_table(result.employees,
+				["name", "employee_name", "department", "designation", "date_of_joining", "status"],
+				["ID", "Name", "Department", "Designation", "Joined", "Status"]);
+		} else if (intent === "get_leave_balance" && result.balances) {
+			detail = this._render_leave_balance(result);
+		} else if (intent === "get_attendance_summary") {
+			detail = this._render_attendance_summary(result);
+		} else if (intent === "get_tasks" && result.tasks) {
+			detail = this._render_doc_table(result.tasks,
+				["name", "subject", "project", "assigned_to", "status", "priority", "exp_end_date"],
+				["Task", "Subject", "Project", "Assigned To", "Status", "Priority", "Due"]);
+		// ── Payroll renderers ─────────────────────────────────────────
+		} else if (intent === "get_salary_slips" && result.salary_slips) {
+			detail = this._render_doc_table(result.salary_slips,
+				["name", "employee_name", "start_date", "end_date", "gross_pay", "total_deduction", "net_pay"],
+				["Slip", "Employee", "From", "To", "Gross", "Deduction", "Net Pay"]);
+		} else if (intent === "get_payroll_summary") {
+			detail = this._render_payroll_summary(result);
+		// ── Manufacturing renderers ────────────────────────────────────
+		} else if (intent === "get_work_orders" && result.work_orders) {
+			detail = this._render_doc_table(result.work_orders,
+				["name", "production_item", "qty", "produced_qty", "planned_start_date", "status"],
+				["Work Order", "Item", "Qty", "Produced", "Planned Date", "Status"]);
+		} else if (intent === "get_bom_list" && result.boms) {
+			detail = this._render_doc_table(result.boms,
+				["name", "item", "item_name", "quantity", "is_default"],
+				["BOM", "Item Code", "Item Name", "Qty", "Default?"]);
+		// ── Purchase renderers ────────────────────────────────────────
+		} else if (intent === "get_purchase_invoices" && result.purchase_invoices) {
+			detail = this._render_doc_table(result.purchase_invoices,
+				["name", "supplier", "posting_date", "grand_total", "outstanding_amount", "status"],
+				["Invoice", "Supplier", "Date", "Total", "Outstanding", "Status"]);
+		// ── Item renderers ────────────────────────────────────────────
+		} else if (intent === "get_items" && result.items) {
+			detail = this._render_doc_table(result.items,
+				["name", "item_name", "item_group", "stock_uom", "is_stock_item"],
+				["Code", "Name", "Group", "UOM", "Stock Item?"]);
+		// ── Expense renderers ─────────────────────────────────────────
+		} else if (intent === "get_expense_claims" && result.expense_claims) {
+			detail = this._render_doc_table(result.expense_claims,
+				["name", "employee_name", "posting_date", "total_claimed_amount", "total_sanctioned_amount", "approval_status"],
+				["Claim", "Employee", "Date", "Claimed", "Sanctioned", "Status"]);
 		// ── Vehicle Diagnostics renderer ─────────────────────────────
 		} else if (intent === "diagnose_vehicle_issue") {
 			detail = this._render_diagnostic(result);
@@ -577,6 +641,19 @@ class AIChatPage {
 				create_vehicle_inspection:[result.vehicle_inspection,"vehicle-inspection"],
 				create_lead:             [result.lead,               "lead"],
 				create_opportunity:      [result.opportunity,        "opportunity"],
+				// HR
+				create_employee:         [result.employee,           "employee"],
+				create_leave_application:[result.leave_application,  "leave-application"],
+				create_expense_claim:    [result.expense_claim,      "expense-claim"],
+				// Manufacturing
+				create_work_order:       [result.work_order,         "work-order"],
+				// Purchase
+				create_purchase_invoice: [result.purchase_invoice,   "purchase-invoice"],
+				create_purchase_receipt: [result.purchase_receipt,   "purchase-receipt"],
+				// Stock
+				create_stock_entry:      [result.stock_entry,        "stock-entry"],
+				// Item
+				create_item:             [result.item,               "item"],
 			};
 			const entry = docRouteMap[intent];
 			if (entry && entry[0] && result.status === "created") {
@@ -1038,6 +1115,42 @@ class AIChatPage {
 			</div>`;
 		}).join("");
 		return header + `<div class="ai-opportunities">${cards}</div>`;
+	}
+
+	_render_leave_balance(r) {
+		if (!r.balances || !r.balances.length)
+			return `<p class="text-muted">${__("No leave allocations found.")}</p>`;
+		const rows = r.balances.map(b => `
+			<tr>
+				<td>${frappe.utils.escape_html(b.leave_type)}</td>
+				<td>${b.allocated}</td>
+				<td>${b.used}</td>
+				<td><strong style="color:${b.balance > 0 ? "var(--green-600)" : "var(--red-500)"}">${b.balance}</strong></td>
+			</tr>`).join("");
+		return `<table class="ai-mini-table">
+			<thead><tr><th>Leave Type</th><th>Allocated</th><th>Used</th><th>Balance</th></tr></thead>
+			<tbody>${rows}</tbody>
+		</table>`;
+	}
+
+	_render_attendance_summary(r) {
+		const summary = r.summary || {};
+		const pairs = Object.entries(summary).map(([k, v]) =>
+			`<div class="ai-kv-row"><span class="ai-kv-label">${k}</span><span class="ai-kv-val">${v}</span></div>`
+		).join("");
+		return `<div class="ai-kv-grid" style="margin-bottom:8px">${pairs}</div>
+			<p class="text-muted" style="font-size:0.8rem">${__("Period")}: ${r.from_date} → ${r.to_date} &nbsp;|&nbsp; ${__("Total")}: ${r.total}</p>`;
+	}
+
+	_render_payroll_summary(r) {
+		const fmt = v => this._fmt_currency(v);
+		return `<div class="ai-kv-grid">
+			<div class="ai-kv-row"><span class="ai-kv-label">${__("Period")}</span><span class="ai-kv-val">${r.from_date} → ${r.to_date}</span></div>
+			<div class="ai-kv-row"><span class="ai-kv-label">${__("Employees")}</span><span class="ai-kv-val">${r.employee_count}</span></div>
+			<div class="ai-kv-row"><span class="ai-kv-label">${__("Total Gross")}</span><span class="ai-kv-val">${fmt(r.total_gross)}</span></div>
+			<div class="ai-kv-row"><span class="ai-kv-label">${__("Total Deductions")}</span><span class="ai-kv-val">${fmt(r.total_deduction)}</span></div>
+			<div class="ai-kv-row"><span class="ai-kv-label">${__("Total Net Pay")}</span><span class="ai-kv-val"><strong>${fmt(r.total_net)}</strong></span></div>
+		</div>`;
 	}
 
 	_render_diagnostic(r) {

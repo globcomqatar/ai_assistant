@@ -22,6 +22,7 @@ import frappe
 
 from ai_assistant.api.tools import TOOLS_SCHEMA
 from ai_assistant.providers import get_provider
+from ai_assistant.api.permission_manager import get_permitted_tools_schema
 
 _DEFAULT_SYSTEM_PROMPT = """You are an ERPNext AI assistant and Business Intelligence Copilot for a business using Frappe/ERPNext.
 
@@ -68,14 +69,14 @@ Business Intelligence routing rules (apply BEFORE any other rule):
 """
 
 
-def build_system_prompt() -> str:
+def build_system_prompt(user: str | None = None) -> str:
 	settings = frappe.get_single("AI Settings")
 	if settings.system_prompt_override:
 		return settings.system_prompt_override
 
-	tools_text = "\n".join(
-		f"- {t['name']}: {t['description']}" for t in TOOLS_SCHEMA
-	)
+	# Filter tools to only what this user is permitted to use
+	schema = get_permitted_tools_schema(user) if user else TOOLS_SCHEMA
+	tools_text = "\n".join(f"- {t['name']}: {t['description']}" for t in schema)
 	return _DEFAULT_SYSTEM_PROMPT.format(tools=tools_text)
 
 
@@ -127,7 +128,7 @@ def route(
 	The last item carries "_meta" with token/cost info.
 	"""
 	provider = get_provider()
-	system_prompt = build_system_prompt()
+	system_prompt = build_system_prompt(user=user)
 
 	ai_response = provider.chat(messages=messages, system_prompt=system_prompt)
 

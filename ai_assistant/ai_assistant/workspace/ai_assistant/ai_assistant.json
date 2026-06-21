@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"header-dashboard\",\"type\":\"header\",\"data\":{\"text\":\"📊 Business Dashboard\",\"col\":12}},{\"id\":\"card-sales\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"AI - Sales This Month\",\"col\":4}},{\"id\":\"card-quotations\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"AI - Pending Quotations\",\"col\":4}},{\"id\":\"card-overdue\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"AI - Overdue Invoices\",\"col\":4}},{\"id\":\"card-stock\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"AI - Low Stock Items\",\"col\":4}},{\"id\":\"card-customers\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"AI - New Customers\",\"col\":4}},{\"id\":\"card-jobs\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"AI - Open Job Cards\",\"col\":4}},{\"id\":\"header-nav\",\"type\":\"header\",\"data\":{\"text\":\"🔗 Navigation\",\"col\":12}},{\"id\":\"ai-chat-shortcut\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"AI Chat\",\"col\":3}},{\"id\":\"ai-settings-shortcut\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"AI Settings\",\"col\":3}},{\"id\":\"ai-usage-log-shortcut\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"AI Usage Log\",\"col\":3}},{\"id\":\"ai-dashboard-shortcut\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"AI Dashboard\",\"col\":3}}]",
+ "content": "[{\"id\": \"hdr-dash\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>\\ud83d\\udcca Business Dashboard</b></span>\", \"col\": 12}}, {\"id\": \"nc-sales\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"AI - Sales This Month\", \"col\": 4}}, {\"id\": \"nc-quotations\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"AI - Pending Quotations\", \"col\": 4}}, {\"id\": \"nc-overdue\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"AI - Overdue Invoices\", \"col\": 4}}, {\"id\": \"nc-stock\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"AI - Low Stock Items\", \"col\": 4}}, {\"id\": \"nc-customers\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"AI - New Customers\", \"col\": 4}}, {\"id\": \"nc-jobs\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"AI - Open Job Cards\", \"col\": 4}}, {\"id\": \"spacer-1\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"hdr-quick\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>\\u26a1 Quick Shortcuts</b></span>\", \"col\": 12}}, {\"id\": \"sc-aichat\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"AI Chat\", \"col\": 3}}, {\"id\": \"sc-aisett\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"AI Settings\", \"col\": 3}}, {\"id\": \"sc-ailog\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"AI Usage Log\", \"col\": 3}}, {\"id\": \"sc-aiperm\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"AI Tool Permission\", \"col\": 3}}, {\"id\": \"sc-aidash\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"AI Dashboard\", \"col\": 3}}, {\"id\": \"spacer-2\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"hdr-masters\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>\\ud83d\\udccb Masters &amp; Reports</b></span>\", \"col\": 12}}, {\"id\": \"card-logs\", \"type\": \"card\", \"data\": {\"card_name\": \"AI Logs\", \"col\": 4}}, {\"id\": \"card-admin\", \"type\": \"card\", \"data\": {\"card_name\": \"AI Administration\", \"col\": 4}}, {\"id\": \"card-reports\", \"type\": \"card\", \"data\": {\"card_name\": \"AI Reports\", \"col\": 4}}]",
  "creation": "2026-06-21 00:00:00.000000",
  "doctype": "Workspace",
  "for_user": "",
@@ -46,11 +46,23 @@
   {
    "color": "Blue",
    "doc_view": "List",
-   "format": "",
+   "format": "{} Logs",
    "icon": "octicon octicon-list-unordered",
    "label": "AI Usage Log",
    "link_to": "AI Usage Log",
    "name": "AI Usage Log",
+   "restrict_to_domain": "",
+   "stats_filter": "",
+   "type": "DocType"
+  },
+  {
+   "color": "Red",
+   "doc_view": "List",
+   "format": "{} Tools",
+   "icon": "octicon octicon-shield",
+   "label": "AI Tool Permission",
+   "link_to": "AI Tool Permission",
+   "name": "AI Tool Permission",
    "restrict_to_domain": "",
    "stats_filter": "",
    "type": "DocType"
@@ -66,6 +78,98 @@
    "restrict_to_domain": "",
    "stats_filter": "",
    "type": "Dashboard"
+  }
+ ],
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "AI Logs",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "AI Usage Log",
+   "link_count": 0,
+   "link_to": "AI Usage Log",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "AI Administration",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "AI Tool Permission",
+   "link_count": 0,
+   "link_to": "AI Tool Permission",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "AI Settings",
+   "link_count": 0,
+   "link_to": "AI Settings",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "AI Reports",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "AI Chat",
+   "link_count": 0,
+   "link_to": "ai-chat",
+   "link_type": "Page",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Usage Log",
+   "link_count": 0,
+   "link_to": "AI Usage Log",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Tool Permissions",
+   "link_count": 0,
+   "link_to": "AI Tool Permission",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   }
  ]
 }

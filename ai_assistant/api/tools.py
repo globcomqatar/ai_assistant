@@ -929,6 +929,396 @@ def get_active_rental_contracts(customer: str = "") -> dict:
 
 
 # ╔══════════════════════════════════════════════════════════════════╗
+# ║  SECTION 13 — HR & EMPLOYEES                                    ║
+# ╚══════════════════════════════════════════════════════════════════╝
+
+def create_employee(first_name: str, last_name: str = "", company: str = "",
+					department: str = "", designation: str = "",
+					date_of_joining: str = "") -> dict:
+	_require(first_name, "first_name")
+	if not company:
+		company = frappe.defaults.get_global_default("company") or ""
+	doc = frappe.new_doc("Employee")
+	doc.first_name = first_name
+	doc.last_name = last_name
+	doc.employee_name = f"{first_name} {last_name}".strip()
+	doc.company = company
+	doc.department = department
+	doc.designation = designation
+	doc.date_of_joining = date_of_joining or today()
+	doc.gender = "Male"
+	_save_and_commit(doc)
+	return {"status": "created", "employee": doc.name,
+			"message": f"Employee {doc.employee_name} created as {doc.name}."}
+
+
+def get_employees(department: str = "", designation: str = "",
+				  status: str = "Active") -> dict:
+	filters: dict = {"status": status}
+	if department:
+		filters["department"] = department
+	if designation:
+		filters["designation"] = designation
+	rows = frappe.get_all("Employee", filters=filters,
+		fields=["name", "employee_name", "department", "designation",
+				"date_of_joining", "status"],
+		limit=25, order_by="employee_name asc")
+	return {"status": "ok", "count": len(rows), "employees": rows}
+
+
+def create_leave_application(employee: str, leave_type: str,
+							 from_date: str, to_date: str,
+							 reason: str = "") -> dict:
+	_require(employee, "employee")
+	_require(leave_type, "leave_type")
+	_require(from_date, "from_date")
+	_require(to_date, "to_date")
+	doc = frappe.new_doc("Leave Application")
+	doc.employee = employee
+	doc.leave_type = leave_type
+	doc.from_date = from_date
+	doc.to_date = to_date
+	doc.description = reason
+	doc.status = "Open"
+	_save_and_commit(doc)
+	return {"status": "created", "leave_application": doc.name,
+			"message": f"Leave application created for {employee} from {from_date} to {to_date}."}
+
+
+def get_leave_balance(employee: str, leave_type: str = "", date: str = "") -> dict:
+	_require(employee, "employee")
+	date = date or today()
+	try:
+		alloc_filters: dict = {
+			"employee": employee, "docstatus": 1,
+			"from_date": ["<=", date], "to_date": [">=", date],
+		}
+		if leave_type:
+			alloc_filters["leave_type"] = leave_type
+		allocs = frappe.get_all("Leave Allocation", filters=alloc_filters,
+			fields=["leave_type", "total_leaves_allocated"])
+		year_start = frappe.utils.get_year_start(date)
+		used_rows = frappe.get_all("Leave Application",
+			filters={"employee": employee, "docstatus": 1, "status": "Approved",
+					 "from_date": [">=", year_start]},
+			fields=["leave_type", "total_leave_days"])
+		used: dict = {}
+		for r in used_rows:
+			lt = r["leave_type"]
+			used[lt] = used.get(lt, 0) + flt(r["total_leave_days"])
+		balances = []
+		for alloc in allocs:
+			lt = alloc["leave_type"]
+			allocated = flt(alloc["total_leaves_allocated"])
+			balances.append({"leave_type": lt, "allocated": allocated,
+							 "used": used.get(lt, 0),
+							 "balance": allocated - used.get(lt, 0)})
+		return {"status": "ok", "employee": employee, "date": date, "balances": balances}
+	except Exception as exc:
+		frappe.log_error(title="AI Leave Balance Error", message=str(exc))
+		return {"status": "error", "message": f"Could not retrieve leave balance: {str(exc)}"}
+
+
+def get_attendance_summary(employee: str = "", from_date: str = "",
+						   to_date: str = "") -> dict:
+	from_date = from_date or str(get_first_day(today()))
+	to_date = to_date or today()
+	filters: dict = {"attendance_date": ["between", [from_date, to_date]], "docstatus": 1}
+	if employee:
+		filters["employee"] = employee
+	rows = frappe.get_all("Attendance", filters=filters,
+		fields=["employee", "employee_name", "attendance_date", "status"],
+		limit=100, order_by="attendance_date desc")
+	summary: dict = {}
+	for r in rows:
+		s = r["status"]
+		summary[s] = summary.get(s, 0) + 1
+	return {"status": "ok", "from_date": from_date, "to_date": to_date,
+			"summary": summary, "total": len(rows), "records": rows[:30]}
+
+
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║  SECTION 14 — PAYROLL                                           ║
+# ╚══════════════════════════════════════════════════════════════════╝
+
+def get_salary_slips(employee: str = "", from_date: str = "",
+					 to_date: str = "") -> dict:
+	from_date = from_date or str(get_first_day(today()))
+	to_date = to_date or today()
+	filters: dict = {"docstatus": 1,
+					 "start_date": [">=", from_date],
+					 "end_date": ["<=", to_date]}
+	if employee:
+		filters["employee"] = employee
+	slips = frappe.get_all("Salary Slip", filters=filters,
+		fields=["name", "employee", "employee_name", "start_date", "end_date",
+				"gross_pay", "net_pay", "total_deduction"],
+		limit=25, order_by="end_date desc")
+	return {"status": "ok", "count": len(slips), "salary_slips": slips}
+
+
+def get_payroll_summary(from_date: str = "", to_date: str = "") -> dict:
+	from_date = from_date or str(get_first_day(today()))
+	to_date = to_date or today()
+	result = frappe.db.sql("""
+		SELECT
+			COUNT(*) AS employee_count,
+			COALESCE(SUM(gross_pay), 0) AS total_gross,
+			COALESCE(SUM(total_deduction), 0) AS total_deduction,
+			COALESCE(SUM(net_pay), 0) AS total_net
+		FROM `tabSalary Slip`
+		WHERE docstatus = 1 AND start_date >= %s AND end_date <= %s
+	""", (from_date, to_date), as_dict=True)
+	r = result[0] if result else {}
+	return {"status": "ok", "from_date": from_date, "to_date": to_date,
+			"employee_count": int(r.get("employee_count") or 0),
+			"total_gross": flt(r.get("total_gross")),
+			"total_deduction": flt(r.get("total_deduction")),
+			"total_net": flt(r.get("total_net"))}
+
+
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║  SECTION 15 — MANUFACTURING                                     ║
+# ╚══════════════════════════════════════════════════════════════════╝
+
+def create_work_order(item: str, qty: float, bom_no: str = "",
+					  planned_start_date: str = "", company: str = "") -> dict:
+	_require(item, "item")
+	_require(qty, "qty")
+	if not company:
+		company = frappe.defaults.get_global_default("company") or ""
+	if not bom_no:
+		bom_no = frappe.db.get_value("BOM", {"item": item, "is_default": 1, "is_active": 1}, "name") or ""
+	doc = frappe.new_doc("Work Order")
+	doc.production_item = item
+	doc.qty = flt(qty)
+	doc.bom_no = bom_no
+	doc.planned_start_date = planned_start_date or today()
+	doc.company = company
+	_save_and_commit(doc)
+	return {"status": "created", "work_order": doc.name,
+			"message": f"Work Order {doc.name} created for {item} × {qty}."}
+
+
+def get_work_orders(status: str = "", item: str = "") -> dict:
+	filters: dict = {}
+	if status:
+		filters["status"] = status
+	if item:
+		filters["production_item"] = item
+	rows = frappe.get_all("Work Order", filters=filters,
+		fields=["name", "production_item", "qty", "produced_qty",
+				"planned_start_date", "status"],
+		limit=20, order_by="planned_start_date desc")
+	return {"status": "ok", "count": len(rows), "work_orders": rows}
+
+
+def get_bom_list(item: str = "") -> dict:
+	filters: dict = {"is_active": 1}
+	if item:
+		filters["item"] = item
+	rows = frappe.get_all("BOM", filters=filters,
+		fields=["name", "item", "item_name", "quantity", "is_default", "is_active"],
+		limit=20)
+	return {"status": "ok", "count": len(rows), "boms": rows}
+
+
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║  SECTION 16 — PURCHASE INVOICE & RECEIPT                        ║
+# ╚══════════════════════════════════════════════════════════════════╝
+
+def create_purchase_invoice(supplier: str, items: list[dict],
+							posting_date: str = "") -> dict:
+	_require(supplier, "supplier")
+	_require(items, "items")
+	doc = frappe.new_doc("Purchase Invoice")
+	doc.supplier = supplier
+	doc.posting_date = posting_date or today()
+	doc.company = frappe.defaults.get_global_default("company") or ""
+	for it in items:
+		doc.append("items", {
+			"item_code": it.get("item_code"),
+			"qty": flt(it.get("qty", 1)),
+			"rate": flt(it.get("rate", 0)),
+		})
+	doc.set_missing_values()
+	_save_and_commit(doc)
+	return {"status": "created", "purchase_invoice": doc.name,
+			"message": f"Purchase Invoice {doc.name} created for {supplier}."}
+
+
+def get_purchase_invoices(supplier: str = "", from_date: str = "",
+						  to_date: str = "") -> dict:
+	from_date = from_date or str(get_first_day(today()))
+	to_date = to_date or today()
+	filters: dict = {"docstatus": 1,
+					 "posting_date": ["between", [from_date, to_date]]}
+	if supplier:
+		filters["supplier"] = supplier
+	rows = frappe.get_all("Purchase Invoice", filters=filters,
+		fields=["name", "supplier", "posting_date", "grand_total",
+				"outstanding_amount", "status"],
+		limit=20, order_by="posting_date desc")
+	return {"status": "ok", "count": len(rows), "purchase_invoices": rows,
+			"total_amount": sum(flt(r.get("grand_total")) for r in rows)}
+
+
+def create_purchase_receipt(purchase_order: str) -> dict:
+	_require(purchase_order, "purchase_order")
+	_exists("Purchase Order", purchase_order)
+	from erpnext.buying.doctype.purchase_order.purchase_order import make_purchase_receipt
+	doc = make_purchase_receipt(purchase_order)
+	_save_and_commit(doc)
+	return {"status": "created", "purchase_receipt": doc.name,
+			"message": f"Purchase Receipt {doc.name} created from {purchase_order}."}
+
+
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║  SECTION 17 — STOCK OPERATIONS                                  ║
+# ╚══════════════════════════════════════════════════════════════════╝
+
+def create_stock_entry(stock_entry_type: str, items: list[dict],
+					   from_warehouse: str = "", to_warehouse: str = "") -> dict:
+	_require(stock_entry_type, "stock_entry_type")
+	_require(items, "items")
+	valid_types = ["Material Transfer", "Material Issue", "Material Receipt", "Manufacture"]
+	if stock_entry_type not in valid_types:
+		frappe.throw(_(f"stock_entry_type must be one of: {', '.join(valid_types)}"))
+	doc = frappe.new_doc("Stock Entry")
+	doc.stock_entry_type = stock_entry_type
+	doc.company = frappe.defaults.get_global_default("company") or ""
+	doc.posting_date = today()
+	for it in items:
+		row: dict = {
+			"item_code": it.get("item_code"),
+			"qty": flt(it.get("qty", 1)),
+			"basic_rate": flt(it.get("rate", 0)),
+		}
+		s_wh = it.get("from_warehouse") or from_warehouse
+		t_wh = it.get("to_warehouse") or to_warehouse
+		if s_wh:
+			row["s_warehouse"] = s_wh
+		if t_wh:
+			row["t_warehouse"] = t_wh
+		doc.append("items", row)
+	doc.set_missing_values()
+	_save_and_commit(doc)
+	return {"status": "created", "stock_entry": doc.name,
+			"message": f"Stock Entry ({stock_entry_type}) {doc.name} created."}
+
+
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║  SECTION 18 — ITEM MANAGEMENT                                   ║
+# ╚══════════════════════════════════════════════════════════════════╝
+
+def create_item(item_name: str, item_group: str = "All Item Groups",
+				item_code: str = "", is_stock_item: int = 1,
+				valuation_rate: float = 0, standard_rate: float = 0,
+				unit_of_measure: str = "Nos") -> dict:
+	_require(item_name, "item_name")
+	doc = frappe.new_doc("Item")
+	doc.item_name = item_name
+	doc.item_code = item_code or item_name
+	doc.item_group = item_group
+	doc.is_stock_item = is_stock_item
+	doc.stock_uom = unit_of_measure
+	doc.valuation_rate = flt(valuation_rate)
+	if standard_rate:
+		doc.append("item_defaults", {
+			"company": frappe.defaults.get_global_default("company") or "",
+		})
+	_save_and_commit(doc)
+	return {"status": "created", "item": doc.name,
+			"message": f"Item '{item_name}' created as {doc.name}."}
+
+
+def get_items(item_group: str = "", query: str = "") -> dict:
+	filters: dict = {"disabled": 0}
+	if item_group:
+		filters["item_group"] = item_group
+	if query:
+		filters["item_name"] = ["like", f"%{query}%"]
+	rows = frappe.get_all("Item", filters=filters,
+		fields=["name", "item_name", "item_group", "stock_uom",
+				"is_stock_item", "disabled"],
+		limit=25, order_by="item_name asc")
+	return {"status": "ok", "count": len(rows), "items": rows}
+
+
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║  SECTION 19 — TASK MANAGEMENT                                   ║
+# ╚══════════════════════════════════════════════════════════════════╝
+
+def get_tasks(project: str = "", assigned_to: str = "", status: str = "") -> dict:
+	filters: dict = {}
+	if project:
+		filters["project"] = project
+	if assigned_to:
+		filters["assigned_to"] = assigned_to
+	if status:
+		filters["status"] = status
+	rows = frappe.get_all("Task", filters=filters,
+		fields=["name", "subject", "project", "assigned_to",
+				"status", "priority", "exp_end_date"],
+		limit=25, order_by="exp_end_date asc")
+	return {"status": "ok", "count": len(rows), "tasks": rows}
+
+
+def update_task_status(task: str, status: str) -> dict:
+	_require(task, "task")
+	_require(status, "status")
+	valid_statuses = ["Open", "Working", "Pending Review", "Completed", "Cancelled"]
+	if status not in valid_statuses:
+		frappe.throw(_(f"Status must be one of: {', '.join(valid_statuses)}"))
+	doc = frappe.get_doc("Task", task)
+	doc.status = status
+	doc.flags.ignore_permissions = True
+	doc.save()
+	frappe.db.commit()
+	return {"status": "updated", "task": task, "new_status": status,
+			"message": f"Task {task} updated to '{status}'."}
+
+
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║  SECTION 20 — EXPENSE CLAIMS                                    ║
+# ╚══════════════════════════════════════════════════════════════════╝
+
+def create_expense_claim(employee: str, expense_type: str, amount: float,
+						 expense_date: str = "", description: str = "") -> dict:
+	_require(employee, "employee")
+	_require(expense_type, "expense_type")
+	_require(amount, "amount")
+	expense_date = expense_date or today()
+	doc = frappe.new_doc("Expense Claim")
+	doc.employee = employee
+	doc.posting_date = expense_date
+	doc.company = frappe.defaults.get_global_default("company") or ""
+	doc.append("expenses", {
+		"expense_date": expense_date,
+		"expense_type": expense_type,
+		"amount": flt(amount),
+		"description": description,
+	})
+	doc.total_claimed_amount = flt(amount)
+	_save_and_commit(doc)
+	return {"status": "created", "expense_claim": doc.name,
+			"message": f"Expense Claim {doc.name} created for {employee}."}
+
+
+def get_expense_claims(employee: str = "", status: str = "") -> dict:
+	filters: dict = {}
+	if employee:
+		filters["employee"] = employee
+	if status:
+		filters["approval_status"] = status
+	rows = frappe.get_all("Expense Claim", filters=filters,
+		fields=["name", "employee", "employee_name", "posting_date",
+				"total_claimed_amount", "total_sanctioned_amount", "approval_status"],
+		limit=20, order_by="posting_date desc")
+	return {"status": "ok", "count": len(rows), "expense_claims": rows}
+
+
+# ╔══════════════════════════════════════════════════════════════════╗
 # ║  REGISTRY & SCHEMA                                              ║
 # ╚══════════════════════════════════════════════════════════════════╝
 
@@ -1014,6 +1404,34 @@ TOOL_REGISTRY: dict[str, callable] = {
 	"get_followup_opportunities":            get_followup_opportunities,
 	# ── Vehicle Diagnostics ───────────────────────────────────────────
 	"diagnose_vehicle_issue":                diagnose_vehicle_issue,
+	# ── HR & Employees ───────────────────────────────────────────────
+	"create_employee":              create_employee,
+	"get_employees":                get_employees,
+	"create_leave_application":     create_leave_application,
+	"get_leave_balance":            get_leave_balance,
+	"get_attendance_summary":       get_attendance_summary,
+	# ── Payroll ──────────────────────────────────────────────────────
+	"get_salary_slips":             get_salary_slips,
+	"get_payroll_summary":          get_payroll_summary,
+	# ── Manufacturing ────────────────────────────────────────────────
+	"create_work_order":            create_work_order,
+	"get_work_orders":              get_work_orders,
+	"get_bom_list":                 get_bom_list,
+	# ── Purchase Invoice & Receipt ───────────────────────────────────
+	"create_purchase_invoice":      create_purchase_invoice,
+	"get_purchase_invoices":        get_purchase_invoices,
+	"create_purchase_receipt":      create_purchase_receipt,
+	# ── Stock Operations ─────────────────────────────────────────────
+	"create_stock_entry":           create_stock_entry,
+	# ── Item Management ──────────────────────────────────────────────
+	"create_item":                  create_item,
+	"get_items":                    get_items,
+	# ── Task Management ──────────────────────────────────────────────
+	"get_tasks":                    get_tasks,
+	"update_task_status":           update_task_status,
+	# ── Expense Claims ───────────────────────────────────────────────
+	"create_expense_claim":         create_expense_claim,
+	"get_expense_claims":           get_expense_claims,
 }
 
 TOOLS_SCHEMA: list[dict] = [
@@ -1367,4 +1785,143 @@ TOOLS_SCHEMA: list[dict] = [
 						   "description": "List of symptom strings e.g. [\"check engine light\", \"rough idle\"]",
 						   "required": True},
 		 "year":          {"type": "integer", "description": "Model year e.g. 2020"}}},
+
+	# ── HR & Employees ───────────────────────────────────────────────
+	{"name": "create_employee",
+	 "description": "Create a new Employee record.",
+	 "parameters": {"first_name": {"type": "string", "required": True},
+					"last_name": {"type": "string"},
+					"company": {"type": "string"},
+					"department": {"type": "string"},
+					"designation": {"type": "string"},
+					"date_of_joining": {"type": "string", "description": "YYYY-MM-DD"}}},
+
+	{"name": "get_employees",
+	 "description": "List employees, optionally filtered by department, designation, or status.",
+	 "parameters": {"department": {"type": "string"},
+					"designation": {"type": "string"},
+					"status": {"type": "string", "description": "Active / Inactive / Left"}}},
+
+	{"name": "create_leave_application",
+	 "description": "Create a Leave Application for an employee.",
+	 "parameters": {"employee": {"type": "string", "required": True},
+					"leave_type": {"type": "string", "required": True,
+								   "description": "e.g. Annual Leave, Sick Leave"},
+					"from_date": {"type": "string", "required": True, "description": "YYYY-MM-DD"},
+					"to_date": {"type": "string", "required": True, "description": "YYYY-MM-DD"},
+					"reason": {"type": "string"}}},
+
+	{"name": "get_leave_balance",
+	 "description": "Get leave allocation and balance for an employee.",
+	 "parameters": {"employee": {"type": "string", "required": True},
+					"leave_type": {"type": "string"},
+					"date": {"type": "string", "description": "YYYY-MM-DD, defaults to today"}}},
+
+	{"name": "get_attendance_summary",
+	 "description": "Get attendance records summary for an employee or all employees in a date range.",
+	 "parameters": {"employee": {"type": "string"},
+					"from_date": {"type": "string"}, "to_date": {"type": "string"}}},
+
+	# ── Payroll ──────────────────────────────────────────────────────
+	{"name": "get_salary_slips",
+	 "description": "List salary slips for a date range, optionally filtered by employee.",
+	 "parameters": {"employee": {"type": "string"},
+					"from_date": {"type": "string"}, "to_date": {"type": "string"}}},
+
+	{"name": "get_payroll_summary",
+	 "description": "Get total gross pay, deductions, and net pay for a payroll period.",
+	 "parameters": {"from_date": {"type": "string"}, "to_date": {"type": "string"}}},
+
+	# ── Manufacturing ────────────────────────────────────────────────
+	{"name": "create_work_order",
+	 "description": "Create a Manufacturing Work Order for a finished good item.",
+	 "parameters": {"item": {"type": "string", "required": True,
+							 "description": "Finished goods item code"},
+					"qty": {"type": "number", "required": True},
+					"bom_no": {"type": "string"},
+					"planned_start_date": {"type": "string", "description": "YYYY-MM-DD"},
+					"company": {"type": "string"}}},
+
+	{"name": "get_work_orders",
+	 "description": "List Work Orders, optionally filtered by status or item.",
+	 "parameters": {"status": {"type": "string",
+							   "description": "Draft / Submitted / In Process / Completed / Stopped"},
+					"item": {"type": "string"}}},
+
+	{"name": "get_bom_list",
+	 "description": "List Bills of Materials (BOM), optionally filtered by item.",
+	 "parameters": {"item": {"type": "string"}}},
+
+	# ── Purchase Invoice & Receipt ───────────────────────────────────
+	{"name": "create_purchase_invoice",
+	 "description": "Create a Purchase Invoice from a supplier with items.",
+	 "parameters": {"supplier": {"type": "string", "required": True},
+					"items": {"type": "array", "required": True,
+							  "description": "[{item_code, qty, rate}]"},
+					"posting_date": {"type": "string"}}},
+
+	{"name": "get_purchase_invoices",
+	 "description": "List purchase invoices for a date range, optionally by supplier.",
+	 "parameters": {"supplier": {"type": "string"},
+					"from_date": {"type": "string"}, "to_date": {"type": "string"}}},
+
+	{"name": "create_purchase_receipt",
+	 "description": "Create a Purchase Receipt from an existing Purchase Order.",
+	 "parameters": {"purchase_order": {"type": "string", "required": True}}},
+
+	# ── Stock Operations ─────────────────────────────────────────────
+	{"name": "create_stock_entry",
+	 "description": "Create a Stock Entry for material transfer, issue, or receipt.",
+	 "parameters": {"stock_entry_type": {"type": "string", "required": True,
+										 "description": "Material Transfer / Material Issue / Material Receipt / Manufacture"},
+					"items": {"type": "array", "required": True,
+							  "description": "[{item_code, qty, rate, from_warehouse, to_warehouse}]"},
+					"from_warehouse": {"type": "string"},
+					"to_warehouse": {"type": "string"}}},
+
+	# ── Item Management ──────────────────────────────────────────────
+	{"name": "create_item",
+	 "description": "Create a new Item (product or service) in the Item master.",
+	 "parameters": {"item_name": {"type": "string", "required": True},
+					"item_group": {"type": "string"},
+					"item_code": {"type": "string"},
+					"is_stock_item": {"type": "integer", "description": "1 for stock item, 0 for service"},
+					"valuation_rate": {"type": "number"},
+					"standard_rate": {"type": "number"},
+					"unit_of_measure": {"type": "string", "description": "Nos / Kg / Ltr etc."}}},
+
+	{"name": "get_items",
+	 "description": "List items from the Item master, optionally filtered by group or name.",
+	 "parameters": {"item_group": {"type": "string"},
+					"query": {"type": "string"}}},
+
+	# ── Task Management ──────────────────────────────────────────────
+	{"name": "get_tasks",
+	 "description": "List tasks, optionally filtered by project, assignee, or status.",
+	 "parameters": {"project": {"type": "string"},
+					"assigned_to": {"type": "string"},
+					"status": {"type": "string",
+							   "description": "Open / Working / Pending Review / Completed / Cancelled"}}},
+
+	{"name": "update_task_status",
+	 "description": "Update the status of an existing Task.",
+	 "parameters": {"task": {"type": "string", "required": True,
+							 "description": "Task name/ID e.g. TASK-00001"},
+					"status": {"type": "string", "required": True,
+							   "description": "Open / Working / Pending Review / Completed / Cancelled"}}},
+
+	# ── Expense Claims ───────────────────────────────────────────────
+	{"name": "create_expense_claim",
+	 "description": "Create an Expense Claim for an employee.",
+	 "parameters": {"employee": {"type": "string", "required": True},
+					"expense_type": {"type": "string", "required": True},
+					"amount": {"type": "number", "required": True},
+					"expense_date": {"type": "string", "description": "YYYY-MM-DD"},
+					"description": {"type": "string"}}},
+
+	{"name": "get_expense_claims",
+	 "description": "List Expense Claims, optionally filtered by employee or approval status.",
+	 "parameters": {"employee": {"type": "string"},
+					"status": {"type": "string",
+							   "description": "Draft / Approved / Rejected / Cancelled / Paid"}}},
 ]

@@ -18,7 +18,12 @@
   "column_break_prompt",
   "response",
   "section_block",
-  "blocked_reason"
+  "blocked_reason",
+  "section_rbac",
+  "requested_tool",
+  "permission_result",
+  "column_break_rbac",
+  "user_roles"
  ],
  "fields": [
   {
@@ -42,7 +47,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Success\nFailed\nBlocked\nPending"
+   "options": "Success\nFailed\nBlocked\nDenied\nPending"
   },
   {
    "fieldname": "column_break_header",
@@ -96,9 +101,37 @@
    "fieldtype": "Small Text",
    "label": "Blocked Reason",
    "depends_on": "eval:doc.status == 'Blocked'"
+  },
+  {
+   "fieldname": "section_rbac",
+   "fieldtype": "Section Break",
+   "label": "Permission Audit"
+  },
+  {
+   "fieldname": "requested_tool",
+   "fieldtype": "Data",
+   "in_list_view": 0,
+   "label": "Requested Tool"
+  },
+  {
+   "default": "N/A",
+   "fieldname": "permission_result",
+   "fieldtype": "Select",
+   "in_list_view": 0,
+   "label": "Permission Result",
+   "options": "N/A\nAllowed\nDenied"
+  },
+  {
+   "fieldname": "column_break_rbac",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "user_roles",
+   "fieldtype": "Small Text",
+   "label": "User Roles"
   }
  ],
- "modified": "2026-06-20 00:00:00.000000",
+ "modified": "2026-06-21 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "AI Assistant",
  "name": "AI Usage Log",
