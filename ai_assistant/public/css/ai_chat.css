@@ -78,7 +78,7 @@
 .ai-sn-brand-text {
 	font-size: 0.72rem;
 	font-weight: 700;
-	color: #c4b5fd;
+	color: #ffffff;
 	text-transform: uppercase;
 	letter-spacing: 0.07em;
 	white-space: nowrap;
@@ -144,7 +144,7 @@
 	font-weight: 700;
 	text-transform: uppercase;
 	letter-spacing: 0.09em;
-	color: rgba(255,255,255,0.32);
+	color: #ffffff;
 	padding: 10px 16px 4px;
 	white-space: nowrap;
 }
