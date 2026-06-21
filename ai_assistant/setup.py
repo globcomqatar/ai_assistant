@@ -14,6 +14,7 @@ def create_dashboard():
     _ensure_dashboard_charts()
     _ensure_dashboard()
     create_default_tool_permissions()
+    _ensure_tool_registry()
     _ensure_agents()
 
 
@@ -147,6 +148,88 @@ def _ensure_dashboard():
     frappe.db.commit()
 
 
+# ─── AI Tool Registry ─────────────────────────────────────────────────────────
+
+# Maps tool function name → category for the AI Tool DocType
+_TOOL_CATEGORIES: dict[str, str] = {
+    "create_customer": "CRM", "search_customer": "CRM", "get_customer_history": "CRM",
+    "create_lead": "CRM", "get_open_leads": "CRM", "create_opportunity": "CRM",
+    "create_quotation": "Sales", "get_quotations": "Sales",
+    "convert_quotation_to_sales_order": "Sales", "create_sales_order": "Sales",
+    "get_sales_orders": "Sales", "convert_so_to_invoice": "Sales",
+    "convert_so_to_delivery_note": "Sales", "close_sales_order": "Sales",
+    "create_sales_invoice": "Accounts", "get_pending_invoices": "Accounts",
+    "create_sales_return": "Accounts", "get_invoices_summary": "Accounts",
+    "create_delivery_note": "Sales", "get_delivery_notes": "Sales",
+    "record_payment": "Accounts", "generate_payment_from_invoice": "Accounts",
+    "get_payment_entries": "Accounts", "get_account_balance": "Accounts",
+    "create_journal_entry": "Accounts", "get_journal_entries": "Accounts",
+    "get_accounts_receivable": "Accounts", "get_sales_summary": "BI Analytics",
+    "create_supplier": "Purchasing", "search_supplier": "Purchasing",
+    "create_purchase_order": "Purchasing", "get_pending_purchase_orders": "Purchasing",
+    "get_purchase_summary": "Purchasing",
+    "get_stock": "Inventory", "search_item": "Inventory", "get_item_price": "Inventory",
+    "create_material_request": "Inventory", "get_stock_report": "Inventory",
+    "create_issue": "Other", "get_open_issues": "Other",
+    "create_project": "Other", "create_task": "Other", "create_job_card": "Other",
+    "create_workshop_job_card": "Workshop", "create_vehicle_inspection": "Workshop",
+    "create_workshop_estimate": "Workshop", "get_workshop_vehicle": "Workshop",
+    "get_workshop_job_cards": "Workshop", "diagnose_vehicle_issue": "Workshop",
+    "get_available_vehicles": "Rental", "get_active_rental_contracts": "Rental",
+    "get_monthly_sales_trend": "BI Analytics", "get_top_customers": "BI Analytics",
+    "get_top_selling_items": "BI Analytics", "get_pending_quotations": "BI Analytics",
+    "get_overdue_invoices": "BI Analytics", "get_stock_alerts": "BI Analytics",
+    "get_open_job_cards": "BI Analytics", "analyze_business": "BI Analytics",
+    "get_management_summary": "BI Analytics", "get_inactive_customers": "BI Analytics",
+    "get_unconverted_quotations": "BI Analytics",
+    "get_customers_with_overdue_balance": "BI Analytics",
+    "get_customers_without_recent_orders": "BI Analytics",
+    "get_followup_opportunities": "BI Analytics",
+    "create_employee": "HR", "get_employees": "HR",
+    "create_leave_application": "HR", "get_leave_balance": "HR",
+    "get_attendance_summary": "HR", "get_salary_slips": "HR", "get_payroll_summary": "HR",
+    "create_work_order": "Manufacturing", "get_work_orders": "Manufacturing",
+    "get_bom_list": "Manufacturing",
+    "create_purchase_invoice": "Purchasing", "get_purchase_invoices": "Purchasing",
+    "create_purchase_receipt": "Purchasing", "create_stock_entry": "Inventory",
+    "create_item": "Inventory", "get_items": "Inventory",
+    "get_tasks": "Other", "update_task_status": "Other",
+    "create_expense_claim": "HR", "get_expense_claims": "HR",
+}
+
+
+def _ensure_tool_registry() -> None:
+    """
+    Idempotent: create one AI Tool record per tool in TOOLS_SCHEMA.
+    This powers the Link field in AI Agent Tool child table.
+    """
+    if not frappe.db.table_exists("AI Tool"):
+        return
+    try:
+        from ai_assistant.api.tools import TOOLS_SCHEMA
+    except Exception:
+        return
+
+    created = 0
+    for tool in TOOLS_SCHEMA:
+        name = tool.get("name", "")
+        if not name or frappe.db.exists("AI Tool", name):
+            continue
+        doc = frappe.new_doc("AI Tool")
+        doc.name        = name
+        doc.tool_name   = name
+        doc.description = tool.get("description", "")
+        doc.category    = _TOOL_CATEGORIES.get(name, "Other")
+        doc.enabled     = 1
+        doc.flags.ignore_permissions = True
+        doc.flags.ignore_mandatory   = True
+        doc.insert()
+        created += 1
+
+    if created:
+        frappe.db.commit()
+
+
 # ─── Default Tool Permissions ─────────────────────────────────────────────────
 
 # Maps each tool to the ERPNext roles that may use it.
@@ -215,22 +298,23 @@ _DEFAULT_TOOL_ROLES: dict[str, list[str]] = {
     # ── Car Rental ───────────────────────────────────────────────────────────
     "get_available_vehicles":       ["Sales User", "Sales Manager"],
     "get_active_rental_contracts":  ["Sales User", "Sales Manager", "Accounts Manager"],
-    # ── Business Intelligence ─────────────────────────────────────────────────
-    "get_monthly_sales_trend":      ["Sales Manager", "Accounts Manager"],
-    "get_top_customers":            ["Sales Manager", "Accounts Manager"],
-    "get_top_selling_items":        ["Sales Manager", "Stock Manager"],
+    # ── Business Intelligence (read-only — broad access) ──────────────────────
+    "get_monthly_sales_trend":      ["Sales User", "Sales Manager", "Accounts Manager"],
+    "get_top_customers":            ["Sales User", "Sales Manager", "Accounts Manager"],
+    "get_top_selling_items":        ["Sales User", "Sales Manager", "Stock Manager"],
     "get_pending_quotations":       ["Sales User", "Sales Manager"],
     "get_overdue_invoices":         ["Accounts User", "Accounts Manager", "Sales Manager"],
-    "get_stock_alerts":             ["Stock User", "Stock Manager"],
-    "get_open_job_cards":           ["Sales Manager"],
-    "analyze_business":             ["Sales Manager", "Accounts Manager"],
-    "get_management_summary":       ["Sales Manager", "Accounts Manager"],
+    "get_stock_alerts":             ["Stock User", "Stock Manager", "Sales Manager"],
+    "get_open_job_cards":           ["Sales User", "Sales Manager"],
+    "analyze_business":             ["Sales User", "Sales Manager", "Accounts Manager"],
+    "get_management_summary":       ["Sales User", "Sales Manager", "Accounts Manager"],
+    "get_sales_summary":            ["Sales User", "Accounts Manager", "Sales Manager"],
     # ── Customer Follow-Up ────────────────────────────────────────────────────
-    "get_inactive_customers":       ["Sales Manager"],
-    "get_unconverted_quotations":   ["Sales Manager"],
-    "get_customers_with_overdue_balance": ["Accounts Manager", "Sales Manager"],
-    "get_customers_without_recent_orders": ["Sales Manager"],
-    "get_followup_opportunities":   ["Sales Manager"],
+    "get_inactive_customers":       ["Sales User", "Sales Manager"],
+    "get_unconverted_quotations":   ["Sales User", "Sales Manager"],
+    "get_customers_with_overdue_balance": ["Accounts User", "Accounts Manager", "Sales Manager"],
+    "get_customers_without_recent_orders": ["Sales User", "Sales Manager"],
+    "get_followup_opportunities":   ["Sales User", "Sales Manager"],
     # ── Vehicle Diagnostics ───────────────────────────────────────────────────
     "diagnose_vehicle_issue":       ["Sales User", "Sales Manager"],
     # ── HR & Employees ────────────────────────────────────────────────────────
