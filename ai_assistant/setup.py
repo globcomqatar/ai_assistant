@@ -11,6 +11,7 @@ def create_dashboard():
     """Create the AI Assistant Dashboard with Number Cards. Called after migrate."""
     _fix_workspace_title()
     _ensure_number_cards()
+    _ensure_dashboard_charts()
     _ensure_dashboard()
     create_default_tool_permissions()
 
@@ -42,29 +43,85 @@ def _ensure_number_cards():
     ]
     for name, label, method, color in cards:
         if frappe.db.exists("Number Card", name):
+            frappe.db.set_value("Number Card", name, "type", "Custom", update_modified=False)
             continue
         doc = frappe.new_doc("Number Card")
-        doc.name    = name
-        doc.label   = label
-        doc.method  = method
-        doc.color   = color
+        doc.name      = name
+        doc.label     = label
+        doc.type      = "Custom"
+        doc.method    = method
+        doc.color     = color
         doc.is_public = 1
-        doc.module  = "AI Assistant"
+        doc.module    = "AI Assistant"
         doc.flags.ignore_permissions = True
         doc.flags.ignore_mandatory   = True
         doc.insert()
     frappe.db.commit()
 
 
+def _ensure_dashboard_charts():
+    """Idempotent: create Dashboard Chart documents for AI usage analytics."""
+    charts = [
+        {
+            "name": "AI - Daily Usage Trend",
+            "chart_name": "AI - Daily Usage Trend",
+            "chart_type": "Count",
+            "document_type": "AI Usage Log",
+            "based_on": "creation",
+            "time_interval": "Daily",
+            "timespan": "Last Month",
+            "color": "#7C3AED",
+            "is_public": 1,
+            "module": "AI Assistant",
+            "type": "Line",
+            "filters_json": "[]",
+        },
+        {
+            "name": "AI - Usage by Status",
+            "chart_name": "AI - Usage by Status",
+            "chart_type": "Count",
+            "document_type": "AI Usage Log",
+            "based_on": "creation",
+            "group_by_type": "Count",
+            "group_by_based_on": "status",
+            "time_interval": "Monthly",
+            "timespan": "Last Year",
+            "color": "#10B981",
+            "is_public": 1,
+            "module": "AI Assistant",
+            "type": "Bar",
+            "filters_json": "[]",
+        },
+    ]
+    for data in charts:
+        if frappe.db.exists("Dashboard Chart", data["name"]):
+            continue
+        doc = frappe.new_doc("Dashboard Chart")
+        for k, v in data.items():
+            setattr(doc, k, v)
+        doc.flags.ignore_permissions = True
+        doc.flags.ignore_mandatory   = True
+        try:
+            doc.insert()
+        except Exception:
+            pass
+    frappe.db.commit()
+
+
 def _ensure_dashboard():
     """Idempotent: create the AI Assistant Dashboard if not present."""
-    if frappe.db.exists("Dashboard", "AI Assistant Dashboard"):
-        return
-    doc = frappe.new_doc("Dashboard")
-    doc.name             = "AI Assistant Dashboard"
-    doc.dashboard_name   = "AI Assistant Dashboard"
-    doc.module           = "AI Assistant"
-    doc.is_public        = 1
+    exists = frappe.db.exists("Dashboard", "AI Assistant Dashboard")
+    if exists:
+        doc = frappe.get_doc("Dashboard", "AI Assistant Dashboard")
+    else:
+        doc = frappe.new_doc("Dashboard")
+        doc.name           = "AI Assistant Dashboard"
+        doc.dashboard_name = "AI Assistant Dashboard"
+        doc.module         = "AI Assistant"
+
+    existing_cards  = [c.card  for c in doc.cards]
+    existing_charts = [c.chart for c in doc.charts]
+
     for card_name in [
         "AI - Sales This Month",
         "AI - Pending Quotations",
@@ -73,10 +130,19 @@ def _ensure_dashboard():
         "AI - New Customers",
         "AI - Open Job Cards",
     ]:
-        doc.append("cards", {"card": card_name})
+        if card_name not in existing_cards:
+            doc.append("cards", {"card": card_name})
+
+    for chart_name in ["AI - Daily Usage Trend", "AI - Usage by Status"]:
+        if chart_name not in existing_charts:
+            doc.append("charts", {"chart": chart_name, "width": "Full"})
+
     doc.flags.ignore_permissions = True
     doc.flags.ignore_mandatory   = True
-    doc.insert()
+    if exists:
+        doc.save()
+    else:
+        doc.insert()
     frappe.db.commit()
 
 
