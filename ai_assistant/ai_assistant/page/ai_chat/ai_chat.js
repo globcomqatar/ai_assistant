@@ -193,8 +193,7 @@ class AIChatPage {
 
 		// Force layout via inline styles — bypasses any CSS cascade issues
 		// with Frappe/Bootstrap parent container rules.
-		const vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
-		const layoutH = (vh - 120) + "px";
+		const layoutH = "80vh";
 		const $layout  = $("#ai-layout");
 		const $sidebar = $("#ai-sidebar");
 		const $chat    = $(".ai-chat-container");
@@ -213,8 +212,7 @@ class AIChatPage {
 		this.$send     = $("#ai-send-btn");
 
 		// Force the messages area to scroll — critical for chat usability.
-		// Without overflow-y:auto + flex:1, messages clip silently and can't scroll.
-		this.$messages.css({ flex: "1 1 0", overflowY: "auto", overflowX: "hidden",
+		this.$messages.css({ flex: "1 1 0", overflowY: "scroll", overflowX: "hidden",
 			minHeight: 0, display: "flex", flexDirection: "column" });
 
 		this._bind_events();

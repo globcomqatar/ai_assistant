@@ -22,7 +22,7 @@
 .ai-layout {
 	position: relative !important;
 	width: 100% !important;
-	height: calc(100vh - 120px) !important;
+	height: 80vh !important;
 	overflow: hidden !important;
 	border-radius: 10px;
 	border: 1px solid var(--border-color);
@@ -262,13 +262,24 @@
 /* ── Message list ─────────────────────────────────────────── */
 .ai-messages {
 	flex: 1;
-	overflow-y: auto;
+	overflow-y: scroll;
+	overflow-x: hidden;
 	padding: 20px 16px;
 	display: flex;
 	flex-direction: column;
 	gap: 12px;
 	scroll-behavior: smooth;
+	/* Styled scrollbar */
+	scrollbar-width: thin;
+	scrollbar-color: rgba(124,58,237,0.35) transparent;
 }
+.ai-messages::-webkit-scrollbar { width: 5px; }
+.ai-messages::-webkit-scrollbar-track { background: transparent; }
+.ai-messages::-webkit-scrollbar-thumb {
+	background: rgba(124,58,237,0.35);
+	border-radius: 3px;
+}
+.ai-messages::-webkit-scrollbar-thumb:hover { background: rgba(124,58,237,0.6); }
 
 /* ── Welcome screen ───────────────────────────────────────── */
 .ai-welcome-msg {
