@@ -29,18 +29,22 @@ def send_message(message: str, history: str = "[]", current_agent: str = "genera
     if len(message) > 4000:
         frappe.throw(_("Message too long. Please keep it under 4 000 characters."))
 
-    # Validate agent access
-    agent_code = (current_agent or "general").strip()
     user = frappe.session.user
-    if agent_code != "general":
-        try:
-            from ai_assistant.api.agent_manager import validate_agent_access
-            if not validate_agent_access(user, agent_code):
-                frappe.throw(_("You do not have access to the '{0}' agent.").format(agent_code))
-        except frappe.PermissionError:
-            raise
-        except Exception:
-            agent_code = "general"
+
+    # PATCH 5: Strict governance pipeline
+    # Step 1 + 2: Resolve agent — non-SM is always forced to "general"
+    from ai_assistant.api.agent_manager import (
+        resolve_active_agent,
+        validate_agent_switch,
+        get_session_agent,
+    )
+    agent_code = resolve_active_agent(user, (current_agent or "general").strip())
+
+    # Step 3: Validate switch — blocks any non-SM attempt to use a non-general agent
+    validate_agent_switch(user, agent_code)
+
+    # Step 4: Session safety — strips any session-level override for non-SM
+    agent_code = get_session_agent(user, agent_code)
 
     try:
         hist: list[dict] = json.loads(history)

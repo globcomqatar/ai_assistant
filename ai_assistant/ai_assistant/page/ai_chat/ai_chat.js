@@ -296,8 +296,9 @@ class AIChatPage {
 			}
 		});
 
-		// Agent pill clicks
+		// Agent pill clicks — System Manager only
 		$(document).on("click", ".ai-agent-pill", (e) => {
+			if (!frappe.user.has_role("System Manager")) return;
 			const agent_code = $(e.currentTarget).data("agent");
 			if (agent_code) this._switch_agent(agent_code);
 		});
@@ -1352,6 +1353,12 @@ class AIChatPage {
 	// ── Agent selector ────────────────────────────────────────────────────────
 
 	_load_agents() {
+		// Non-System Manager: hide the agent bar entirely, lock to general
+		if (!frappe.user.has_role("System Manager")) {
+			$("#ai-agent-bar").hide();
+			this.current_agent = "general";
+			return;
+		}
 		frappe.call({
 			method: "ai_assistant.api.chat.get_agents",
 			callback: (r) => {

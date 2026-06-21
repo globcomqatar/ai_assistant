@@ -99,10 +99,81 @@ def validate_agent_access(user: str, agent_code: str) -> bool:
     return "System Manager" in user_roles or bool(user_roles & set(allowed_roles))
 
 
+# ── Agent Governance (Patches 1–4) ───────────────────────────────────────────
+
+def _is_system_manager(user: str) -> bool:
+    return "System Manager" in frappe.get_roles(user)
+
+
+def resolve_active_agent(user: str, requested_agent: str | None = None) -> str:
+    """
+    PATCH 1: Strict agent resolution.
+    Non-System Manager users are always forced to 'general'.
+    System Manager can use any valid agent.
+    """
+    if not _is_system_manager(user):
+        return "general"
+    if not requested_agent:
+        return "general"
+    return requested_agent
+
+
+def validate_agent_switch(user: str, agent: str) -> None:
+    """
+    PATCH 2: Raise PermissionError if a non-System Manager tries to switch
+    away from the general agent. Called server-side on every request.
+    """
+    if not _is_system_manager(user) and agent != "general":
+        frappe.throw(
+            _("Agent switching is not allowed for this user."),
+            frappe.PermissionError,
+        )
+
+
+def check_system_manager_access(user: str) -> None:
+    """
+    PATCH 3: Gate for AI Agent configuration endpoints.
+    Raises PermissionError for any non-System Manager.
+    """
+    if not _is_system_manager(user):
+        frappe.throw(
+            _("Only System Manager can access AI Agent configuration."),
+            frappe.PermissionError,
+        )
+
+
+def get_session_agent(user: str, session_agent: str) -> str:
+    """
+    PATCH 4: Session cannot override agent for non-System Manager.
+    Always returns 'general' for regular users regardless of stored session value.
+    """
+    if not _is_system_manager(user):
+        return "general"
+    return session_agent
+
+
 @frappe.whitelist()
 def get_available_agents(user: str | None = None) -> list[dict]:
-    """Return agents available to the current (or given) user, ordered by display_order."""
+    """
+    Return agents available to the current (or given) user, ordered by display_order.
+    Non-System Manager users receive only the general agent — agent switching is locked.
+    """
     user = user or frappe.session.user
+    # PATCH 2 enforcement: non-SM only sees general agent
+    if not _is_system_manager(user):
+        row = frappe.db.get_value(
+            "AI Agent", "general",
+            ["agent_code", "agent_name", "description", "icon", "color", "default_agent"],
+            as_dict=True,
+        ) or {}
+        return [{
+            "agent_code":    row.get("agent_code", "general"),
+            "agent_name":    row.get("agent_name", "General ERP Assistant"),
+            "description":   row.get("description", ""),
+            "icon":          row.get("icon", "🤖"),
+            "color":         row.get("color", "#2563EB"),
+            "default_agent": True,
+        }]
     rows = frappe.get_all(
         "AI Agent",
         filters={"enabled": 1},
