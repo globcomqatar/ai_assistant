@@ -38,7 +38,7 @@
 	left: 0 !important;
 	bottom: 0 !important;
 	width: 230px !important;
-	background: linear-gradient(180deg, #1C2333 0%, #0F172A 100%) !important;
+	background: linear-gradient(180deg, #1e1b4b 0%, #2d2467 100%) !important;
 	display: flex !important;
 	flex-direction: column !important;
 	overflow: hidden !important;
@@ -237,7 +237,7 @@
 	align-items: center;
 	justify-content: space-between;
 	padding: 12px 16px;
-	background: linear-gradient(135deg, #1C2333 0%, #111827 100%);
+	background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
 	color: #fff;
 	flex-shrink: 0;
 }
