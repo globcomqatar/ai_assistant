@@ -1,22 +1,67 @@
 [
  {
-  "name": "AI Assistant Dashboard",
-  "doctype": "Dashboard",
+  "cards": [
+   {
+    "card": "AI - Sales This Month",
+    "parent": "AI Assistant Dashboard",
+    "parentfield": "cards",
+    "parenttype": "Dashboard"
+   },
+   {
+    "card": "AI - Pending Quotations",
+    "parent": "AI Assistant Dashboard",
+    "parentfield": "cards",
+    "parenttype": "Dashboard"
+   },
+   {
+    "card": "AI - Overdue Invoices",
+    "parent": "AI Assistant Dashboard",
+    "parentfield": "cards",
+    "parenttype": "Dashboard"
+   },
+   {
+    "card": "AI - Low Stock Items",
+    "parent": "AI Assistant Dashboard",
+    "parentfield": "cards",
+    "parenttype": "Dashboard"
+   },
+   {
+    "card": "AI - New Customers",
+    "parent": "AI Assistant Dashboard",
+    "parentfield": "cards",
+    "parenttype": "Dashboard"
+   },
+   {
+    "card": "AI - Open Job Cards",
+    "parent": "AI Assistant Dashboard",
+    "parentfield": "cards",
+    "parenttype": "Dashboard"
+   }
+  ],
+  "chart_options": null,
+  "charts": [
+   {
+    "chart": "AI - Daily Usage Trend",
+    "parent": "AI Assistant Dashboard",
+    "parentfield": "charts",
+    "parenttype": "Dashboard",
+    "width": "Full"
+   },
+   {
+    "chart": "AI - Usage by Status",
+    "parent": "AI Assistant Dashboard",
+    "parentfield": "charts",
+    "parenttype": "Dashboard",
+    "width": "Full"
+   }
+  ],
   "dashboard_name": "AI Assistant Dashboard",
+  "docstatus": 0,
+  "doctype": "Dashboard",
   "is_default": 0,
   "is_standard": 0,
+  "modified": "2026-06-22 16:00:52.925332",
   "module": "AI Assistant",
-  "cards": [
-   {"card": "AI - Sales This Month",   "doctype": "Number Card Link"},
-   {"card": "AI - Pending Quotations", "doctype": "Number Card Link"},
-   {"card": "AI - Overdue Invoices",   "doctype": "Number Card Link"},
-   {"card": "AI - Low Stock Items",    "doctype": "Number Card Link"},
-   {"card": "AI - New Customers",      "doctype": "Number Card Link"},
-   {"card": "AI - Open Job Cards",     "doctype": "Number Card Link"}
-  ],
-  "charts": [
-   {"chart": "AI - Daily Usage Trend", "width": "Full", "doctype": "Dashboard Chart Link"},
-   {"chart": "AI - Usage by Status",   "width": "Full", "doctype": "Dashboard Chart Link"}
-  ]
+  "name": "AI Assistant Dashboard"
  }
 ]
