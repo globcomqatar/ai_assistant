@@ -25,7 +25,32 @@ ANALYTICAL_TOOLS: frozenset[str] = frozenset({
 })
 
 
-def _interpret_analytics(tool_result: dict, user_message: str) -> dict | None:
+# All four keys the interpreter must return — strict subset check (Fix 4)
+_INTERP_KEYS: frozenset[str] = frozenset({"findings", "risks", "recommendations", "required_actions"})
+
+
+def _log_interpret(
+    user: str, intent: str, prompt: str, raw: str,
+    tokens: int, cost: float, status: str,
+) -> None:
+    """Write one AI Usage Log row for an interpreter call. Fails silently."""
+    try:
+        from ai_assistant.api.executor import _write_log
+        _write_log(
+            user=user,
+            prompt=prompt[:500],
+            response=raw[:500],
+            tool_used=f"_interpret:{intent}",
+            tokens=tokens,
+            cost=cost,
+            status=status,
+            permission_result="N/A",
+        )
+    except Exception as _exc:
+        frappe.log_error(title="Interpreter log write failed", message=str(_exc))
+
+
+def _interpret_analytics(tool_result: dict, user_message: str, user: str) -> dict | None:
     """
     Send computed metrics to the AI and get back four structured sections.
 
@@ -39,6 +64,7 @@ def _interpret_analytics(tool_result: dict, user_message: str) -> dict | None:
         from ai_assistant.providers import get_provider
         from ai_assistant.api.router import _extract_json
 
+        _intent = tool_result.get("intent", "unknown")
         metrics = tool_result["metrics"]
         aging = tool_result.get("aging_buckets") or {}
         top_cx = tool_result.get("top_customers") or []
@@ -74,15 +100,49 @@ def _interpret_analytics(tool_result: dict, user_message: str) -> dict | None:
             messages=[{"role": "user", "content": user_content}],
             system_prompt=system_prompt,
         )
-        clean = _extract_json(resp.raw_text.strip())
-        parsed = json.loads(clean)
 
-        expected = {"findings", "risks", "recommendations", "required_actions"}
-        if not expected.intersection(parsed.keys()):
-            raise ValueError(f"Interpreter returned unexpected keys: {list(parsed.keys())}")
+        _tokens = getattr(resp, "tokens_total", 0) or 0
+        _cost   = getattr(resp, "estimated_cost_usd", 0.0) or 0.0
 
-        return {k: [str(i) for i in v] if isinstance(v, list) else []
-                for k, v in parsed.items() if k in expected}
+        # Parse JSON — log and return None on decode failure
+        try:
+            clean = _extract_json(resp.raw_text.strip())
+            parsed = json.loads(clean)
+        except (json.JSONDecodeError, ValueError) as _je:
+            frappe.log_error(title="Analytics interpreter failed", message=f"JSONDecodeError: {_je}")
+            _log_interpret(user, _intent, user_content, resp.raw_text, _tokens, _cost, "Error")
+            return None
+
+        # Fix 4: strict key presence check
+        missing = _INTERP_KEYS - parsed.keys()
+        if missing:
+            frappe.log_error(
+                title="Interpreter response missing keys",
+                message=f"Missing: {missing}. Raw (first 300): {resp.raw_text[:300]}",
+            )
+            _log_interpret(user, _intent, user_content, resp.raw_text, _tokens, _cost, "Error")
+            return None
+
+        # Fix 4: strict type check — all four values must be lists
+        wrong_type = [k for k in _INTERP_KEYS if not isinstance(parsed.get(k), list)]
+        if wrong_type:
+            frappe.log_error(
+                title="Interpreter response wrong types",
+                message=f"Keys not lists: {wrong_type}. Raw (first 300): {resp.raw_text[:300]}",
+            )
+            _log_interpret(user, _intent, user_content, resp.raw_text, _tokens, _cost, "Error")
+            return None
+
+        # Strip empty / whitespace-only items from each list
+        result = {k: [str(i) for i in parsed[k] if str(i).strip()] for k in _INTERP_KEYS}
+
+        # If every list is empty after stripping, skip the analysis section entirely
+        if not any(result.values()):
+            _log_interpret(user, _intent, user_content, resp.raw_text, _tokens, _cost, "Success")
+            return None
+
+        _log_interpret(user, _intent, user_content, resp.raw_text, _tokens, _cost, "Success")
+        return result
 
     except Exception as exc:
         frappe.log_error(title="Analytics interpreter failed", message=f"{type(exc).__name__}: {exc}")
@@ -180,7 +240,7 @@ def send_message(message: str, history: str = "[]", current_agent: str = "genera
             and _result.get("status", "ok") == "ok"
             and _result.get("metrics")          # only enriched tools have this key
         ):
-            _result["analysis"] = _interpret_analytics(_result, message)
+            _result["analysis"] = _interpret_analytics(_result, message, user)
 
     if not results:
         results = [{"intent": "reply",

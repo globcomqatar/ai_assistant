@@ -105,6 +105,20 @@ def _is_system_manager(user: str) -> bool:
     return "System Manager" in frappe.get_roles(user)
 
 
+def _safe_general_code() -> str:
+    """Return the correct agent_code for the 'general' fallback.
+    Tries the default_agent flag first, then the literal name 'general',
+    then falls back to the hardcoded string so the system never breaks
+    even if the AI Agent table is empty or misconfigured."""
+    code = frappe.db.get_value("AI Agent", {"enabled": 1, "default_agent": 1}, "agent_code")
+    if code:
+        return code
+    code = frappe.db.get_value("AI Agent", {"name": "general", "enabled": 1}, "agent_code")
+    if code:
+        return code
+    return "general"
+
+
 def resolve_active_agent(user: str, requested_agent: str | None = None) -> str:
     """
     PATCH 1: Strict agent resolution.
@@ -112,9 +126,9 @@ def resolve_active_agent(user: str, requested_agent: str | None = None) -> str:
     System Manager can use any valid agent.
     """
     if not _is_system_manager(user):
-        return "general"
+        return _safe_general_code()
     if not requested_agent:
-        return "general"
+        return _safe_general_code()
     return requested_agent
 
 
@@ -145,10 +159,10 @@ def check_system_manager_access(user: str) -> None:
 def get_session_agent(user: str, session_agent: str) -> str:
     """
     PATCH 4: Session cannot override agent for non-System Manager.
-    Always returns 'general' for regular users regardless of stored session value.
+    Always returns the safe general agent for regular users regardless of stored session value.
     """
     if not _is_system_manager(user):
-        return "general"
+        return _safe_general_code()
     return session_agent
 
 

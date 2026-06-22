@@ -5,6 +5,8 @@ All four expose an OpenAI-compatible REST interface.
 
 from __future__ import annotations
 
+import frappe
+import openai as _openai_lib
 from openai import OpenAI
 
 from ai_assistant.providers.base import AIProvider, AIResponse
@@ -56,6 +58,7 @@ class OpenAICompatibleProvider(AIProvider):
 		self.model = model
 		self.provider_tag = provider_tag
 		self._use_json_mode = provider_tag not in _NO_JSON_MODE_PROVIDERS
+		self._timeout: int = 60  # seconds; supervisor overrides to (5, 15) for fast routing
 
 	def chat(
 		self,
@@ -76,11 +79,22 @@ class OpenAICompatibleProvider(AIProvider):
 			call_kwargs["response_format"] = {"type": "json_object"}
 
 		try:
-			response = self._client.chat.completions.create(**call_kwargs)
+			response = self._client.chat.completions.create(**call_kwargs, timeout=self._timeout)
+		except _openai_lib.APITimeoutError:
+			frappe.throw(
+				"AI request timed out — please try again. "
+				"If this persists the AI provider may be slow."
+			)
 		except Exception:
 			# Retry without json_mode if the provider rejected it
 			call_kwargs.pop("response_format", None)
-			response = self._client.chat.completions.create(**call_kwargs)
+			try:
+				response = self._client.chat.completions.create(**call_kwargs, timeout=self._timeout)
+			except _openai_lib.APITimeoutError:
+				frappe.throw(
+					"AI request timed out — please try again. "
+					"If this persists the AI provider may be slow."
+				)
 
 		choice = response.choices[0]
 		usage = response.usage

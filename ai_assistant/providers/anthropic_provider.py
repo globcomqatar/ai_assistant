@@ -9,6 +9,8 @@ JSON output is enforced via:
 
 from __future__ import annotations
 
+import httpx
+
 from ai_assistant.providers.base import AIProvider, AIResponse
 
 # Cost per 1 000 tokens (input, output) in USD
@@ -27,7 +29,10 @@ class AnthropicProvider(AIProvider):
 	def __init__(self, api_key: str, model: str):
 		# Lazy import so `anthropic` is only required when Claude is actually used
 		from anthropic import Anthropic
-		self._client = Anthropic(api_key=api_key)
+		self._client = Anthropic(
+			api_key=api_key,
+			timeout=httpx.Timeout(60.0, connect=10.0),
+		)
 		self.model = model
 
 	def chat(
@@ -43,12 +48,19 @@ class AnthropicProvider(AIProvider):
 			{"role": "assistant", "content": "{"},
 		]
 
-		response = self._client.messages.create(
-			model=self.model,
-			max_tokens=2048,
-			system=system_prompt + "\n\nIMPORTANT: Your response must start with '{' and be valid JSON only.",
-			messages=anthropic_messages,
-		)
+		try:
+			response = self._client.messages.create(
+				model=self.model,
+				max_tokens=2048,
+				system=system_prompt + "\n\nIMPORTANT: Your response must start with '{' and be valid JSON only.",
+				messages=anthropic_messages,
+			)
+		except httpx.TimeoutException:
+			import frappe
+			frappe.throw(
+				"AI request timed out — please try again. "
+				"If this persists the AI provider may be slow."
+			)
 
 		# The model continues from "{" — prepend it back
 		raw = "{" + (response.content[0].text if response.content else "")

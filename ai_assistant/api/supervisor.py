@@ -9,6 +9,7 @@ governance rules for all other users are entirely unchanged.
 from __future__ import annotations
 
 import json
+import time
 import frappe
 
 
@@ -73,11 +74,17 @@ def route_to_agent(message: str, user: str) -> dict:
             f"Available agents:\n{catalog_lines}"
         )
 
+        _t0 = time.perf_counter()
         provider = get_provider()
+        # Tighter timeout for routing — must be fast so it never stalls the user
+        if hasattr(provider, "_timeout"):
+            provider._timeout = (5, 15)
+
         resp = provider.chat(
             messages=[{"role": "user", "content": message}],
             system_prompt=system_prompt,
         )
+        _latency_ms = round((time.perf_counter() - _t0) * 1000)
 
         raw = resp.raw_text.strip()
         clean = _extract_json(raw)
@@ -98,6 +105,24 @@ def route_to_agent(message: str, user: str) -> dict:
             (a["agent_name"] for a in candidates if a["agent_code"] == agent_code),
             agent_code,
         )
+
+        _log: dict = {
+            "user":            frappe.session.user,
+            "message_preview": message[:120],
+            "routed_to":       agent_code,
+            "reason":          reason[:120],
+            "latency_ms":      _latency_ms,
+            "candidate_count": len(candidates),
+            "method":          "llm",
+        }
+        if _latency_ms > 3000:
+            _log["warning"] = "slow_routing"
+            frappe.publish_realtime(
+                "ai_supervisor_slow",
+                {"latency_ms": _latency_ms, "user": frappe.session.user},
+            )
+        frappe.log_error(title="[Supervisor] route_to_agent", message=json.dumps(_log))
+
         return {
             "agent_code": agent_code,
             "agent_name": agent_name,
@@ -106,5 +131,13 @@ def route_to_agent(message: str, user: str) -> dict:
         }
 
     except Exception as exc:
-        frappe.log_error(title="Supervisor routing failed", message=str(exc))
+        _latency_ms = round((time.perf_counter() - _t0) * 1000) if "_t0" in dir() else -1
+        frappe.log_error(
+            title="[Supervisor] route_to_agent",
+            message=json.dumps({
+                "error":           str(exc),
+                "latency_ms":      _latency_ms,
+                "message_preview": message[:120],
+            }),
+        )
         return _fallback

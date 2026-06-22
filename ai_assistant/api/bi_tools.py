@@ -878,6 +878,15 @@ def get_sales_analysis() -> dict:
     Deep sales analysis for the current month:
     revenue by item group, by salesperson, quotation conversion rate,
     top customers, top items, new vs returning customers.
+
+    Salesperson attribution — Case B (Sales Team child table):
+    Sales Order has no direct sales_person Link field. Attribution uses
+    the `tabSales Team` child table (Sales Order field: sales_team,
+    child DocType: Sales Team, child field: sales_person → Link to Sales Person).
+    The revenue query joins tabSales Team on tabSales Invoice (not tabSales Order)
+    using allocated_percentage to weight each salesperson's share.
+    Do NOT filter directly on a sales_person column on tabSales Invoice —
+    that field does not exist there; always join through tabSales Team.
     """
     m_start, _ = _month_range(0)
     t = today()
