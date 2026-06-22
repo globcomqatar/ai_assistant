@@ -140,10 +140,8 @@
 }
 
 .ai-sn-section-label {
-	font-size: 0.68rem;
-	font-weight: 800;
-	text-transform: uppercase;
-	letter-spacing: 0.09em;
+	font-size: 0.8rem;
+	font-weight: 700;
 	color: #ffffff;
 	padding: 10px 16px 4px;
 	white-space: nowrap;
