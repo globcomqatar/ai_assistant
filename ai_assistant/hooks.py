@@ -8,8 +8,9 @@ app_license = "mit"
 required_apps = ["erpnext"]
 
 fixtures = [
-	{"dt": "Workspace",          "filters": [["module", "=", "AI Assistant"]]},
+	# Number Card must load before Workspace — Workspace link-validates against card names on save
 	{"dt": "Number Card",        "filters": [["module", "=", "AI Assistant"]]},
+	{"dt": "Workspace",          "filters": [["module", "=", "AI Assistant"]]},
 	{"dt": "AI Tool Permission", "filters": [["name", "like", "%"]]},
 	{"dt": "AI Agent",           "filters": [["name", "like", "%"]]},
 	{"dt": "AI Tool",            "filters": [["name", "like", "%"]]},
