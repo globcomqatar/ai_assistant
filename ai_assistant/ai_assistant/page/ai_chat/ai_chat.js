@@ -634,8 +634,8 @@ class AIChatPage {
 				["Code","Item","Qty Sold","Revenue"]);
 		} else if (intent === "get_pending_quotations" && result.quotations) {
 			detail = this._render_pending_quotations(result);
-		} else if (intent === "get_overdue_invoices" && result.invoices) {
-			detail = this._render_overdue_invoices(result);
+		} else if (intent === "get_overdue_invoices") {
+			detail = this._render_overdue_analysis(result);
 		} else if (intent === "get_stock_alerts") {
 			detail = this._render_stock_alerts(result);
 		} else if (intent === "get_open_job_cards" && result.job_cards) {
@@ -1114,6 +1114,130 @@ class AIChatPage {
 			<thead><tr><th>Invoice</th><th>Customer</th><th>Outstanding</th><th>Due Date</th><th>Overdue</th></tr></thead>
 			<tbody>${rows}</tbody>
 		</table>`;
+	}
+
+	_render_kpi_strip(metrics) {
+		const fmt = v => this._fmt_currency(v);
+		const kpis = [
+			{ label: __("Total Overdue (QAR)"), value: fmt(metrics.total_overdue),        danger: true  },
+			{ label: __("Invoices"),             value: metrics.invoice_count,             danger: false },
+			{ label: __("Customers Affected"),   value: metrics.customers_affected,        danger: false },
+			{ label: __("90+ Days (QAR)"),       value: fmt(metrics.over_90_days),         danger: metrics.over_90_pct > 20 },
+			{ label: __("90+ %"),                value: `${metrics.over_90_pct}%`,         danger: metrics.over_90_pct > 20 },
+			{ label: __("Top Account %"),        value: `${metrics.worst_customer_pct}%`,  danger: metrics.worst_customer_pct > 30 },
+		];
+		const cards = kpis.map(k =>
+			`<div class="ai-kpi-card">
+				<div class="ai-kpi-value${k.danger ? " ai-kpi-danger" : ""}">${frappe.utils.escape_html(String(k.value))}</div>
+				<div class="ai-kpi-label">${k.label}</div>
+			</div>`
+		).join("");
+		return `<div class="ai-kpi-strip">${cards}</div>`;
+	}
+
+	// Renders a frappe.Chart into a placeholder div after it is in the DOM.
+	_render_chart(chartData, mountId) {
+		setTimeout(() => {
+			const el = document.getElementById(mountId);
+			if (!el || !window.frappe || !frappe.Chart) return;
+			try {
+				new frappe.Chart(el, {
+					type: chartData.type || "bar",
+					title: chartData.title || "",
+					data: { labels: chartData.labels || [], datasets: chartData.datasets || [] },
+					height: 240,
+					colors: ["#7C3AED", "#2563EB", "#0D9488", "#EA580C"],
+				});
+			} catch (_e) {
+				el.innerHTML = `<p style="color:var(--text-muted);font-size:0.8rem;padding:8px">${__("Chart unavailable")}</p>`;
+			}
+		}, 150);
+		return `<div id="${mountId}" class="ai-chart"></div>`;
+	}
+
+	_render_overdue_analysis(result) {
+		const fmt = v => this._fmt_currency(v);
+		let html = "";
+
+		// KPI strip — only when enriched metrics are present
+		if (result.metrics) {
+			html += this._render_kpi_strip(result.metrics);
+		} else {
+			// Graceful fallback for non-enriched result
+			html += `<div class="ai-kv-grid" style="margin-bottom:8px">
+				<div class="ai-kv-row"><span class="ai-kv-label">Overdue Count</span><span class="ai-kv-val" style="color:var(--red-500)">${result.overdue_count || 0}</span></div>
+				<div class="ai-kv-row"><span class="ai-kv-label">Total Overdue</span><span class="ai-kv-val" style="color:var(--red-500)">${fmt(result.total_overdue_amount)}</span></div>
+			</div>`;
+		}
+
+		// Aging bar chart
+		if (result.chart && result.chart.labels && result.chart.labels.length) {
+			const mountId = "ai-chart-" + Date.now() + "-" + Math.floor(Math.random() * 9999);
+			html += this._render_chart(result.chart, mountId);
+		}
+
+		// Top customers table
+		if (result.top_customers && result.top_customers.length) {
+			const rows = result.top_customers.map(c =>
+				`<tr>
+					<td>${frappe.utils.escape_html(c.customer)}</td>
+					<td class="text-right">${fmt(c.outstanding)}</td>
+					<td class="text-right">${c.pct_of_total}%</td>
+				</tr>`
+			).join("");
+			html += `<p style="font-weight:600;margin:10px 0 4px">📊 ${__("Top Customers by Outstanding")}</p>
+				<table class="ai-table">
+					<thead><tr><th>${__("Customer")}</th><th class="text-right">${__("Outstanding")}</th><th class="text-right">${__("% of Total")}</th></tr></thead>
+					<tbody>${rows}</tbody>
+				</table>`;
+		}
+
+		// Invoice table (capped at 50 server-side)
+		if (result.invoices && result.invoices.length) {
+			const invRows = result.invoices.map(i =>
+				`<tr>
+					<td><a href="/app/sales-invoice/${encodeURIComponent(i.name)}" target="_blank">${i.name}</a></td>
+					<td>${frappe.utils.escape_html(i.customer || "")}</td>
+					<td class="text-right">${fmt(i.outstanding_amount)}</td>
+					<td>${i.due_date || ""}</td>
+					<td class="text-right" style="color:var(--red-500)">${i.days_overdue || 0}d</td>
+				</tr>`
+			).join("");
+			html += `<p style="font-weight:600;margin:10px 0 4px">⚠️ ${__("Overdue Invoices")} (${result.invoices.length})</p>
+				<table class="ai-table">
+					<thead><tr><th>${__("Invoice")}</th><th>${__("Customer")}</th><th class="text-right">${__("Outstanding")}</th><th>${__("Due Date")}</th><th class="text-right">${__("Overdue")}</th></tr></thead>
+					<tbody>${invRows}</tbody>
+				</table>`;
+		}
+
+		// AI-interpreted sections — renders only when analysis is present
+		if (result.analysis) {
+			html += this._render_analysis_sections(result.analysis);
+		}
+
+		return html;
+	}
+
+	// Generic renderer for the four analysis arrays — used by all future analytical tools.
+	_render_analysis_sections(analysis) {
+		if (!analysis) return "";
+		const sections = [
+			{ key: "findings",         label: __("Findings"),         icon: "📌" },
+			{ key: "risks",            label: __("Risks"),            icon: "⚠️" },
+			{ key: "recommendations",  label: __("Recommendations"),  icon: "💡" },
+			{ key: "required_actions", label: __("Required Actions"), icon: "✅" },
+		];
+		let html = `<div class="ai-analysis-sections">`;
+		let rendered = 0;
+		for (const sec of sections) {
+			const items = analysis[sec.key];
+			if (!items || !items.length) continue;
+			const lis = items.map(item => `<li>${frappe.utils.escape_html(String(item))}</li>`).join("");
+			html += `<div class="ai-analysis-section"><h4>${sec.icon} ${sec.label}</h4><ul>${lis}</ul></div>`;
+			rendered++;
+		}
+		if (!rendered) return "";
+		return html + `</div>`;
 	}
 
 	_render_stock_alerts(r) {

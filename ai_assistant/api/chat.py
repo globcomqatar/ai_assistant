@@ -12,6 +12,78 @@ from ai_assistant.api.router import route
 from ai_assistant.api.executor import execute_actions
 
 
+# Intent names of tools that return a `metrics` key and receive AI interpretation.
+# Add a tool's intent here whenever you enrich it with metrics/chart — no other changes needed.
+ANALYTICAL_TOOLS: frozenset[str] = frozenset({
+    "get_overdue_invoices",
+    # future: "get_monthly_sales_trend", "get_stock_alerts", "get_accounts_receivable", ...
+})
+
+
+def _interpret_analytics(tool_result: dict, user_message: str) -> dict | None:
+    """
+    Send computed metrics to the AI and get back four structured sections.
+
+    Returns {"findings":[...], "risks":[...], "recommendations":[...],
+             "required_actions":[...]} or None on any failure.
+    Always safe to call — logs errors and returns None without raising.
+    """
+    if not tool_result.get("metrics"):
+        return None
+    try:
+        from ai_assistant.providers import get_provider
+        from ai_assistant.api.router import _extract_json
+
+        metrics = tool_result["metrics"]
+        aging = tool_result.get("aging_buckets") or {}
+        top_cx = tool_result.get("top_customers") or []
+
+        # Build compact, number-rich context — raw invoice rows excluded
+        ctx = ["### Metrics"]
+        for k, v in metrics.items():
+            ctx.append(f"- {k}: {v}")
+        if aging:
+            ctx.append("### Aging Buckets (QAR)")
+            for bucket, amt in aging.items():
+                ctx.append(f"- {bucket} days past due: {amt:,.0f}")
+        if top_cx:
+            ctx.append("### Top Customers by Outstanding")
+            for cx in top_cx[:5]:
+                ctx.append(f"- {cx['customer']}: QAR {cx['outstanding']:,.0f} ({cx['pct_of_total']}%)")
+
+        system_prompt = (
+            "You are a financial analyst for a Qatar-based ERP system. "
+            "Interpret the supplied pre-computed metrics and respond with ONLY valid JSON — "
+            "no markdown, no explanation, no extra text.\n\n"
+            'Output: {"findings":["..."],"risks":["..."],'
+            '"recommendations":["..."],"required_actions":["..."]}\n\n'
+            "Rules: 2-4 items per array. Every figure you quote must come from the "
+            "supplied numbers — never invent values. Currency is QAR. "
+            "findings=factual observations; risks=business risks; "
+            "recommendations=strategic improvements; required_actions=immediate operational steps."
+        )
+        user_content = f"User question: {user_message}\n\nComputed data:\n" + "\n".join(ctx)
+
+        provider = get_provider()
+        resp = provider.chat(
+            messages=[{"role": "user", "content": user_content}],
+            system_prompt=system_prompt,
+        )
+        clean = _extract_json(resp.raw_text.strip())
+        parsed = json.loads(clean)
+
+        expected = {"findings", "risks", "recommendations", "required_actions"}
+        if not expected.intersection(parsed.keys()):
+            raise ValueError(f"Interpreter returned unexpected keys: {list(parsed.keys())}")
+
+        return {k: [str(i) for i in v] if isinstance(v, list) else []
+                for k, v in parsed.items() if k in expected}
+
+    except Exception as exc:
+        frappe.log_error(title="Analytics interpreter failed", message=f"{type(exc).__name__}: {exc}")
+        return None
+
+
 @frappe.whitelist()
 def send_message(message: str, history: str = "[]", current_agent: str = "general") -> dict:
     """
@@ -94,6 +166,16 @@ def send_message(message: str, history: str = "[]", current_agent: str = "genera
         ai_raw_response=ai_raw,
         agent_code=agent_code,
     )
+
+    # Step 6: For each successful analytical result, add AI-interpreted sections.
+    # One extra model call per analytical report; fails silently — never breaks data/chart.
+    for _result in results:
+        if (
+            _result.get("intent") in ANALYTICAL_TOOLS
+            and _result.get("status", "ok") == "ok"
+            and _result.get("metrics")          # only enriched tools have this key
+        ):
+            _result["analysis"] = _interpret_analytics(_result, message)
 
     if not results:
         results = [{"intent": "reply",

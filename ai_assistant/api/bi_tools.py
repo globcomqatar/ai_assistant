@@ -168,7 +168,8 @@ def get_pending_quotations(days_old: int = 0) -> dict:
 
 
 def get_overdue_invoices() -> dict:
-    """All unpaid invoices past their due date."""
+    """Unpaid invoices past due date — enriched with aging buckets, metrics, and chart data."""
+    # Fetch up to 200 for accurate analytics; display is capped to 50 below
     rows = frappe.get_all(
         "Sales Invoice",
         filters={
@@ -179,18 +180,86 @@ def get_overdue_invoices() -> dict:
         fields=["name", "customer", "posting_date", "due_date",
                 "grand_total", "outstanding_amount"],
         order_by="due_date asc",
-        limit=50,
+        limit=200,
     )
+
+    _today = getdate(today())
     for r in rows:
-        if r.get("due_date"):
-            r["days_overdue"] = date_diff(today(), str(r["due_date"]))
+        r["days_overdue"] = date_diff(str(_today), str(r["due_date"])) if r.get("due_date") else 0
+
     total_overdue = sum(flt(r.get("outstanding_amount")) for r in rows)
+
+    # Aging buckets — sum outstanding by days past due
+    buckets = {"0-30": 0.0, "31-60": 0.0, "61-90": 0.0, "90+": 0.0}
+    for r in rows:
+        d = r["days_overdue"]
+        amt = flt(r.get("outstanding_amount"))
+        if d <= 30:
+            buckets["0-30"] += amt
+        elif d <= 60:
+            buckets["31-60"] += amt
+        elif d <= 90:
+            buckets["61-90"] += amt
+        else:
+            buckets["90+"] += amt
+
+    # Top customers by outstanding (up to 8)
+    customer_totals: dict[str, float] = {}
+    for r in rows:
+        c = r.get("customer") or "Unknown"
+        customer_totals[c] = customer_totals.get(c, 0.0) + flt(r.get("outstanding_amount"))
+
+    sorted_customers = sorted(customer_totals.items(), key=lambda x: x[1], reverse=True)[:8]
+    top_customers = [
+        {
+            "customer": name,
+            "outstanding": round(amt, 2),
+            "pct_of_total": round(amt / total_overdue * 100, 1) if total_overdue else 0,
+        }
+        for name, amt in sorted_customers
+    ]
+
+    # Summary metrics
+    over_90 = sum(flt(r.get("outstanding_amount")) for r in rows if r["days_overdue"] > 90)
+    customers_affected = len(customer_totals)
+    worst_pct = top_customers[0]["pct_of_total"] if top_customers else 0
+    metrics = {
+        "total_overdue": round(total_overdue, 2),
+        "invoice_count": len(rows),
+        "customers_affected": customers_affected,
+        "over_90_days": round(over_90, 2),
+        "over_90_pct": round(over_90 / total_overdue * 100, 1) if total_overdue else 0,
+        "worst_customer_pct": worst_pct,
+    }
+
+    # Chart config for bar chart by aging bucket
+    chart = {
+        "type": "bar",
+        "title": "Overdue Invoices by Aging Bucket (QAR)",
+        "labels": list(buckets.keys()),
+        "datasets": [{"name": "Outstanding (QAR)", "values": [round(v, 2) for v in buckets.values()]}],
+    }
+
+    worst_customer = top_customers[0]["customer"] if top_customers else "N/A"
+    message = (
+        f"{len(rows)} overdue invoices totaling QAR {total_overdue:,.0f} "
+        f"across {customers_affected} customers. "
+        f"QAR {over_90:,.0f} ({metrics['over_90_pct']}%) is 90+ days past due. "
+        f"Largest exposure: {worst_customer} ({worst_pct}% of total)."
+    )
+
     return {
+        # Original keys — preserved for backward compatibility
         "status": "ok",
         "overdue_count": len(rows),
         "total_overdue_amount": total_overdue,
-        "invoices": rows,
-        "message": f"{len(rows)} overdue invoices totaling {total_overdue:,.0f}.",
+        "invoices": rows[:50],          # capped at 50 for display
+        "message": message,
+        # Enrichment
+        "aging_buckets": buckets,
+        "top_customers": top_customers,
+        "metrics": metrics,
+        "chart": chart,
     }
 
 

@@ -994,3 +994,55 @@
 	font-style: italic;
 }
 .ai-routing-note-icon { font-style: normal; font-size: 0.85rem; }
+
+/* ── Analytical KPI Strip ─────────────────────────────────────────────────── */
+.ai-kpi-strip {
+	display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;
+}
+.ai-kpi-card {
+	flex: 1 1 90px; min-width: 76px;
+	background: var(--card-bg); border: 1px solid var(--border-color);
+	border-radius: 8px; padding: 8px 10px; text-align: center;
+}
+.ai-kpi-value {
+	font-size: 1rem; font-weight: 700; color: var(--text-color); white-space: nowrap;
+}
+.ai-kpi-value.ai-kpi-danger { color: var(--red-500); }
+.ai-kpi-label {
+	font-size: 0.66rem; color: var(--text-muted); margin-top: 2px; white-space: nowrap;
+}
+
+/* ── Chart container ──────────────────────────────────────────────────────── */
+.ai-chart { margin: 8px 0 12px; min-height: 240px; }
+
+/* ── Generic analysis table ───────────────────────────────────────────────── */
+.ai-table {
+	width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-bottom: 8px;
+}
+.ai-table th, .ai-table td {
+	padding: 5px 8px; border-bottom: 1px solid var(--border-color); text-align: left;
+}
+.ai-table thead th {
+	font-weight: 600; background: var(--subtle-fg);
+	font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em;
+}
+.ai-table tr:hover { background: var(--fg-hover); }
+.text-right { text-align: right !important; }
+
+/* ── AI-interpreted analysis sections ────────────────────────────────────── */
+.ai-analysis-sections {
+	border-top: 1px solid var(--border-color);
+	padding-top: 10px; margin-top: 12px;
+	display: flex; flex-direction: column; gap: 6px;
+}
+.ai-analysis-section {
+	background: var(--card-bg); border: 1px solid var(--border-color);
+	border-radius: 6px; padding: 8px 12px;
+}
+.ai-analysis-section h4 {
+	font-size: 0.78rem; font-weight: 700; margin: 0 0 4px; color: var(--text-color);
+}
+.ai-analysis-section ul { margin: 0; padding-left: 16px; }
+.ai-analysis-section ul li {
+	font-size: 0.78rem; color: var(--text-muted); margin-bottom: 2px; line-height: 1.4;
+}
