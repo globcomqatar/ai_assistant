@@ -133,51 +133,90 @@ def get_monthly_sales_trend(months: int = 6) -> dict:
 
 
 def get_top_customers(period_days: int = 30, limit: int = 10) -> dict:
-    """Top customers by sales value in the last N days."""
+    """Top customers by base-currency sales value in the last N days."""
     from_date = add_days(today(), -period_days)
-    rows = frappe.db.sql("""
-        SELECT customer,
-               SUM(grand_total)  AS total_sales,
-               COUNT(*)          AS invoice_count,
-               MAX(posting_date) AS last_invoice_date
-        FROM `tabSales Invoice`
-        WHERE docstatus = 1 AND posting_date >= %s
-        GROUP BY customer
-        ORDER BY total_sales DESC
-        LIMIT %s
-    """, (from_date, limit), as_dict=True)
+    try:
+        rows = frappe.db.sql("""
+            SELECT customer,
+                   SUM(base_grand_total) AS total_sales,
+                   COUNT(*)              AS invoice_count,
+                   MAX(posting_date)     AS last_invoice_date
+            FROM `tabSales Invoice`
+            WHERE docstatus = 1 AND posting_date >= %s
+            GROUP BY customer
+            ORDER BY total_sales DESC
+            LIMIT %s
+        """, (from_date, limit), as_dict=True)
+    except Exception as exc:
+        import traceback as _tb
+        frappe.log_error(title="get_top_customers SQL failed", message=_tb.format_exc())
+        return {
+            "status": "error",
+            "message": f"Failed to query top customers: {exc}",
+            "customers": [],
+        }
+    customers = [
+        {
+            "customer":          r.customer,
+            "total_sales":       frappe.utils.flt(r.total_sales, 2),
+            "invoice_count":     int(r.invoice_count or 0),
+            "last_invoice_date": str(r.last_invoice_date or ""),
+            "currency":          frappe.defaults.get_global_default("currency") or "QAR",
+        }
+        for r in rows
+    ]
     return {
-        "status": "ok",
+        "status":      "ok",
         "period_days": period_days,
-        "from_date": from_date,
-        "count": len(rows),
-        "customers": [dict(r) for r in rows],
-        "message": f"Top {len(rows)} customers in the last {period_days} days.",
+        "from_date":   from_date,
+        "count":       len(customers),
+        "customers":   customers,
+        "message":     f"Top {len(customers)} customers in the last {period_days} days.",
     }
 
 
 def get_top_selling_items(period_days: int = 30, limit: int = 10) -> dict:
-    """Top selling items by revenue in the last N days."""
+    """Top selling items by base-currency revenue in the last N days."""
     from_date = add_days(today(), -period_days)
-    rows = frappe.db.sql("""
-        SELECT sii.item_code,
-               sii.item_name,
-               SUM(sii.qty)    AS total_qty,
-               SUM(sii.amount) AS total_amount
-        FROM `tabSales Invoice Item` sii
-        INNER JOIN `tabSales Invoice` si ON si.name = sii.parent
-        WHERE si.docstatus = 1 AND si.posting_date >= %s
-        GROUP BY sii.item_code, sii.item_name
-        ORDER BY total_amount DESC
-        LIMIT %s
-    """, (from_date, limit), as_dict=True)
+    try:
+        rows = frappe.db.sql("""
+            SELECT sii.item_code,
+                   sii.item_name,
+                   SUM(sii.qty)         AS total_qty,
+                   SUM(sii.base_amount) AS total_amount,
+                   si.currency
+            FROM `tabSales Invoice Item` sii
+            INNER JOIN `tabSales Invoice` si ON si.name = sii.parent
+            WHERE si.docstatus = 1 AND si.posting_date >= %s
+            GROUP BY sii.item_code, sii.item_name, si.currency
+            ORDER BY total_amount DESC
+            LIMIT %s
+        """, (from_date, limit), as_dict=True)
+    except Exception as exc:
+        import traceback as _tb
+        frappe.log_error(title="get_top_selling_items SQL failed", message=_tb.format_exc())
+        return {
+            "status": "error",
+            "message": f"Failed to query top selling items: {exc}",
+            "items": [],
+        }
+    items = [
+        {
+            "item_code":    r.item_code,
+            "item_name":    r.item_name,
+            "total_qty":    frappe.utils.flt(r.total_qty, 3),
+            "total_amount": frappe.utils.flt(r.total_amount, 2),
+            "currency":     r.currency or frappe.defaults.get_global_default("currency") or "QAR",
+        }
+        for r in rows
+    ]
     return {
-        "status": "ok",
+        "status":      "ok",
         "period_days": period_days,
-        "from_date": from_date,
-        "count": len(rows),
-        "items": [dict(r) for r in rows],
-        "message": f"Top {len(rows)} items by revenue in the last {period_days} days.",
+        "from_date":   from_date,
+        "count":       len(items),
+        "items":       items,
+        "message":     f"Top {len(items)} items by revenue in the last {period_days} days.",
     }
 
 
