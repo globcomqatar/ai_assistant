@@ -1,6 +1,6 @@
 # AI Assistant for ERPNext
 
-Natural language AI chat inside ERPNext Desk. Accepts English/Urdu, converts to ERP actions.
+Natural language AI chat inside ERPNext / ERPCloud Desk. Accepts English/Urdu, converts to ERP actions.
 
 ## Features
 - ChatGPT-style UI inside ERPNext Desk
