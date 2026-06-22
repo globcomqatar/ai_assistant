@@ -923,7 +923,7 @@
 
 	/* Mobile: agent bar — icon-only pills, horizontal scroll, no wrap */
 	.ai-agent-bar  { padding: 4px 8px; overflow-x: auto; }
-	.ai-agent-pills { flex-shrink: 0; flex-wrap: nowrap; }
+	.ai-agent-pills { display: inline-flex; flex-wrap: nowrap; }
 	.ai-agent-pill { font-size: 0.68rem; padding: 3px 7px; }
 	/* Hide names on ALL pills (including active) — icon alone is enough on small screens */
 	.ai-agent-pill-name,
@@ -937,20 +937,19 @@
 }
 
 /* ── Agent selector bar ──────────────────────────────────────── */
+/* Block (not flex) + overflow-x: auto is the reliable single-row scroll pattern.
+   inline-flex on the child sizes to content, overflows the block, triggers scroll. */
 .ai-agent-bar {
-	display: flex;
-	align-items: center;
 	padding: 6px 12px;
 	background: var(--bg-color);
 	border-bottom: 1px solid var(--border-color);
 	overflow-x: auto;
+	overflow-y: hidden;
 	flex-shrink: 0;
-	gap: 6px;
 	scrollbar-width: none;
 }
 .ai-agent-bar::-webkit-scrollbar { display: none; }
-/* nowrap + no-shrink: pills overflow bar, bar scrolls — never wraps to 2nd row */
-.ai-agent-pills { display: flex; gap: 6px; flex-wrap: nowrap; flex-shrink: 0; }
+.ai-agent-pills { display: inline-flex; gap: 6px; flex-wrap: nowrap; vertical-align: middle; }
 .ai-agent-pill {
 	display: flex; align-items: center; gap: 5px;
 	padding: 4px 10px; border-radius: 999px;
