@@ -922,7 +922,8 @@
 	.ai-launcher-fab { width: 46px; height: 46px; font-size: 1.2rem; bottom: 16px; right: 16px; }
 
 	/* Mobile: agent bar — icon-only pills, horizontal scroll, no wrap */
-	.ai-agent-bar { padding: 4px 8px; }
+	.ai-agent-bar  { padding: 4px 8px; overflow-x: auto; }
+	.ai-agent-pills { flex-shrink: 0; flex-wrap: nowrap; }
 	.ai-agent-pill { font-size: 0.68rem; padding: 3px 7px; }
 	/* Hide names on ALL pills (including active) — icon alone is enough on small screens */
 	.ai-agent-pill-name,
@@ -948,8 +949,8 @@
 	scrollbar-width: none;
 }
 .ai-agent-bar::-webkit-scrollbar { display: none; }
-/* nowrap ensures pills never spill to a second row — bar scrolls horizontally instead */
-.ai-agent-pills { display: flex; gap: 6px; flex-wrap: nowrap; }
+/* nowrap + no-shrink: pills overflow bar, bar scrolls — never wraps to 2nd row */
+.ai-agent-pills { display: flex; gap: 6px; flex-wrap: nowrap; flex-shrink: 0; }
 .ai-agent-pill {
 	display: flex; align-items: center; gap: 5px;
 	padding: 4px 10px; border-radius: 999px;
