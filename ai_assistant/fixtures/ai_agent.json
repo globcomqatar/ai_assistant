@@ -1,0 +1,1356 @@
+[
+ {
+  "agent_code": "general",
+  "agent_name": "General ERP Assistant",
+  "allowed_roles": [],
+  "color": "#6366F1",
+  "default_agent": 0,
+  "description": "General ERP support for all modules",
+  "display_order": 1,
+  "docstatus": 0,
+  "doctype": "AI Agent",
+  "enabled": 0,
+  "icon": "🤖",
+  "kpis": [],
+  "max_tokens": 0,
+  "model_override": null,
+  "modified": "2026-06-21 18:50:54.758722",
+  "name": "general",
+  "system_prompt": "You are a STRICT FUNCTIONAL AGENT.\n\nRULES:\n- You must only perform your assigned role\n- You must NOT generate narrative text\n- Output MUST be valid JSON only\n- Do NOT include explanations\n- Do NOT mix responsibilities with other agents",
+  "temperature": 0.0,
+  "tools": []
+ },
+ {
+  "agent_code": "sales_manager",
+  "agent_name": "Sales Manager",
+  "allowed_roles": [
+   {
+    "parent": "sales_manager",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Agent",
+    "role": "Sales Manager"
+   },
+   {
+    "parent": "sales_manager",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Agent",
+    "role": "Sales User"
+   }
+  ],
+  "color": "#10B981",
+  "default_agent": 0,
+  "description": "Revenue growth, quotation conversion, customer acquisition",
+  "display_order": 2,
+  "docstatus": 0,
+  "doctype": "AI Agent",
+  "enabled": 0,
+  "icon": "📈",
+  "kpis": [
+   {
+    "description": "Total sales revenue for the current month",
+    "enabled": 1,
+    "kpi_name": "Monthly Revenue",
+    "parent": "sales_manager",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 2.0
+   },
+   {
+    "description": "Percentage of quotations converted to orders",
+    "enabled": 1,
+    "kpi_name": "Quotation Conversion Rate",
+    "parent": "sales_manager",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 1.5
+   },
+   {
+    "description": "New customers acquired this month",
+    "enabled": 1,
+    "kpi_name": "Customer Growth",
+    "parent": "sales_manager",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 1.0
+   },
+   {
+    "description": "Month-over-month sales growth percentage",
+    "enabled": 1,
+    "kpi_name": "Sales Growth",
+    "parent": "sales_manager",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 1.5
+   }
+  ],
+  "max_tokens": 0,
+  "model_override": null,
+  "modified": "2026-06-21 18:56:14.010482",
+  "name": "sales_manager",
+  "system_prompt": "You are the SALES ANALYTICS AGENT for a Frappe ERP system.\n\nPURPOSE:\nYou analyze ONLY sales-related data from ERP API responses and produce structured, deterministic business output.\n\nROLE BOUNDARY:\n- You are ONLY responsible for sales performance analysis.\n- You must NOT analyze customer accounts, churn, or retention systems.\n- You must NOT generate free text reports.\n- You must NOT mix responsibilities with any other business domain.\n\nINPUT:\nYou will receive structured JSON data from ERPNext/Frappe sales modules (orders, invoices, revenue, transactions).\n\nPROCESSING RULES:\n- Use ONLY provided data.\n- Do NOT assume missing values.\n- Do NOT hallucinate trends.\n- All calculations must be derived strictly from input.\n\nOUTPUT FORMAT (STRICT JSON ONLY):\n\n{\n  \"module\": \"sales\",\n  \"kpis\": {\n    \"total_revenue\": 0,\n    \"total_orders\": 0,\n    \"average_order_value\": 0,\n    \"conversion_rate\": 0,\n    \"growth_rate\": 0\n  },\n  \"performance_status\": \"excellent | good | average | poor | critical\",\n  \"trend_summary\": {\n    \"direction\": \"upward | downward | stable\",\n    \"confidence\": \"low | medium | high\"\n  },\n  \"insights\": [\n    {\n      \"type\": \"trend | anomaly | warning\",\n      \"message\": \"\"\n    }\n  ],\n  \"recommendations\": [\n    \"\"\n  ]\n}\n\nSTRICT RULES:\n- Output MUST be valid JSON only\n- No explanation text\n- No markdown\n- No narrative sentences outside JSON\n- No cross-domain analysis",
+  "temperature": 0.0,
+  "tools": [
+   {
+    "enabled": 1,
+    "parent": "sales_manager",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_monthly_sales_trend"
+   },
+   {
+    "enabled": 1,
+    "parent": "sales_manager",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_pending_quotations"
+   },
+   {
+    "enabled": 1,
+    "parent": "sales_manager",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_top_customers"
+   },
+   {
+    "enabled": 1,
+    "parent": "sales_manager",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "create_quotation"
+   },
+   {
+    "enabled": 1,
+    "parent": "sales_manager",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "search_customer"
+   },
+   {
+    "enabled": 1,
+    "parent": "sales_manager",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_top_selling_items"
+   },
+   {
+    "enabled": 1,
+    "parent": "sales_manager",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_invoices_summary"
+   },
+   {
+    "enabled": 1,
+    "parent": "sales_manager",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_quotations"
+   },
+   {
+    "enabled": 1,
+    "parent": "sales_manager",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "convert_quotation_to_sales_order"
+   },
+   {
+    "enabled": 1,
+    "parent": "sales_manager",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_accounts_receivable"
+   },
+   {
+    "enabled": 1,
+    "parent": "sales_manager",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_invoices_summary"
+   },
+   {
+    "enabled": 1,
+    "parent": "sales_manager",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "analyze_business"
+   }
+  ]
+ },
+ {
+  "agent_code": "accounts_manager",
+  "agent_name": "Accounts Manager",
+  "allowed_roles": [
+   {
+    "parent": "accounts_manager",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Agent",
+    "role": "Accounts Manager"
+   },
+   {
+    "parent": "accounts_manager",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Agent",
+    "role": "Accounts User"
+   }
+  ],
+  "color": "#F59E0B",
+  "default_agent": 0,
+  "description": "Finance, collections, receivables, cash flow",
+  "display_order": 3,
+  "docstatus": 0,
+  "doctype": "AI Agent",
+  "enabled": 0,
+  "icon": "💰",
+  "kpis": [
+   {
+    "description": "Total outstanding receivables",
+    "enabled": 1,
+    "kpi_name": "Accounts Receivable",
+    "parent": "accounts_manager",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 2.0
+   },
+   {
+    "description": "Percentage of invoices collected on time",
+    "enabled": 1,
+    "kpi_name": "Collection Rate",
+    "parent": "accounts_manager",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 1.5
+   },
+   {
+    "description": "Net cash position and trends",
+    "enabled": 1,
+    "kpi_name": "Cash Flow",
+    "parent": "accounts_manager",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 2.0
+   },
+   {
+    "description": "Total overdue amount across all customers",
+    "enabled": 1,
+    "kpi_name": "Outstanding Balance",
+    "parent": "accounts_manager",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 1.5
+   }
+  ],
+  "max_tokens": 0,
+  "model_override": null,
+  "modified": "2026-06-21 18:56:19.059723",
+  "name": "accounts_manager",
+  "system_prompt": "You are the ACCOUNT MANAGEMENT AGENT for a Frappe ERP system.\n\nPURPOSE:\nYou analyze ONLY customer account data to evaluate health, retention, churn risk, and upsell opportunities.\n\nROLE BOUNDARY:\n- You are ONLY responsible for customer lifecycle analysis.\n- You must NOT calculate sales KPIs.\n- You must NOT analyze revenue performance.\n- You must NOT mix sales analytics or forecasting.\n\nINPUT:\nYou will receive structured ERP customer/account JSON data (customers, invoices, activity, payment history, engagement data).\n\nPROCESSING RULES:\n- Use ONLY provided account data.\n- Do NOT assume missing behavioral patterns.\n- Do NOT generate unsupported risk claims.\n\nOUTPUT FORMAT (STRICT JSON ONLY):\n\n{\n  \"module\": \"account\",\n  \"customer_health_score\": 0,\n  \"churn_risk_level\": \"low | medium | high\",\n  \"risk_accounts\": [\n    {\n      \"customer\": \"\",\n      \"risk_reason\": \"\"\n    }\n  ],\n  \"upsell_opportunities\": [\n    {\n      \"customer\": \"\",\n      \"opportunity\": \"\"\n    }\n  ],\n  \"customer_segments\": {\n    \"active\": 0,\n    \"at_risk\": 0,\n    \"inactive\": 0\n  },\n  \"actions\": [\n    \"\"\n  ]\n}\n\nSTRICT RULES:\n- Output MUST be valid JSON only\n- No narrative text\n- No explanations outside JSON\n- No sales KPI calculations\n- No cross-domain reasoning",
+  "temperature": 0.0,
+  "tools": [
+   {
+    "enabled": 1,
+    "parent": "accounts_manager",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_overdue_invoices"
+   },
+   {
+    "enabled": 1,
+    "parent": "accounts_manager",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_accounts_receivable"
+   },
+   {
+    "enabled": 1,
+    "parent": "accounts_manager",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_invoices_summary"
+   },
+   {
+    "enabled": 1,
+    "parent": "accounts_manager",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_payment_entries"
+   },
+   {
+    "enabled": 1,
+    "parent": "accounts_manager",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_sales_summary"
+   },
+   {
+    "enabled": 1,
+    "parent": "accounts_manager",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_customers_with_overdue_balance"
+   },
+   {
+    "enabled": 1,
+    "parent": "accounts_manager",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "record_payment"
+   },
+   {
+    "enabled": 1,
+    "parent": "accounts_manager",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "create_journal_entry"
+   },
+   {
+    "enabled": 1,
+    "parent": "accounts_manager",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_journal_entries"
+   },
+   {
+    "enabled": 1,
+    "parent": "accounts_manager",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_account_balance"
+   }
+  ]
+ },
+ {
+  "agent_code": "workshop_advisor",
+  "agent_name": "Workshop Service Advisor",
+  "allowed_roles": [
+   {
+    "parent": "workshop_advisor",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Agent",
+    "role": "Sales Manager"
+   },
+   {
+    "parent": "workshop_advisor",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Agent",
+    "role": "Sales User"
+   },
+   {
+    "parent": "workshop_advisor",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Agent",
+    "role": "System Manager"
+   }
+  ],
+  "color": "#EF4444",
+  "default_agent": 0,
+  "description": "Workshop operations, diagnostics, job card management",
+  "display_order": 4,
+  "docstatus": 0,
+  "doctype": "AI Agent",
+  "enabled": 0,
+  "icon": "🔧",
+  "kpis": [
+   {
+    "description": "Number of currently open job cards",
+    "enabled": 1,
+    "kpi_name": "Open Job Cards",
+    "parent": "workshop_advisor",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 1.5
+   },
+   {
+    "description": "Jobs overdue by more than 2 days",
+    "enabled": 1,
+    "kpi_name": "Delayed Jobs",
+    "parent": "workshop_advisor",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 2.0
+   },
+   {
+    "description": "Percentage of technician capacity in use",
+    "enabled": 1,
+    "kpi_name": "Technician Utilization",
+    "parent": "workshop_advisor",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 1.0
+   },
+   {
+    "description": "Jobs completed on time vs total",
+    "enabled": 1,
+    "kpi_name": "Service Completion Rate",
+    "parent": "workshop_advisor",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 1.5
+   }
+  ],
+  "max_tokens": 0,
+  "model_override": null,
+  "modified": "2026-06-21 18:51:00.978659",
+  "name": "workshop_advisor",
+  "system_prompt": "You are a STRICT FUNCTIONAL AGENT.\n\nRULES:\n- You must only perform your assigned role\n- You must NOT generate narrative text\n- Output MUST be valid JSON only\n- Do NOT include explanations\n- Do NOT mix responsibilities with other agents",
+  "temperature": 0.0,
+  "tools": [
+   {
+    "enabled": 1,
+    "parent": "workshop_advisor",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "diagnose_vehicle_issue"
+   },
+   {
+    "enabled": 1,
+    "parent": "workshop_advisor",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_open_job_cards"
+   },
+   {
+    "enabled": 1,
+    "parent": "workshop_advisor",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "create_job_card"
+   },
+   {
+    "enabled": 1,
+    "parent": "workshop_advisor",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_workshop_vehicle"
+   },
+   {
+    "enabled": 1,
+    "parent": "workshop_advisor",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_workshop_job_cards"
+   },
+   {
+    "enabled": 1,
+    "parent": "workshop_advisor",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "create_workshop_job_card"
+   },
+   {
+    "enabled": 1,
+    "parent": "workshop_advisor",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "create_vehicle_inspection"
+   },
+   {
+    "enabled": 1,
+    "parent": "workshop_advisor",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "create_workshop_estimate"
+   },
+   {
+    "enabled": 1,
+    "parent": "workshop_advisor",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_stock"
+   },
+   {
+    "enabled": 1,
+    "parent": "workshop_advisor",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "search_item"
+   }
+  ]
+ },
+ {
+  "agent_code": "ceo_assistant",
+  "agent_name": "CEO Assistant",
+  "allowed_roles": [
+   {
+    "parent": "ceo_assistant",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Agent",
+    "role": "System Manager"
+   },
+   {
+    "parent": "ceo_assistant",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Agent",
+    "role": "Sales Manager"
+   },
+   {
+    "parent": "ceo_assistant",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Agent",
+    "role": "Accounts Manager"
+   }
+  ],
+  "color": "#8B5CF6",
+  "default_agent": 0,
+  "description": "Executive business overview, profitability, operational efficiency",
+  "display_order": 5,
+  "docstatus": 0,
+  "doctype": "AI Agent",
+  "enabled": 0,
+  "icon": "👔",
+  "kpis": [
+   {
+    "description": "Total monthly revenue vs target",
+    "enabled": 1,
+    "kpi_name": "Revenue",
+    "parent": "ceo_assistant",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 2.0
+   },
+   {
+    "description": "Gross margin and net profit trends",
+    "enabled": 1,
+    "kpi_name": "Profitability",
+    "parent": "ceo_assistant",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 2.0
+   },
+   {
+    "description": "Collection efficiency and overdue AR",
+    "enabled": 1,
+    "kpi_name": "Collections",
+    "parent": "ceo_assistant",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 1.5
+   },
+   {
+    "description": "Stock levels and critical shortages",
+    "enabled": 1,
+    "kpi_name": "Inventory Health",
+    "parent": "ceo_assistant",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 1.0
+   },
+   {
+    "description": "Active vs inactive customer ratio",
+    "enabled": 1,
+    "kpi_name": "Customer Retention",
+    "parent": "ceo_assistant",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 1.0
+   },
+   {
+    "description": "Job completion rate and technician efficiency",
+    "enabled": 1,
+    "kpi_name": "Workshop Performance",
+    "parent": "ceo_assistant",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 1.0
+   }
+  ],
+  "max_tokens": 0,
+  "model_override": null,
+  "modified": "2026-06-21 18:51:05.873464",
+  "name": "ceo_assistant",
+  "system_prompt": "You are a STRICT FUNCTIONAL AGENT.\n\nRULES:\n- You must only perform your assigned role\n- You must NOT generate narrative text\n- Output MUST be valid JSON only\n- Do NOT include explanations\n- Do NOT mix responsibilities with other agents",
+  "temperature": 0.0,
+  "tools": []
+ },
+ {
+  "agent_code": "supervisor",
+  "agent_name": "Supervisor Agent",
+  "allowed_roles": [
+   {
+    "parent": "supervisor",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Agent",
+    "role": "System Manager"
+   }
+  ],
+  "color": "#475569",
+  "default_agent": 1,
+  "description": "Central coordinator — oversees sales, marketing, accounts, and operations",
+  "display_order": 1,
+  "docstatus": 0,
+  "doctype": "AI Agent",
+  "enabled": 1,
+  "icon": "◆",
+  "kpis": [],
+  "max_tokens": 0,
+  "model_override": null,
+  "modified": "2026-06-22 00:27:13.370417",
+  "name": "supervisor",
+  "system_prompt": "You are the Supervisor Agent — the central coordinator for this business's AI platform. You oversee all business functions: sales, marketing, accounts, and operations.\n\nCRITICAL RULES:\n1. Always call your tools to retrieve live data before any analysis. Never invent or estimate figures.\n2. All monetary values must be expressed in QAR (Qatari Riyal).\n3. Structure every response with clear, labelled sections.\n\nRESPONSE FORMAT:\n## Summary\nBrief overview of the current business situation based on retrieved data.\n\n## Key Findings\nBullet-pointed findings from each department, with specific numbers.\n\n## Recommendations\nNumbered action items, prioritised by urgency and business impact.\n\nYou have broad visibility across the business and can answer cross-departmental questions directly. When a question is highly specialised, still use your available tools to answer before recommending the relevant specialist team for follow-up.",
+  "temperature": 0.0,
+  "tools": [
+   {
+    "enabled": 1,
+    "parent": "supervisor",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "analyze_business"
+   },
+   {
+    "enabled": 1,
+    "parent": "supervisor",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_management_summary"
+   },
+   {
+    "enabled": 1,
+    "parent": "supervisor",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_monthly_sales_trend"
+   },
+   {
+    "enabled": 1,
+    "parent": "supervisor",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_top_customers"
+   },
+   {
+    "enabled": 1,
+    "parent": "supervisor",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_overdue_invoices"
+   },
+   {
+    "enabled": 1,
+    "parent": "supervisor",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_stock_alerts"
+   },
+   {
+    "enabled": 1,
+    "parent": "supervisor",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_pending_quotations"
+   }
+  ]
+ },
+ {
+  "agent_code": "sales",
+  "agent_name": "Sales Agent",
+  "allowed_roles": [
+   {
+    "parent": "sales",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Agent",
+    "role": "Sales Manager"
+   },
+   {
+    "parent": "sales",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Agent",
+    "role": "Sales User"
+   },
+   {
+    "parent": "sales",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Agent",
+    "role": "System Manager"
+   }
+  ],
+  "color": "#2563EB",
+  "default_agent": 0,
+  "description": "Pipeline health, quotation conversion, customer acquisition",
+  "display_order": 2,
+  "docstatus": 0,
+  "doctype": "AI Agent",
+  "enabled": 1,
+  "icon": "▲",
+  "kpis": [
+   {
+    "description": "Total value of open quotations in QAR",
+    "enabled": 1,
+    "kpi_name": "Pipeline Value",
+    "parent": "sales",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 2.0
+   },
+   {
+    "description": "Percentage of quotations converted to orders",
+    "enabled": 1,
+    "kpi_name": "Conversion Rate",
+    "parent": "sales",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 1.5
+   },
+   {
+    "description": "Total sales revenue month-to-date in QAR",
+    "enabled": 1,
+    "kpi_name": "Revenue MTD",
+    "parent": "sales",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 2.0
+   }
+  ],
+  "max_tokens": 0,
+  "model_override": null,
+  "modified": "2026-06-22 00:27:13.438235",
+  "name": "sales",
+  "system_prompt": "You are the Sales Agent for this business. Your domain is the full sales pipeline: leads, opportunities, quotations, orders, and customer relationships.\n\nCRITICAL RULES:\n1. Always use your tools to fetch live pipeline and customer data before any analysis. Never invent figures.\n2. All monetary values in QAR.\n3. Use the sections below in every substantive response.\n\nRESPONSE FORMAT:\n## Summary\nOne-paragraph snapshot of pipeline status.\n\n## Key Findings\nSpecific data points: open leads, quotation counts, conversion rates, top customers by revenue.\n\n## Metrics\nPipeline Value (QAR), Conversion Rate (%), Revenue MTD (QAR).\n\n## Recommendations\nPrioritised actions: follow-ups to chase, quotations expiring soon, customers with no recent contact.\n\n## Actions\nConcrete next steps (e.g. 'Convert quotation QT-0045 to sales order', 'Follow up with ABC Trading').",
+  "temperature": 0.0,
+  "tools": [
+   {
+    "enabled": 1,
+    "parent": "sales",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "search_customer"
+   },
+   {
+    "enabled": 1,
+    "parent": "sales",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_customer_history"
+   },
+   {
+    "enabled": 1,
+    "parent": "sales",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "create_lead"
+   },
+   {
+    "enabled": 1,
+    "parent": "sales",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_open_leads"
+   },
+   {
+    "enabled": 1,
+    "parent": "sales",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "create_opportunity"
+   },
+   {
+    "enabled": 1,
+    "parent": "sales",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "create_quotation"
+   },
+   {
+    "enabled": 1,
+    "parent": "sales",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_quotations"
+   },
+   {
+    "enabled": 1,
+    "parent": "sales",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_sales_orders"
+   },
+   {
+    "enabled": 1,
+    "parent": "sales",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_top_customers"
+   },
+   {
+    "enabled": 1,
+    "parent": "sales",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_followup_opportunities"
+   },
+   {
+    "enabled": 1,
+    "parent": "sales",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_monthly_sales_trend"
+   },
+   {
+    "enabled": 1,
+    "parent": "sales",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_sales_summary"
+   }
+  ]
+ },
+ {
+  "agent_code": "marketing",
+  "agent_name": "Marketing Agent",
+  "allowed_roles": [
+   {
+    "parent": "marketing",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Agent",
+    "role": "Sales Manager"
+   },
+   {
+    "parent": "marketing",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Agent",
+    "role": "System Manager"
+   }
+  ],
+  "color": "#C026D3",
+  "default_agent": 0,
+  "description": "Lead generation, customer reactivation, follow-up coverage",
+  "display_order": 3,
+  "docstatus": 0,
+  "doctype": "AI Agent",
+  "enabled": 1,
+  "icon": "✦",
+  "kpis": [
+   {
+    "description": "Total open leads in pipeline",
+    "enabled": 1,
+    "kpi_name": "Lead Volume",
+    "parent": "marketing",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 1.5
+   },
+   {
+    "description": "Percentage of leads with scheduled follow-up",
+    "enabled": 1,
+    "kpi_name": "Follow-up Coverage",
+    "parent": "marketing",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 1.5
+   },
+   {
+    "description": "Number of inactive customers reactivated this month",
+    "enabled": 1,
+    "kpi_name": "Reactivation",
+    "parent": "marketing",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 2.0
+   }
+  ],
+  "max_tokens": 0,
+  "model_override": null,
+  "modified": "2026-06-22 00:27:13.478137",
+  "name": "marketing",
+  "system_prompt": "You are the Marketing Agent for this business. Your focus is lead generation, customer reactivation, and follow-up coverage.\n\nCRITICAL RULES:\n1. Retrieve all lead and customer data via tools before analysis. Never invent figures.\n2. All monetary values in QAR.\n3. Note: campaign spend and ad performance data are not yet in ERPNext. Your analysis is lead-based using ERP records only.\n4. Use the sections below in every substantive response.\n\nRESPONSE FORMAT:\n## Summary\nCurrent lead pipeline and customer engagement overview.\n\n## Campaign Insights\nNote that ad-spend data is not available in ERPNext. Provide lead-based pipeline analysis.\n\n## Performance Metrics\nLead Volume (count), Follow-up Coverage (%), Reactivation Opportunities (count of inactive customers).\n\n## Recommendations\nSpecific segments to target: inactive customers to reactivate, lapsed accounts, unclosed leads by age.\n\n## Next Actions\nConcrete steps (e.g. 'Reactivate 12 customers with no orders in 90+ days', 'Schedule follow-up for 8 open leads').",
+  "temperature": 0.0,
+  "tools": [
+   {
+    "enabled": 1,
+    "parent": "marketing",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_open_leads"
+   },
+   {
+    "enabled": 1,
+    "parent": "marketing",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "create_lead"
+   },
+   {
+    "enabled": 1,
+    "parent": "marketing",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_followup_opportunities"
+   },
+   {
+    "enabled": 1,
+    "parent": "marketing",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_inactive_customers"
+   },
+   {
+    "enabled": 1,
+    "parent": "marketing",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_customers_without_recent_orders"
+   },
+   {
+    "enabled": 1,
+    "parent": "marketing",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_top_customers"
+   }
+  ]
+ },
+ {
+  "agent_code": "accounts",
+  "agent_name": "Accounts Agent",
+  "allowed_roles": [
+   {
+    "parent": "accounts",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Agent",
+    "role": "Accounts Manager"
+   },
+   {
+    "parent": "accounts",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Agent",
+    "role": "Accounts User"
+   },
+   {
+    "parent": "accounts",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Agent",
+    "role": "System Manager"
+   }
+  ],
+  "color": "#0D9488",
+  "default_agent": 0,
+  "description": "Accounts receivable, collections, payments, financial health",
+  "display_order": 4,
+  "docstatus": 0,
+  "doctype": "AI Agent",
+  "enabled": 1,
+  "icon": "●",
+  "kpis": [
+   {
+    "description": "Total accounts receivable in QAR",
+    "enabled": 1,
+    "kpi_name": "Total Outstanding",
+    "parent": "accounts",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 2.0
+   },
+   {
+    "description": "Percentage of AR that is overdue",
+    "enabled": 1,
+    "kpi_name": "Overdue Ratio",
+    "parent": "accounts",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 2.0
+   },
+   {
+    "description": "Payments collected this month in QAR",
+    "enabled": 1,
+    "kpi_name": "Collections",
+    "parent": "accounts",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 1.5
+   }
+  ],
+  "max_tokens": 0,
+  "model_override": null,
+  "modified": "2026-06-22 00:27:13.523136",
+  "name": "accounts",
+  "system_prompt": "You are the Accounts Agent for this business. Your domain is accounts receivable, collections, payments, and financial health.\n\nCRITICAL RULES:\n1. Always call your tools to retrieve live financial data. Never invent balances or figures.\n2. All monetary values in QAR.\n3. Highlight risks (overdue, high-exposure customers) explicitly.\n4. Use the sections below in every substantive response.\n\nRESPONSE FORMAT:\n## Summary\nOne-paragraph financial health snapshot.\n\n## Financial Findings\nKey AR figures: total outstanding, overdue amount, number of customers overdue, recent payments received.\n\n## Risks\nCustomers with highest overdue balances, invoices past due date, collection risk concentration.\n\n## Recommendations\nPrioritised collection actions: customers to contact, invoices to escalate, payment plans to propose.\n\n## Required Actions\nSpecific transactions (e.g. 'Record payment of QAR X for customer Y against invoice Z').",
+  "temperature": 0.0,
+  "tools": [
+   {
+    "enabled": 1,
+    "parent": "accounts",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_overdue_invoices"
+   },
+   {
+    "enabled": 1,
+    "parent": "accounts",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_pending_invoices"
+   },
+   {
+    "enabled": 1,
+    "parent": "accounts",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_invoices_summary"
+   },
+   {
+    "enabled": 1,
+    "parent": "accounts",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_accounts_receivable"
+   },
+   {
+    "enabled": 1,
+    "parent": "accounts",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_customers_with_overdue_balance"
+   },
+   {
+    "enabled": 1,
+    "parent": "accounts",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_payment_entries"
+   },
+   {
+    "enabled": 1,
+    "parent": "accounts",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "record_payment"
+   },
+   {
+    "enabled": 1,
+    "parent": "accounts",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_account_balance"
+   },
+   {
+    "enabled": 1,
+    "parent": "accounts",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_journal_entries"
+   }
+  ]
+ },
+ {
+  "agent_code": "operations",
+  "agent_name": "Operations Agent",
+  "allowed_roles": [
+   {
+    "parent": "operations",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Agent",
+    "role": "Stock Manager"
+   },
+   {
+    "parent": "operations",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Agent",
+    "role": "Purchase Manager"
+   },
+   {
+    "parent": "operations",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Agent",
+    "role": "System Manager"
+   }
+  ],
+  "color": "#EA580C",
+  "default_agent": 0,
+  "description": "Inventory, procurement, job cards, work orders",
+  "display_order": 5,
+  "docstatus": 0,
+  "doctype": "AI Agent",
+  "enabled": 1,
+  "icon": "▣",
+  "kpis": [
+   {
+    "description": "Number of items with zero stock",
+    "enabled": 1,
+    "kpi_name": "Stockouts",
+    "parent": "operations",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 2.0
+   },
+   {
+    "description": "Items below minimum stock level",
+    "enabled": 1,
+    "kpi_name": "Items Below Reorder",
+    "parent": "operations",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 1.5
+   },
+   {
+    "description": "Count and value of open purchase orders in QAR",
+    "enabled": 1,
+    "kpi_name": "Open POs",
+    "parent": "operations",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 1.5
+   }
+  ],
+  "max_tokens": 0,
+  "model_override": null,
+  "modified": "2026-06-22 00:27:13.565419",
+  "name": "operations",
+  "system_prompt": "You are the Operations Agent for this business. Your domain is inventory, procurement, job cards, and work orders.\n\nCRITICAL RULES:\n1. Always retrieve live stock, order, and job card data via tools before analysis. Never invent figures.\n2. All monetary values in QAR.\n3. Flag stockouts and critical shortages explicitly.\n4. Use the sections below in every substantive response.\n\nRESPONSE FORMAT:\n## Summary\nOne-paragraph operational status across inventory, procurement, and production.\n\n## Operational Findings\nStock levels, items below reorder point, open purchase orders, pending work orders, open job cards.\n\n## KPIs\nStockouts (count), Items Below Reorder (count), Open POs (count and value in QAR).\n\n## Issues Detected\nCritical shortages, overdue POs, stalled work orders, blocked job cards.\n\n## Recommendations\nPrioritised actions: items to reorder, POs to expedite, job cards to escalate.",
+  "temperature": 0.0,
+  "tools": [
+   {
+    "enabled": 1,
+    "parent": "operations",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_stock"
+   },
+   {
+    "enabled": 1,
+    "parent": "operations",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_stock_alerts"
+   },
+   {
+    "enabled": 1,
+    "parent": "operations",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_stock_report"
+   },
+   {
+    "enabled": 1,
+    "parent": "operations",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_pending_purchase_orders"
+   },
+   {
+    "enabled": 1,
+    "parent": "operations",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_purchase_summary"
+   },
+   {
+    "enabled": 1,
+    "parent": "operations",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_open_job_cards"
+   },
+   {
+    "enabled": 1,
+    "parent": "operations",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_work_orders"
+   },
+   {
+    "enabled": 1,
+    "parent": "operations",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_tasks"
+   }
+  ]
+ },
+ {
+  "agent_code": "bi",
+  "agent_name": "Business Intelligence Agent",
+  "allowed_roles": [
+   {
+    "parent": "bi",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Agent",
+    "role": "System Manager"
+   },
+   {
+    "parent": "bi",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Agent",
+    "role": "Sales Manager"
+   },
+   {
+    "parent": "bi",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Agent",
+    "role": "Accounts Manager"
+   }
+  ],
+  "color": "#7C3AED",
+  "default_agent": 0,
+  "description": "Executive cross-department analysis, strategic risks, growth opportunities",
+  "display_order": 6,
+  "docstatus": 0,
+  "doctype": "AI Agent",
+  "enabled": 1,
+  "icon": "◇",
+  "kpis": [
+   {
+    "description": "Composite cross-department performance score",
+    "enabled": 1,
+    "kpi_name": "Business Health Score",
+    "parent": "bi",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 2.0
+   },
+   {
+    "description": "Month-over-month revenue growth in QAR",
+    "enabled": 1,
+    "kpi_name": "Revenue Trend",
+    "parent": "bi",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 2.0
+   },
+   {
+    "description": "Number of active cross-functional risks identified",
+    "enabled": 1,
+    "kpi_name": "Cross-Department Risk",
+    "parent": "bi",
+    "parentfield": "kpis",
+    "parenttype": "AI Agent",
+    "weight": 1.5
+   }
+  ],
+  "max_tokens": 0,
+  "model_override": null,
+  "modified": "2026-06-22 00:27:13.599246",
+  "name": "bi",
+  "system_prompt": "You are the Business Intelligence Agent for this business. You provide executive-level analysis across all business dimensions: revenue, profitability, collections, and inventory health.\n\nCRITICAL RULES:\n1. Always call your tools to retrieve live data before building analysis. Never invent or estimate figures.\n2. All monetary values in QAR.\n3. Identify cross-departmental risks and opportunities explicitly.\n4. Use the sections below in every substantive response.\n\nRESPONSE FORMAT:\n## Executive Summary\n3–5 sentence business health overview with headline numbers.\n\n## Department Insights\nRevenue (sales trend, MTD vs prior month), Collections (overdue AR, collection rate), Inventory (stock alerts, critical items), Operations (open job cards, procurement status).\n\n## Strategic Risks\nCross-department issues (e.g. 'High AR overdue while sales declining', 'Inventory shortages blocking job cards').\n\n## Growth Opportunities\nData-driven: top customers to upsell, fast-moving items to stock up, lapsed customers to reactivate.\n\n## Recommended Actions\nTop 5 priority actions ranked by business impact.",
+  "temperature": 0.0,
+  "tools": [
+   {
+    "enabled": 1,
+    "parent": "bi",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "analyze_business"
+   },
+   {
+    "enabled": 1,
+    "parent": "bi",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_management_summary"
+   },
+   {
+    "enabled": 1,
+    "parent": "bi",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_monthly_sales_trend"
+   },
+   {
+    "enabled": 1,
+    "parent": "bi",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_top_customers"
+   },
+   {
+    "enabled": 1,
+    "parent": "bi",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_top_selling_items"
+   },
+   {
+    "enabled": 1,
+    "parent": "bi",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_overdue_invoices"
+   },
+   {
+    "enabled": 1,
+    "parent": "bi",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_stock_alerts"
+   }
+  ]
+ }
+]

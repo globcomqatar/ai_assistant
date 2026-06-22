@@ -16,7 +16,9 @@
  "doctype": "Workspace",
  "for_user": "",
  "hide_custom": 0,
+ "icon": "workflow",
  "idx": 0,
+ "indicator_color": "",
  "is_hidden": 0,
  "label": "AI Assistant",
  "links": [
@@ -125,7 +127,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-06-21 15:25:34.972262",
+ "modified": "2026-06-22 17:27:55.684014",
  "modified_by": "Administrator",
  "module": "AI Assistant",
  "name": "AI Assistant",

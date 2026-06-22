@@ -1,0 +1,872 @@
+[
+ {
+  "category": "CRM",
+  "description": "Create a new Customer with optional phone and email contact.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.145403",
+  "name": "create_customer",
+  "tool_name": "create_customer"
+ },
+ {
+  "category": "CRM",
+  "description": "Get sales orders, invoices, and payments for a customer.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.155783",
+  "name": "get_customer_history",
+  "tool_name": "get_customer_history"
+ },
+ {
+  "category": "CRM",
+  "description": "Create a new CRM Lead.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.159685",
+  "name": "create_lead",
+  "tool_name": "create_lead"
+ },
+ {
+  "category": "CRM",
+  "description": "List open/new CRM leads.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.163582",
+  "name": "get_open_leads",
+  "tool_name": "get_open_leads"
+ },
+ {
+  "category": "CRM",
+  "description": "Create a Sales Opportunity linked to a customer or lead.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.167290",
+  "name": "create_opportunity",
+  "tool_name": "create_opportunity"
+ },
+ {
+  "category": "Sales",
+  "description": "Create a Quotation for a customer with items.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.171041",
+  "name": "create_quotation",
+  "tool_name": "create_quotation"
+ },
+ {
+  "category": "Sales",
+  "description": "List quotations, optionally filtered by customer or status.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.175036",
+  "name": "get_quotations",
+  "tool_name": "get_quotations"
+ },
+ {
+  "category": "Sales",
+  "description": "Convert a Quotation into a Sales Order.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.178903",
+  "name": "convert_quotation_to_sales_order",
+  "tool_name": "convert_quotation_to_sales_order"
+ },
+ {
+  "category": "Sales",
+  "description": "Create a Sales Order for a customer.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.182721",
+  "name": "create_sales_order",
+  "tool_name": "create_sales_order"
+ },
+ {
+  "category": "Sales",
+  "description": "List open/pending sales orders, optionally filtered by customer or status.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.186587",
+  "name": "get_sales_orders",
+  "tool_name": "get_sales_orders"
+ },
+ {
+  "category": "Sales",
+  "description": "Convert a Sales Order into a Sales Invoice (draft).",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.190613",
+  "name": "convert_so_to_invoice",
+  "tool_name": "convert_so_to_invoice"
+ },
+ {
+  "category": "Sales",
+  "description": "Convert a Sales Order into a Delivery Note (draft).",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.194686",
+  "name": "convert_so_to_delivery_note",
+  "tool_name": "convert_so_to_delivery_note"
+ },
+ {
+  "category": "Sales",
+  "description": "Close an open Sales Order that will no longer be fulfilled.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.198651",
+  "name": "close_sales_order",
+  "tool_name": "close_sales_order"
+ },
+ {
+  "category": "Accounts",
+  "description": "Create a Sales Invoice directly for a customer with items.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.202652",
+  "name": "create_sales_invoice",
+  "tool_name": "create_sales_invoice"
+ },
+ {
+  "category": "Accounts",
+  "description": "List unpaid/outstanding sales invoices, optionally by customer.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.206752",
+  "name": "get_pending_invoices",
+  "tool_name": "get_pending_invoices"
+ },
+ {
+  "category": "Accounts",
+  "description": "Create a Credit Note / sales return against an existing Sales Invoice.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.219012",
+  "name": "create_sales_return",
+  "tool_name": "create_sales_return"
+ },
+ {
+  "category": "Sales",
+  "description": "Create a Delivery Note for a customer.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.227463",
+  "name": "create_delivery_note",
+  "tool_name": "create_delivery_note"
+ },
+ {
+  "category": "Sales",
+  "description": "List delivery notes, optionally filtered by customer or status.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.231440",
+  "name": "get_delivery_notes",
+  "tool_name": "get_delivery_notes"
+ },
+ {
+  "category": "Accounts",
+  "description": "Record a payment received from a customer, optionally linked to an invoice.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.234900",
+  "name": "record_payment",
+  "tool_name": "record_payment"
+ },
+ {
+  "category": "Accounts",
+  "description": "Auto-generate a Payment Entry from a Sales Invoice using ERPNext defaults.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.238640",
+  "name": "generate_payment_from_invoice",
+  "tool_name": "generate_payment_from_invoice"
+ },
+ {
+  "category": "Accounts",
+  "description": "List customer payment entries for a date range.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.242750",
+  "name": "get_payment_entries",
+  "tool_name": "get_payment_entries"
+ },
+ {
+  "category": "Accounts",
+  "description": "Get the current debit/credit balance of a GL account.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.246861",
+  "name": "get_account_balance",
+  "tool_name": "get_account_balance"
+ },
+ {
+  "category": "Accounts",
+  "description": "Create a balanced Journal Entry with debit and credit rows.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.250581",
+  "name": "create_journal_entry",
+  "tool_name": "create_journal_entry"
+ },
+ {
+  "category": "Accounts",
+  "description": "List journal entries for a date range.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.254702",
+  "name": "get_journal_entries",
+  "tool_name": "get_journal_entries"
+ },
+ {
+  "category": "Purchasing",
+  "description": "Create a new Supplier.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.266672",
+  "name": "create_supplier",
+  "tool_name": "create_supplier"
+ },
+ {
+  "category": "Purchasing",
+  "description": "Search suppliers by partial name.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.270737",
+  "name": "search_supplier",
+  "tool_name": "search_supplier"
+ },
+ {
+  "category": "Purchasing",
+  "description": "Create a Purchase Order for a supplier.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.274666",
+  "name": "create_purchase_order",
+  "tool_name": "create_purchase_order"
+ },
+ {
+  "category": "Purchasing",
+  "description": "List pending/open purchase orders, optionally filtered by supplier.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.278566",
+  "name": "get_pending_purchase_orders",
+  "tool_name": "get_pending_purchase_orders"
+ },
+ {
+  "category": "Purchasing",
+  "description": "Get total purchase order amount and count for a date range.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.282270",
+  "name": "get_purchase_summary",
+  "tool_name": "get_purchase_summary"
+ },
+ {
+  "category": "Inventory",
+  "description": "Search items/products by name.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.290050",
+  "name": "search_item",
+  "tool_name": "search_item"
+ },
+ {
+  "category": "Inventory",
+  "description": "Get selling price of an item from a price list.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.294094",
+  "name": "get_item_price",
+  "tool_name": "get_item_price"
+ },
+ {
+  "category": "Inventory",
+  "description": "Create a Material Request to reorder stock.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.298063",
+  "name": "create_material_request",
+  "tool_name": "create_material_request"
+ },
+ {
+  "category": "Inventory",
+  "description": "List current stock levels, optionally by item group or warehouse.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.302066",
+  "name": "get_stock_report",
+  "tool_name": "get_stock_report"
+ },
+ {
+  "category": "Other",
+  "description": "Create a Support Issue / ticket.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.305832",
+  "name": "create_issue",
+  "tool_name": "create_issue"
+ },
+ {
+  "category": "Other",
+  "description": "List open support issues, optionally filtered by customer.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.309855",
+  "name": "get_open_issues",
+  "tool_name": "get_open_issues"
+ },
+ {
+  "category": "Other",
+  "description": "Create a new Project.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.313798",
+  "name": "create_project",
+  "tool_name": "create_project"
+ },
+ {
+  "category": "Other",
+  "description": "Create a Task, optionally linked to a Project.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.317785",
+  "name": "create_task",
+  "tool_name": "create_task"
+ },
+ {
+  "category": "Other",
+  "description": "Create a maintenance visit / job card for a vehicle or item.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.321633",
+  "name": "create_job_card",
+  "tool_name": "create_job_card"
+ },
+ {
+  "category": "Workshop",
+  "description": "Create a Vehicle Inspection record.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.329345",
+  "name": "create_vehicle_inspection",
+  "tool_name": "create_vehicle_inspection"
+ },
+ {
+  "category": "Workshop",
+  "description": "Search workshop vehicles by plate number or customer name.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.337899",
+  "name": "get_workshop_vehicle",
+  "tool_name": "get_workshop_vehicle"
+ },
+ {
+  "category": "Workshop",
+  "description": "List workshop job cards by status.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.341786",
+  "name": "get_workshop_job_cards",
+  "tool_name": "get_workshop_job_cards"
+ },
+ {
+  "category": "Rental",
+  "description": "List available rental vehicles.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.345854",
+  "name": "get_available_vehicles",
+  "tool_name": "get_available_vehicles"
+ },
+ {
+  "category": "Rental",
+  "description": "List active rental contracts, optionally filtered by customer.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.350172",
+  "name": "get_active_rental_contracts",
+  "tool_name": "get_active_rental_contracts"
+ },
+ {
+  "category": "BI Analytics",
+  "description": "Top customers by sales revenue in the last N days. Use for customer ranking reports.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.357994",
+  "name": "get_top_customers",
+  "tool_name": "get_top_customers"
+ },
+ {
+  "category": "BI Analytics",
+  "description": "Top selling items/products by revenue in the last N days.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.361589",
+  "name": "get_top_selling_items",
+  "tool_name": "get_top_selling_items"
+ },
+ {
+  "category": "BI Analytics",
+  "description": "All open/pending quotations not yet converted. Shows count, total value, and expiring-soon alerts.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.365763",
+  "name": "get_pending_quotations",
+  "tool_name": "get_pending_quotations"
+ },
+ {
+  "category": "BI Analytics",
+  "description": "All sales invoices past their due date with outstanding amounts. Use for collections analysis.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.370163",
+  "name": "get_overdue_invoices",
+  "tool_name": "get_overdue_invoices"
+ },
+ {
+  "category": "BI Analytics",
+  "description": "Items below safety stock level and out-of-stock items with pending demand.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.374109",
+  "name": "get_stock_alerts",
+  "tool_name": "get_stock_alerts"
+ },
+ {
+  "category": "BI Analytics",
+  "description": "Open and in-progress workshop job cards. Detects delayed jobs.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.377813",
+  "name": "get_open_job_cards",
+  "tool_name": "get_open_job_cards"
+ },
+ {
+  "category": "BI Analytics",
+  "description": "Daily management briefing: today/week/month sales, collections, pending quotations, overdue invoices, inventory, and workshop status. Use for 'morning briefing' or 'daily summary' requests.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.385864",
+  "name": "get_management_summary",
+  "tool_name": "get_management_summary"
+ },
+ {
+  "category": "BI Analytics",
+  "description": "Customers with no purchase in the last N days — useful for win-back campaigns.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.389794",
+  "name": "get_inactive_customers",
+  "tool_name": "get_inactive_customers"
+ },
+ {
+  "category": "BI Analytics",
+  "description": "Open quotations older than N days that have not been converted to orders.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.393755",
+  "name": "get_unconverted_quotations",
+  "tool_name": "get_unconverted_quotations"
+ },
+ {
+  "category": "BI Analytics",
+  "description": "Customers ranked by total overdue amount. Use for collections prioritisation.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.397839",
+  "name": "get_customers_with_overdue_balance",
+  "tool_name": "get_customers_with_overdue_balance"
+ },
+ {
+  "category": "BI Analytics",
+  "description": "Previously active, high-value customers who have not ordered in the last N days.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.401779",
+  "name": "get_customers_without_recent_orders",
+  "tool_name": "get_customers_without_recent_orders"
+ },
+ {
+  "category": "BI Analytics",
+  "description": "Composite follow-up intelligence: overdue payments, stale quotations, lapsed customers — prioritised by revenue impact. Use when asked who needs follow-up or attention.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.405967",
+  "name": "get_followup_opportunities",
+  "tool_name": "get_followup_opportunities"
+ },
+ {
+  "category": "Workshop",
+  "description": "AI-powered vehicle diagnostic assistant. Given make, model, year, and symptom list, returns possible causes, recommended checks, required parts, and estimated labour hours.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.410006",
+  "name": "diagnose_vehicle_issue",
+  "tool_name": "diagnose_vehicle_issue"
+ },
+ {
+  "category": "HR",
+  "description": "Create a new Employee record.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.414155",
+  "name": "create_employee",
+  "tool_name": "create_employee"
+ },
+ {
+  "category": "HR",
+  "description": "List employees, optionally filtered by department, designation, or status.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.417904",
+  "name": "get_employees",
+  "tool_name": "get_employees"
+ },
+ {
+  "category": "HR",
+  "description": "Create a Leave Application for an employee.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.423440",
+  "name": "create_leave_application",
+  "tool_name": "create_leave_application"
+ },
+ {
+  "category": "HR",
+  "description": "Get leave allocation and balance for an employee.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.428530",
+  "name": "get_leave_balance",
+  "tool_name": "get_leave_balance"
+ },
+ {
+  "category": "HR",
+  "description": "Get attendance records summary for an employee or all employees in a date range.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.432672",
+  "name": "get_attendance_summary",
+  "tool_name": "get_attendance_summary"
+ },
+ {
+  "category": "HR",
+  "description": "List salary slips for a date range, optionally filtered by employee.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.436904",
+  "name": "get_salary_slips",
+  "tool_name": "get_salary_slips"
+ },
+ {
+  "category": "HR",
+  "description": "Get total gross pay, deductions, and net pay for a payroll period.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.441996",
+  "name": "get_payroll_summary",
+  "tool_name": "get_payroll_summary"
+ },
+ {
+  "category": "Manufacturing",
+  "description": "Create a Manufacturing Work Order for a finished good item.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.446168",
+  "name": "create_work_order",
+  "tool_name": "create_work_order"
+ },
+ {
+  "category": "Manufacturing",
+  "description": "List Work Orders, optionally filtered by status or item.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.450670",
+  "name": "get_work_orders",
+  "tool_name": "get_work_orders"
+ },
+ {
+  "category": "Manufacturing",
+  "description": "List Bills of Materials (BOM), optionally filtered by item.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.455194",
+  "name": "get_bom_list",
+  "tool_name": "get_bom_list"
+ },
+ {
+  "category": "Purchasing",
+  "description": "Create a Purchase Invoice from a supplier with items.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.460546",
+  "name": "create_purchase_invoice",
+  "tool_name": "create_purchase_invoice"
+ },
+ {
+  "category": "Purchasing",
+  "description": "List purchase invoices for a date range, optionally by supplier.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.465340",
+  "name": "get_purchase_invoices",
+  "tool_name": "get_purchase_invoices"
+ },
+ {
+  "category": "Purchasing",
+  "description": "Create a Purchase Receipt from an existing Purchase Order.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.470685",
+  "name": "create_purchase_receipt",
+  "tool_name": "create_purchase_receipt"
+ },
+ {
+  "category": "Inventory",
+  "description": "Create a Stock Entry for material transfer, issue, or receipt.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.474902",
+  "name": "create_stock_entry",
+  "tool_name": "create_stock_entry"
+ },
+ {
+  "category": "Inventory",
+  "description": "Create a new Item (product or service) in the Item master.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.479786",
+  "name": "create_item",
+  "tool_name": "create_item"
+ },
+ {
+  "category": "Inventory",
+  "description": "List items from the Item master, optionally filtered by group or name.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.483856",
+  "name": "get_items",
+  "tool_name": "get_items"
+ },
+ {
+  "category": "Other",
+  "description": "List tasks, optionally filtered by project, assignee, or status.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.487731",
+  "name": "get_tasks",
+  "tool_name": "get_tasks"
+ },
+ {
+  "category": "Other",
+  "description": "Update the status of an existing Task.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.491539",
+  "name": "update_task_status",
+  "tool_name": "update_task_status"
+ },
+ {
+  "category": "HR",
+  "description": "Create an Expense Claim for an employee.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.495575",
+  "name": "create_expense_claim",
+  "tool_name": "create_expense_claim"
+ },
+ {
+  "category": "HR",
+  "description": "List Expense Claims, optionally filtered by employee or approval status.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.499642",
+  "name": "get_expense_claims",
+  "tool_name": "get_expense_claims"
+ },
+ {
+  "category": "Other",
+  "description": "Deep sales analysis for the current month: revenue by item group and salesperson, quotation conversion rate, top customers, top items, new vs returning customers. Use for sales performance deep-dives.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-22 16:00:54.014737",
+  "name": "get_sales_analysis",
+  "tool_name": "get_sales_analysis"
+ },
+ {
+  "category": "Other",
+  "description": "Outstanding purchase invoices with aging buckets, top suppliers by balance, upcoming-due forecast (next 7 days), and payables health metrics. Use for 'what do we owe' or payables/AP analysis.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-22 16:00:54.042617",
+  "name": "get_payables_analysis",
+  "tool_name": "get_payables_analysis"
+ },
+ {
+  "category": "CRM",
+  "description": "Search customers by partial name.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.151392",
+  "name": "search_customer",
+  "tool_name": "search_customer"
+ },
+ {
+  "category": "Accounts",
+  "description": "Get all outstanding/unpaid sales invoices (AR report), with overdue flag.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.258675",
+  "name": "get_accounts_receivable",
+  "tool_name": "get_accounts_receivable"
+ },
+ {
+  "category": "BI Analytics",
+  "description": "Get total sales, invoice count, and top 5 customers for a date range.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.262590",
+  "name": "get_sales_summary",
+  "tool_name": "get_sales_summary"
+ },
+ {
+  "category": "Inventory",
+  "description": "Check actual stock quantity for an item across warehouses.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.286278",
+  "name": "get_stock",
+  "tool_name": "get_stock"
+ },
+ {
+  "category": "Workshop",
+  "description": "Create a Workshop Job Card (auto_workshop app).",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.325510",
+  "name": "create_workshop_job_card",
+  "tool_name": "create_workshop_job_card"
+ },
+ {
+  "category": "Workshop",
+  "description": "Create a Workshop Estimate with parts and labor.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.333804",
+  "name": "create_workshop_estimate",
+  "tool_name": "create_workshop_estimate"
+ },
+ {
+  "category": "BI Analytics",
+  "description": "Monthly sales totals and invoice counts for the past N months. Use for trend/growth analysis.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.354237",
+  "name": "get_monthly_sales_trend",
+  "tool_name": "get_monthly_sales_trend"
+ },
+ {
+  "category": "BI Analytics",
+  "description": "Comprehensive AI business intelligence report: sales KPIs, AR, quotations, stock, workshop. Returns prioritised recommendations. Use when the user asks to analyze or review their business.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.381972",
+  "name": "analyze_business",
+  "tool_name": "analyze_business"
+ },
+ {
+  "category": "Accounts",
+  "description": "Get invoice totals and outstanding amounts for a date range.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:05.223487",
+  "name": "get_invoices_summary",
+  "tool_name": "get_invoices_summary"
+ }
+]

@@ -1,0 +1,2053 @@
+[
+ {
+  "allowed_roles": [
+   {
+    "parent": "create_customer",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   },
+   {
+    "parent": "create_customer",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   }
+  ],
+  "description": "Create a new Customer with optional phone and email contact.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.645879",
+  "name": "create_customer",
+  "tool_name": "create_customer"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "search_customer",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   },
+   {
+    "parent": "search_customer",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   },
+   {
+    "parent": "search_customer",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts User"
+   },
+   {
+    "parent": "search_customer",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   }
+  ],
+  "description": "Search customers by partial name.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.664812",
+  "name": "search_customer",
+  "tool_name": "search_customer"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_customer_history",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   },
+   {
+    "parent": "get_customer_history",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   },
+   {
+    "parent": "get_customer_history",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts User"
+   },
+   {
+    "parent": "get_customer_history",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   }
+  ],
+  "description": "Get sales orders, invoices, and payments for a customer.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.680868",
+  "name": "get_customer_history",
+  "tool_name": "get_customer_history"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "create_lead",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   },
+   {
+    "parent": "create_lead",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   }
+  ],
+  "description": "Create a new CRM Lead.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.691145",
+  "name": "create_lead",
+  "tool_name": "create_lead"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_open_leads",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   },
+   {
+    "parent": "get_open_leads",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   }
+  ],
+  "description": "List open/new CRM leads.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.699246",
+  "name": "get_open_leads",
+  "tool_name": "get_open_leads"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "create_opportunity",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   },
+   {
+    "parent": "create_opportunity",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   }
+  ],
+  "description": "Create a Sales Opportunity linked to a customer or lead.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.707464",
+  "name": "create_opportunity",
+  "tool_name": "create_opportunity"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "create_quotation",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   },
+   {
+    "parent": "create_quotation",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   }
+  ],
+  "description": "Create a Quotation for a customer with items.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.716229",
+  "name": "create_quotation",
+  "tool_name": "create_quotation"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_quotations",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   },
+   {
+    "parent": "get_quotations",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   }
+  ],
+  "description": "List quotations, optionally filtered by customer or status.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.725845",
+  "name": "get_quotations",
+  "tool_name": "get_quotations"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "convert_quotation_to_sales_order",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   }
+  ],
+  "description": "Convert a Quotation into a Sales Order.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.732645",
+  "name": "convert_quotation_to_sales_order",
+  "tool_name": "convert_quotation_to_sales_order"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "create_sales_order",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   }
+  ],
+  "description": "Create a Sales Order for a customer.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.738517",
+  "name": "create_sales_order",
+  "tool_name": "create_sales_order"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_sales_orders",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   },
+   {
+    "parent": "get_sales_orders",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   }
+  ],
+  "description": "List open/pending sales orders, optionally filtered by customer or status.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.746152",
+  "name": "get_sales_orders",
+  "tool_name": "get_sales_orders"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "convert_so_to_invoice",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   }
+  ],
+  "description": "Convert a Sales Order into a Sales Invoice (draft).",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.751960",
+  "name": "convert_so_to_invoice",
+  "tool_name": "convert_so_to_invoice"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "convert_so_to_delivery_note",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Stock Manager"
+   }
+  ],
+  "description": "Convert a Sales Order into a Delivery Note (draft).",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.758442",
+  "name": "convert_so_to_delivery_note",
+  "tool_name": "convert_so_to_delivery_note"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "close_sales_order",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   }
+  ],
+  "description": "Close an open Sales Order that will no longer be fulfilled.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.765057",
+  "name": "close_sales_order",
+  "tool_name": "close_sales_order"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "create_sales_invoice",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   }
+  ],
+  "description": "Create a Sales Invoice directly for a customer with items.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.771214",
+  "name": "create_sales_invoice",
+  "tool_name": "create_sales_invoice"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_pending_invoices",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts User"
+   },
+   {
+    "parent": "get_pending_invoices",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   },
+   {
+    "parent": "get_pending_invoices",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   }
+  ],
+  "description": "List unpaid/outstanding sales invoices, optionally by customer.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.783444",
+  "name": "get_pending_invoices",
+  "tool_name": "get_pending_invoices"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "create_sales_return",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   }
+  ],
+  "description": "Create a Credit Note / sales return against an existing Sales Invoice.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.795972",
+  "name": "create_sales_return",
+  "tool_name": "create_sales_return"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_invoices_summary",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts User"
+   },
+   {
+    "parent": "get_invoices_summary",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   },
+   {
+    "parent": "get_invoices_summary",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   }
+  ],
+  "description": "Get invoice totals and outstanding amounts for a date range.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.810118",
+  "name": "get_invoices_summary",
+  "tool_name": "get_invoices_summary"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "create_delivery_note",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Stock Manager"
+   }
+  ],
+  "description": "Create a Delivery Note for a customer.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.821622",
+  "name": "create_delivery_note",
+  "tool_name": "create_delivery_note"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_delivery_notes",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Stock User"
+   },
+   {
+    "parent": "get_delivery_notes",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Stock Manager"
+   },
+   {
+    "parent": "get_delivery_notes",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   }
+  ],
+  "description": "List delivery notes, optionally filtered by customer or status.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.830587",
+  "name": "get_delivery_notes",
+  "tool_name": "get_delivery_notes"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "record_payment",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   }
+  ],
+  "description": "Record a payment received from a customer, optionally linked to an invoice.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.837199",
+  "name": "record_payment",
+  "tool_name": "record_payment"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "generate_payment_from_invoice",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   }
+  ],
+  "description": "Auto-generate a Payment Entry from a Sales Invoice using ERPNext defaults.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.843878",
+  "name": "generate_payment_from_invoice",
+  "tool_name": "generate_payment_from_invoice"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_payment_entries",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts User"
+   },
+   {
+    "parent": "get_payment_entries",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   }
+  ],
+  "description": "List customer payment entries for a date range.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.850755",
+  "name": "get_payment_entries",
+  "tool_name": "get_payment_entries"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_account_balance",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts User"
+   },
+   {
+    "parent": "get_account_balance",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   }
+  ],
+  "description": "Get the current debit/credit balance of a GL account.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.857890",
+  "name": "get_account_balance",
+  "tool_name": "get_account_balance"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "create_journal_entry",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   }
+  ],
+  "description": "Create a balanced Journal Entry with debit and credit rows.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.864011",
+  "name": "create_journal_entry",
+  "tool_name": "create_journal_entry"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_journal_entries",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts User"
+   },
+   {
+    "parent": "get_journal_entries",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   }
+  ],
+  "description": "List journal entries for a date range.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.870959",
+  "name": "get_journal_entries",
+  "tool_name": "get_journal_entries"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_accounts_receivable",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts User"
+   },
+   {
+    "parent": "get_accounts_receivable",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   },
+   {
+    "parent": "get_accounts_receivable",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   }
+  ],
+  "description": "Get all outstanding/unpaid sales invoices (AR report), with overdue flag.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.880142",
+  "name": "get_accounts_receivable",
+  "tool_name": "get_accounts_receivable"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_sales_summary",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   },
+   {
+    "parent": "get_sales_summary",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   },
+   {
+    "parent": "get_sales_summary",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   }
+  ],
+  "description": "Get total sales, invoice count, and top 5 customers for a date range.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:46.901601",
+  "name": "get_sales_summary",
+  "tool_name": "get_sales_summary"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "create_supplier",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Purchase Manager"
+   }
+  ],
+  "description": "Create a new Supplier.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.897599",
+  "name": "create_supplier",
+  "tool_name": "create_supplier"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "search_supplier",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Purchase User"
+   },
+   {
+    "parent": "search_supplier",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Purchase Manager"
+   }
+  ],
+  "description": "Search suppliers by partial name.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.903601",
+  "name": "search_supplier",
+  "tool_name": "search_supplier"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "create_purchase_order",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Purchase Manager"
+   }
+  ],
+  "description": "Create a Purchase Order for a supplier.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.908513",
+  "name": "create_purchase_order",
+  "tool_name": "create_purchase_order"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_pending_purchase_orders",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Purchase User"
+   },
+   {
+    "parent": "get_pending_purchase_orders",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Purchase Manager"
+   }
+  ],
+  "description": "List pending/open purchase orders, optionally filtered by supplier.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.914618",
+  "name": "get_pending_purchase_orders",
+  "tool_name": "get_pending_purchase_orders"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_purchase_summary",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Purchase Manager"
+   },
+   {
+    "parent": "get_purchase_summary",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   }
+  ],
+  "description": "Get total purchase order amount and count for a date range.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.921202",
+  "name": "get_purchase_summary",
+  "tool_name": "get_purchase_summary"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_stock",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Stock User"
+   },
+   {
+    "parent": "get_stock",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Stock Manager"
+   },
+   {
+    "parent": "get_stock",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Purchase Manager"
+   },
+   {
+    "parent": "get_stock",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   }
+  ],
+  "description": "Check actual stock quantity for an item across warehouses.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.928667",
+  "name": "get_stock",
+  "tool_name": "get_stock"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "search_item",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   },
+   {
+    "parent": "search_item",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   },
+   {
+    "parent": "search_item",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Purchase User"
+   },
+   {
+    "parent": "search_item",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Purchase Manager"
+   },
+   {
+    "parent": "search_item",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Stock User"
+   },
+   {
+    "parent": "search_item",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Stock Manager"
+   }
+  ],
+  "description": "Search items/products by name.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.939064",
+  "name": "search_item",
+  "tool_name": "search_item"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_item_price",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   },
+   {
+    "parent": "get_item_price",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   }
+  ],
+  "description": "Get selling price of an item from a price list.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.946958",
+  "name": "get_item_price",
+  "tool_name": "get_item_price"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "create_material_request",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Purchase Manager"
+   },
+   {
+    "parent": "create_material_request",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Stock Manager"
+   }
+  ],
+  "description": "Create a Material Request to reorder stock.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.953314",
+  "name": "create_material_request",
+  "tool_name": "create_material_request"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_stock_report",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Stock User"
+   },
+   {
+    "parent": "get_stock_report",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Stock Manager"
+   }
+  ],
+  "description": "List current stock levels, optionally by item group or warehouse.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.958874",
+  "name": "get_stock_report",
+  "tool_name": "get_stock_report"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "create_issue",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Support Team"
+   },
+   {
+    "parent": "create_issue",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   },
+   {
+    "parent": "create_issue",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   }
+  ],
+  "description": "Create a Support Issue / ticket.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.966511",
+  "name": "create_issue",
+  "tool_name": "create_issue"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_open_issues",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Support Team"
+   },
+   {
+    "parent": "get_open_issues",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   }
+  ],
+  "description": "List open support issues, optionally filtered by customer.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.973070",
+  "name": "get_open_issues",
+  "tool_name": "get_open_issues"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "create_project",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Projects Manager"
+   }
+  ],
+  "description": "Create a new Project.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.979079",
+  "name": "create_project",
+  "tool_name": "create_project"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "create_task",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Employee"
+   },
+   {
+    "parent": "create_task",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Projects Manager"
+   }
+  ],
+  "description": "Create a Task, optionally linked to a Project.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.985984",
+  "name": "create_task",
+  "tool_name": "create_task"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "create_job_card",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Manufacturing Manager"
+   },
+   {
+    "parent": "create_job_card",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Projects Manager"
+   }
+  ],
+  "description": "Create a maintenance visit / job card for a vehicle or item.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.992520",
+  "name": "create_job_card",
+  "tool_name": "create_job_card"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "create_workshop_job_card",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   },
+   {
+    "parent": "create_workshop_job_card",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   }
+  ],
+  "description": "Create a Workshop Job Card (auto_workshop app).",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:37.999472",
+  "name": "create_workshop_job_card",
+  "tool_name": "create_workshop_job_card"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "create_vehicle_inspection",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   },
+   {
+    "parent": "create_vehicle_inspection",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   }
+  ],
+  "description": "Create a Vehicle Inspection record.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:38.005642",
+  "name": "create_vehicle_inspection",
+  "tool_name": "create_vehicle_inspection"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "create_workshop_estimate",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   },
+   {
+    "parent": "create_workshop_estimate",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   }
+  ],
+  "description": "Create a Workshop Estimate with parts and labor.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:38.013434",
+  "name": "create_workshop_estimate",
+  "tool_name": "create_workshop_estimate"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_workshop_vehicle",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   },
+   {
+    "parent": "get_workshop_vehicle",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   }
+  ],
+  "description": "Search workshop vehicles by plate number or customer name.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:38.021342",
+  "name": "get_workshop_vehicle",
+  "tool_name": "get_workshop_vehicle"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_workshop_job_cards",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   },
+   {
+    "parent": "get_workshop_job_cards",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   }
+  ],
+  "description": "List workshop job cards by status.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:38.029233",
+  "name": "get_workshop_job_cards",
+  "tool_name": "get_workshop_job_cards"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_available_vehicles",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   },
+   {
+    "parent": "get_available_vehicles",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   }
+  ],
+  "description": "List available rental vehicles.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:38.036098",
+  "name": "get_available_vehicles",
+  "tool_name": "get_available_vehicles"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_active_rental_contracts",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   },
+   {
+    "parent": "get_active_rental_contracts",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   },
+   {
+    "parent": "get_active_rental_contracts",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   }
+  ],
+  "description": "List active rental contracts, optionally filtered by customer.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:38.043223",
+  "name": "get_active_rental_contracts",
+  "tool_name": "get_active_rental_contracts"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_monthly_sales_trend",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   },
+   {
+    "parent": "get_monthly_sales_trend",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   },
+   {
+    "parent": "get_monthly_sales_trend",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   }
+  ],
+  "description": "Monthly sales totals and invoice counts for the past N months. Use for trend/growth analysis.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:46.841121",
+  "name": "get_monthly_sales_trend",
+  "tool_name": "get_monthly_sales_trend"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_top_customers",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   },
+   {
+    "parent": "get_top_customers",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   },
+   {
+    "parent": "get_top_customers",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   }
+  ],
+  "description": "Top customers by sales revenue in the last N days. Use for customer ranking reports.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:46.854047",
+  "name": "get_top_customers",
+  "tool_name": "get_top_customers"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_top_selling_items",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   },
+   {
+    "parent": "get_top_selling_items",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Stock Manager"
+   },
+   {
+    "parent": "get_top_selling_items",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   }
+  ],
+  "description": "Top selling items/products by revenue in the last N days.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:46.870108",
+  "name": "get_top_selling_items",
+  "tool_name": "get_top_selling_items"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_pending_quotations",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   },
+   {
+    "parent": "get_pending_quotations",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   }
+  ],
+  "description": "All open/pending quotations not yet converted. Shows count, total value, and expiring-soon alerts.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:38.070942",
+  "name": "get_pending_quotations",
+  "tool_name": "get_pending_quotations"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_overdue_invoices",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts User"
+   },
+   {
+    "parent": "get_overdue_invoices",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   },
+   {
+    "parent": "get_overdue_invoices",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   }
+  ],
+  "description": "All sales invoices past their due date with outstanding amounts. Use for collections analysis.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:38.080118",
+  "name": "get_overdue_invoices",
+  "tool_name": "get_overdue_invoices"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_stock_alerts",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Stock User"
+   },
+   {
+    "parent": "get_stock_alerts",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Stock Manager"
+   }
+  ],
+  "description": "Items below safety stock level and out-of-stock items with pending demand.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:38.087189",
+  "name": "get_stock_alerts",
+  "tool_name": "get_stock_alerts"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_open_job_cards",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   },
+   {
+    "parent": "get_open_job_cards",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   }
+  ],
+  "description": "Open and in-progress workshop job cards. Detects delayed jobs.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:46.886130",
+  "name": "get_open_job_cards",
+  "tool_name": "get_open_job_cards"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "analyze_business",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   },
+   {
+    "parent": "analyze_business",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   },
+   {
+    "parent": "analyze_business",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   }
+  ],
+  "description": "Comprehensive AI business intelligence report: sales KPIs, AR, quotations, stock, workshop. Returns prioritised recommendations. Use when the user asks to analyze or review their business.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:46.089116",
+  "name": "analyze_business",
+  "tool_name": "analyze_business"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_management_summary",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   },
+   {
+    "parent": "get_management_summary",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   },
+   {
+    "parent": "get_management_summary",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   }
+  ],
+  "description": "Daily management briefing: today/week/month sales, collections, pending quotations, overdue invoices, inventory, and workshop status. Use for 'morning briefing' or 'daily summary' requests.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:46.827793",
+  "name": "get_management_summary",
+  "tool_name": "get_management_summary"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_inactive_customers",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   },
+   {
+    "parent": "get_inactive_customers",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   }
+  ],
+  "description": "Customers with no purchase in the last N days — useful for win-back campaigns.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:46.915740",
+  "name": "get_inactive_customers",
+  "tool_name": "get_inactive_customers"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_unconverted_quotations",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   },
+   {
+    "parent": "get_unconverted_quotations",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   }
+  ],
+  "description": "Open quotations older than N days that have not been converted to orders.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:46.928633",
+  "name": "get_unconverted_quotations",
+  "tool_name": "get_unconverted_quotations"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_customers_with_overdue_balance",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   },
+   {
+    "parent": "get_customers_with_overdue_balance",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   }
+  ],
+  "description": "Customers ranked by total overdue amount. Use for collections prioritisation.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:38.127510",
+  "name": "get_customers_with_overdue_balance",
+  "tool_name": "get_customers_with_overdue_balance"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_customers_without_recent_orders",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   },
+   {
+    "parent": "get_customers_without_recent_orders",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   }
+  ],
+  "description": "Previously active, high-value customers who have not ordered in the last N days.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:46.944220",
+  "name": "get_customers_without_recent_orders",
+  "tool_name": "get_customers_without_recent_orders"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_followup_opportunities",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   },
+   {
+    "parent": "get_followup_opportunities",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   }
+  ],
+  "description": "Composite follow-up intelligence: overdue payments, stale quotations, lapsed customers — prioritised by revenue impact. Use when asked who needs follow-up or attention.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 17:08:46.958686",
+  "name": "get_followup_opportunities",
+  "tool_name": "get_followup_opportunities"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "diagnose_vehicle_issue",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   },
+   {
+    "parent": "diagnose_vehicle_issue",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   }
+  ],
+  "description": "AI-powered vehicle diagnostic assistant. Given make, model, year, and symptom list, returns possible causes, recommended checks, required parts, and estimated labour hours.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 10:30:38.149854",
+  "name": "diagnose_vehicle_issue",
+  "tool_name": "diagnose_vehicle_issue"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "create_employee",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "HR Manager"
+   }
+  ],
+  "description": "Create a new Employee record.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 11:14:26.584328",
+  "name": "create_employee",
+  "tool_name": "create_employee"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_employees",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "HR User"
+   },
+   {
+    "parent": "get_employees",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "HR Manager"
+   }
+  ],
+  "description": "List employees, optionally filtered by department, designation, or status.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 11:14:26.599554",
+  "name": "get_employees",
+  "tool_name": "get_employees"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "create_leave_application",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Employee"
+   },
+   {
+    "parent": "create_leave_application",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "HR User"
+   },
+   {
+    "parent": "create_leave_application",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "HR Manager"
+   }
+  ],
+  "description": "Create a Leave Application for an employee.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 11:14:26.610501",
+  "name": "create_leave_application",
+  "tool_name": "create_leave_application"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_leave_balance",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Employee"
+   },
+   {
+    "parent": "get_leave_balance",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "HR User"
+   },
+   {
+    "parent": "get_leave_balance",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "HR Manager"
+   }
+  ],
+  "description": "Get leave allocation and balance for an employee.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 11:14:26.621680",
+  "name": "get_leave_balance",
+  "tool_name": "get_leave_balance"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_attendance_summary",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "HR User"
+   },
+   {
+    "parent": "get_attendance_summary",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "HR Manager"
+   }
+  ],
+  "description": "Get attendance records summary for an employee or all employees in a date range.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 11:14:26.631474",
+  "name": "get_attendance_summary",
+  "tool_name": "get_attendance_summary"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_salary_slips",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "HR Manager"
+   },
+   {
+    "parent": "get_salary_slips",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   }
+  ],
+  "description": "List salary slips for a date range, optionally filtered by employee.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 11:14:26.640740",
+  "name": "get_salary_slips",
+  "tool_name": "get_salary_slips"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_payroll_summary",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "HR Manager"
+   },
+   {
+    "parent": "get_payroll_summary",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   }
+  ],
+  "description": "Get total gross pay, deductions, and net pay for a payroll period.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 11:14:26.649726",
+  "name": "get_payroll_summary",
+  "tool_name": "get_payroll_summary"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "create_work_order",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Manufacturing Manager"
+   }
+  ],
+  "description": "Create a Manufacturing Work Order for a finished good item.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 11:14:26.657987",
+  "name": "create_work_order",
+  "tool_name": "create_work_order"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_work_orders",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Manufacturing User"
+   },
+   {
+    "parent": "get_work_orders",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Manufacturing Manager"
+   }
+  ],
+  "description": "List Work Orders, optionally filtered by status or item.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 11:14:26.667475",
+  "name": "get_work_orders",
+  "tool_name": "get_work_orders"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_bom_list",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Manufacturing User"
+   },
+   {
+    "parent": "get_bom_list",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Manufacturing Manager"
+   },
+   {
+    "parent": "get_bom_list",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Stock Manager"
+   }
+  ],
+  "description": "List Bills of Materials (BOM), optionally filtered by item.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 11:14:26.681197",
+  "name": "get_bom_list",
+  "tool_name": "get_bom_list"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "create_purchase_invoice",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   },
+   {
+    "parent": "create_purchase_invoice",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Purchase Manager"
+   }
+  ],
+  "description": "Create a Purchase Invoice from a supplier with items.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 11:14:26.691531",
+  "name": "create_purchase_invoice",
+  "tool_name": "create_purchase_invoice"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_purchase_invoices",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts User"
+   },
+   {
+    "parent": "get_purchase_invoices",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   },
+   {
+    "parent": "get_purchase_invoices",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Purchase Manager"
+   }
+  ],
+  "description": "List purchase invoices for a date range, optionally by supplier.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 11:14:26.702708",
+  "name": "get_purchase_invoices",
+  "tool_name": "get_purchase_invoices"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "create_purchase_receipt",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Purchase Manager"
+   },
+   {
+    "parent": "create_purchase_receipt",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Stock Manager"
+   }
+  ],
+  "description": "Create a Purchase Receipt from an existing Purchase Order.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 11:14:26.711526",
+  "name": "create_purchase_receipt",
+  "tool_name": "create_purchase_receipt"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "create_stock_entry",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Stock Manager"
+   }
+  ],
+  "description": "Create a Stock Entry for material transfer, issue, or receipt.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 11:14:26.718364",
+  "name": "create_stock_entry",
+  "tool_name": "create_stock_entry"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "create_item",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Stock Manager"
+   },
+   {
+    "parent": "create_item",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Purchase Manager"
+   }
+  ],
+  "description": "Create a new Item (product or service) in the Item master.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 11:14:26.725638",
+  "name": "create_item",
+  "tool_name": "create_item"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_items",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   },
+   {
+    "parent": "get_items",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   },
+   {
+    "parent": "get_items",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Stock User"
+   },
+   {
+    "parent": "get_items",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Stock Manager"
+   },
+   {
+    "parent": "get_items",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Purchase User"
+   },
+   {
+    "parent": "get_items",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Purchase Manager"
+   }
+  ],
+  "description": "List items from the Item master, optionally filtered by group or name.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 11:14:26.742674",
+  "name": "get_items",
+  "tool_name": "get_items"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_tasks",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Employee"
+   },
+   {
+    "parent": "get_tasks",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Projects Manager"
+   }
+  ],
+  "description": "List tasks, optionally filtered by project, assignee, or status.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 11:14:26.756266",
+  "name": "get_tasks",
+  "tool_name": "get_tasks"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "update_task_status",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Employee"
+   },
+   {
+    "parent": "update_task_status",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Projects Manager"
+   }
+  ],
+  "description": "Update the status of an existing Task.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 11:14:26.764752",
+  "name": "update_task_status",
+  "tool_name": "update_task_status"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "create_expense_claim",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Employee"
+   },
+   {
+    "parent": "create_expense_claim",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "HR User"
+   },
+   {
+    "parent": "create_expense_claim",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "HR Manager"
+   }
+  ],
+  "description": "Create an Expense Claim for an employee.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 11:14:26.777156",
+  "name": "create_expense_claim",
+  "tool_name": "create_expense_claim"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_expense_claims",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "HR User"
+   },
+   {
+    "parent": "get_expense_claims",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "HR Manager"
+   },
+   {
+    "parent": "get_expense_claims",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   }
+  ],
+  "description": "List Expense Claims, optionally filtered by employee or approval status.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-21 11:14:26.791639",
+  "name": "get_expense_claims",
+  "tool_name": "get_expense_claims"
+ }
+]
