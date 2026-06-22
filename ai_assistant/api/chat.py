@@ -73,23 +73,29 @@ def _interpret_analytics(tool_result: dict, user_message: str, user: str) -> dic
         ctx = ["### Metrics"]
         for k, v in metrics.items():
             ctx.append(f"- {k}: {v}")
+        base_curr = metrics.get("base_currency", "QAR")
+        multi_curr = metrics.get("multi_currency", False)
         if aging:
-            ctx.append("### Aging Buckets (QAR)")
+            ctx.append(f"### Aging Buckets ({base_curr})")
             for bucket, amt in aging.items():
                 ctx.append(f"- {bucket} days past due: {amt:,.0f}")
         if top_cx:
             ctx.append("### Top Customers by Outstanding")
             for cx in top_cx[:5]:
-                ctx.append(f"- {cx['customer']}: QAR {cx['outstanding']:,.0f} ({cx['pct_of_total']}%)")
+                ctx.append(f"- {cx['customer']}: {base_curr} {cx['outstanding']:,.0f} ({cx['pct_of_total']}%)")
 
+        multi_curr_note = (
+            " Transactions may involve multiple currencies — all amounts shown are base-currency equivalents."
+            if multi_curr else ""
+        )
         system_prompt = (
             "You are a financial analyst for a Qatar-based ERP system. "
             "Interpret the supplied pre-computed metrics and respond with ONLY valid JSON — "
             "no markdown, no explanation, no extra text.\n\n"
             'Output: {"findings":["..."],"risks":["..."],'
             '"recommendations":["..."],"required_actions":["..."]}\n\n'
-            "Rules: 2-4 items per array. Every figure you quote must come from the "
-            "supplied numbers — never invent values. Currency is QAR. "
+            f"Rules: 2-4 items per array. Every figure you quote must come from the "
+            f"supplied numbers — never invent values. Base currency is {base_curr}.{multi_curr_note} "
             "findings=factual observations; risks=business risks; "
             "recommendations=strategic improvements; required_actions=immediate operational steps."
         )

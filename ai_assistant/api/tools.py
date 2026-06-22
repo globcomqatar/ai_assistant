@@ -313,10 +313,12 @@ def get_pending_invoices(customer: str = "") -> dict:
 		filters["customer"] = customer
 	rows = frappe.get_all("Sales Invoice", filters=filters,
 		fields=["name", "customer", "posting_date", "due_date",
-				"grand_total", "outstanding_amount"],
+				"grand_total", "outstanding_amount", "conversion_rate", "currency"],
 		limit=20, order_by="posting_date desc")
+	base_currency = frappe.db.get_single_value("Global Defaults", "default_currency") or "QAR"
 	return {"status": "ok", "count": len(rows),
-			"total_outstanding": sum(flt(r.get("outstanding_amount")) for r in rows),
+			"total_outstanding": sum(flt(r.get("outstanding_amount")) * flt(r.get("conversion_rate") or 1) for r in rows),
+			"base_currency": base_currency,
 			"invoices": rows}
 
 
@@ -344,14 +346,17 @@ def get_invoices_summary(customer: str = "", from_date: str = "", to_date: str =
 	if customer:
 		filters["customer"] = customer
 	rows = frappe.get_all("Sales Invoice", filters=filters,
-		fields=["name", "customer", "posting_date", "grand_total", "outstanding_amount", "status"],
+		fields=["name", "customer", "posting_date", "grand_total", "base_grand_total",
+				"outstanding_amount", "conversion_rate", "currency", "status"],
 		limit=30, order_by="posting_date desc")
+	base_currency = frappe.db.get_single_value("Global Defaults", "default_currency") or "QAR"
 	return {
 		"status": "ok",
 		"from_date": from_date, "to_date": to_date,
 		"count": len(rows),
-		"total_billed": sum(flt(r.get("grand_total")) for r in rows),
-		"total_outstanding": sum(flt(r.get("outstanding_amount")) for r in rows),
+		"total_billed": sum(flt(r.get("base_grand_total") or r.get("grand_total")) for r in rows),
+		"total_outstanding": sum(flt(r.get("outstanding_amount")) * flt(r.get("conversion_rate") or 1) for r in rows),
+		"base_currency": base_currency,
 		"invoices": rows,
 	}
 
@@ -541,15 +546,17 @@ def get_accounts_receivable(customer: str = "") -> dict:
 		filters["customer"] = customer
 	rows = frappe.get_all("Sales Invoice", filters=filters,
 		fields=["name", "customer", "posting_date", "due_date",
-				"grand_total", "outstanding_amount"],
+				"grand_total", "outstanding_amount", "conversion_rate", "currency"],
 		limit=30, order_by="due_date asc")
 	overdue = [r for r in rows if r.get("due_date") and str(r["due_date"]) < today()]
+	base_currency = frappe.db.get_single_value("Global Defaults", "default_currency") or "QAR"
 	return {
 		"status": "ok",
 		"count": len(rows),
 		"overdue_count": len(overdue),
-		"total_outstanding": sum(flt(r.get("outstanding_amount")) for r in rows),
-		"total_overdue": sum(flt(r.get("outstanding_amount")) for r in overdue),
+		"total_outstanding": sum(flt(r.get("outstanding_amount")) * flt(r.get("conversion_rate") or 1) for r in rows),
+		"total_overdue": sum(flt(r.get("outstanding_amount")) * flt(r.get("conversion_rate") or 1) for r in overdue),
+		"base_currency": base_currency,
 		"invoices": rows,
 	}
 
@@ -559,13 +566,13 @@ def get_sales_summary(from_date: str = "", to_date: str = "") -> dict:
 	to_date   = str(to_date   or today())
 	result = frappe.db.sql("""
 		SELECT COUNT(*) AS invoice_count,
-			   COALESCE(SUM(grand_total), 0) AS total_sales,
-			   COALESCE(SUM(outstanding_amount), 0) AS total_outstanding
+			   COALESCE(SUM(base_grand_total), 0) AS total_sales,
+			   COALESCE(SUM(outstanding_amount * COALESCE(conversion_rate, 1)), 0) AS total_outstanding
 		FROM `tabSales Invoice`
 		WHERE docstatus = 1 AND posting_date BETWEEN %s AND %s
 	""", (from_date, to_date), as_dict=True)
 	top_customers = frappe.db.sql("""
-		SELECT customer, SUM(grand_total) AS total
+		SELECT customer, SUM(base_grand_total) AS total
 		FROM `tabSales Invoice`
 		WHERE docstatus = 1 AND posting_date BETWEEN %s AND %s
 		GROUP BY customer ORDER BY total DESC LIMIT 5
@@ -581,7 +588,7 @@ def get_sales_summary(from_date: str = "", to_date: str = "") -> dict:
 	prev_from = str(add_days(from_date, -period_days))
 	prev_to   = str(add_days(to_date,   -period_days))
 	prev_r = frappe.db.sql("""
-		SELECT COALESCE(SUM(grand_total), 0) AS v FROM `tabSales Invoice`
+		SELECT COALESCE(SUM(base_grand_total), 0) AS v FROM `tabSales Invoice`
 		WHERE docstatus = 1 AND posting_date BETWEEN %s AND %s
 	""", (prev_from, prev_to), as_dict=True)
 	prev_sales = float((prev_r[0] or {}).get("v", 0))
@@ -598,6 +605,7 @@ def get_sales_summary(from_date: str = "", to_date: str = "") -> dict:
 	top_item     = (top_item_r[0].get("item_name") or "N/A") if top_item_r else "N/A"
 	top_customer = top_customers[0]["customer"] if top_customers else "N/A"
 
+	base_currency = frappe.db.get_single_value("Global Defaults", "default_currency") or "QAR"
 	metrics = {
 		"total_revenue":       round(total_sales, 2),
 		"total_orders":        invoice_count,
@@ -605,12 +613,14 @@ def get_sales_summary(from_date: str = "", to_date: str = "") -> dict:
 		"revenue_vs_prev_pct": revenue_vs_prev_pct,
 		"top_customer":        top_customer,
 		"top_item":            top_item,
+		"base_currency":       base_currency,
+		"multi_currency":      True,
 	}
 	chart = {
 		"type": "bar",
 		"title": "Sales Summary",
 		"labels": ["Revenue", "Avg Order Value"],
-		"datasets": [{"name": "QAR", "values": [round(total_sales, 2), avg_order_value]}],
+		"datasets": [{"name": base_currency, "values": [round(total_sales, 2), avg_order_value]}],
 	}
 	return {
 		"status": "ok",
@@ -619,8 +629,9 @@ def get_sales_summary(from_date: str = "", to_date: str = "") -> dict:
 		"total_sales":       total_sales,
 		"total_outstanding": float(row.get("total_outstanding", 0)),
 		"top_customers":     top_customers,
+		"base_currency":     base_currency,
 		"message": (
-			f"Sales {from_date} to {to_date}: QAR {total_sales:,.0f} from "
+			f"Sales {from_date} to {to_date}: {base_currency} {total_sales:,.0f} (base currency) from "
 			f"{invoice_count} orders ({revenue_vs_prev_pct:+.1f}% vs prev period)."
 		),
 		"metrics": metrics,
@@ -694,7 +705,7 @@ def get_purchase_summary(from_date: str = "", to_date: str = "") -> dict:
 	to_date = to_date or today()
 	result = frappe.db.sql("""
 		SELECT COUNT(*) AS order_count,
-			   COALESCE(SUM(grand_total), 0) AS total_purchase
+			   COALESCE(SUM(base_grand_total), 0) AS total_purchase
 		FROM `tabPurchase Order`
 		WHERE docstatus = 1 AND transaction_date BETWEEN %s AND %s
 	""", (from_date, to_date), as_dict=True)
@@ -1205,11 +1216,13 @@ def get_purchase_invoices(supplier: str = "", from_date: str = "",
 	if supplier:
 		filters["supplier"] = supplier
 	rows = frappe.get_all("Purchase Invoice", filters=filters,
-		fields=["name", "supplier", "posting_date", "grand_total",
-				"outstanding_amount", "status"],
+		fields=["name", "supplier", "posting_date", "grand_total", "base_grand_total",
+				"outstanding_amount", "conversion_rate", "currency", "status"],
 		limit=20, order_by="posting_date desc")
+	base_currency = frappe.db.get_single_value("Global Defaults", "default_currency") or "QAR"
 	return {"status": "ok", "count": len(rows), "purchase_invoices": rows,
-			"total_amount": sum(flt(r.get("grand_total")) for r in rows)}
+			"total_amount": sum(flt(r.get("base_grand_total") or r.get("grand_total")) for r in rows),
+			"base_currency": base_currency}
 
 
 def create_purchase_receipt(purchase_order: str) -> dict:

@@ -44,6 +44,16 @@ def _sql_count(table: str, where: str, params: tuple) -> int:
     return int((rows[0] or {}).get("c", 0))
 
 
+_BASE_CURRENCY: str | None = None
+
+
+def get_base_currency() -> str:
+    global _BASE_CURRENCY
+    if _BASE_CURRENCY is None:
+        _BASE_CURRENCY = frappe.db.get_single_value("Global Defaults", "default_currency") or "QAR"
+    return _BASE_CURRENCY
+
+
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║  FEATURE 1 — BUSINESS ANALYSIS ENGINE                                       ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
@@ -56,7 +66,7 @@ def get_monthly_sales_trend(months: int = 6) -> dict:
     for i in range(months - 1, -1, -1):
         m_start, m_end = _month_range(i)
         rows = frappe.db.sql("""
-            SELECT COALESCE(SUM(grand_total), 0) AS total,
+            SELECT COALESCE(SUM(base_grand_total), 0) AS total,
                    COUNT(*) AS cnt
             FROM `tabSales Invoice`
             WHERE docstatus = 1
@@ -84,20 +94,21 @@ def get_monthly_sales_trend(months: int = 6) -> dict:
 
     m_start_curr, _ = _month_range(0)
     top_customers = frappe.db.sql("""
-        SELECT customer, SUM(grand_total) AS revenue, COUNT(*) AS orders
+        SELECT customer, SUM(base_grand_total) AS revenue, COUNT(*) AS orders
         FROM `tabSales Invoice`
         WHERE docstatus = 1 AND posting_date >= %s
         GROUP BY customer ORDER BY revenue DESC LIMIT 5
     """, (m_start_curr,), as_dict=True)
 
     top_items = frappe.db.sql("""
-        SELECT sii.item_code, sii.item_name, SUM(sii.amount) AS total_revenue, SUM(sii.qty) AS total_qty
+        SELECT sii.item_code, sii.item_name, SUM(sii.base_amount) AS total_revenue, SUM(sii.qty) AS total_qty
         FROM `tabSales Invoice Item` sii
         INNER JOIN `tabSales Invoice` si ON si.name = sii.parent
         WHERE si.docstatus = 1 AND si.posting_date >= %s
         GROUP BY sii.item_code, sii.item_name ORDER BY total_revenue DESC LIMIT 5
     """, (m_start_curr,), as_dict=True)
 
+    base_currency = get_base_currency()
     metrics = {
         "revenue_current_month": round(current, 2),
         "revenue_prev_month":    round(previous, 2),
@@ -105,12 +116,14 @@ def get_monthly_sales_trend(months: int = 6) -> dict:
         "revenue_ytd":           round(revenue_ytd, 2),
         "avg_monthly_revenue":   avg_monthly,
         "best_month_name":       best_month_name,
+        "base_currency":         base_currency,
+        "multi_currency":        True,
     }
     chart = {
         "type": "line",
         "title": f"Monthly Sales Trend (Last {months} Months)",
         "labels": [m["month"] for m in trend],
-        "datasets": [{"name": "Sales (QAR)", "values": [m["total_sales"] for m in trend]}],
+        "datasets": [{"name": f"Sales ({base_currency})", "values": [m["total_sales"] for m in trend]}],
     }
 
     return {
@@ -126,8 +139,8 @@ def get_monthly_sales_trend(months: int = 6) -> dict:
         "chart":         chart,
         "message": (
             f"Sales trend for {months} months. "
-            f"Current month: QAR {current:,.0f}. MoM: {growth:+.1f}%. "
-            f"YTD: QAR {revenue_ytd:,.0f}. Best month: {best_month_name}."
+            f"Current month: {base_currency} {current:,.0f} (base currency). MoM: {growth:+.1f}%. "
+            f"YTD: {base_currency} {revenue_ytd:,.0f}. Best month: {best_month_name}."
         ),
     }
 
@@ -262,7 +275,7 @@ def get_overdue_invoices() -> dict:
             "due_date": ["<", today()],
         },
         fields=["name", "customer", "posting_date", "due_date",
-                "grand_total", "outstanding_amount"],
+                "grand_total", "outstanding_amount", "currency", "conversion_rate"],
         order_by="due_date asc",
         limit=200,
     )
@@ -270,14 +283,15 @@ def get_overdue_invoices() -> dict:
     _today = getdate(today())
     for r in rows:
         r["days_overdue"] = date_diff(str(_today), str(r["due_date"])) if r.get("due_date") else 0
+        r["base_outstanding"] = flt(r.get("outstanding_amount")) * flt(r.get("conversion_rate") or 1)
 
-    total_overdue = sum(flt(r.get("outstanding_amount")) for r in rows)
+    total_overdue = sum(r["base_outstanding"] for r in rows)
 
     # Aging buckets — sum outstanding by days past due
     buckets = {"0-30": 0.0, "31-60": 0.0, "61-90": 0.0, "90+": 0.0}
     for r in rows:
         d = r["days_overdue"]
-        amt = flt(r.get("outstanding_amount"))
+        amt = r["base_outstanding"]
         if d <= 30:
             buckets["0-30"] += amt
         elif d <= 60:
@@ -291,7 +305,7 @@ def get_overdue_invoices() -> dict:
     customer_totals: dict[str, float] = {}
     for r in rows:
         c = r.get("customer") or "Unknown"
-        customer_totals[c] = customer_totals.get(c, 0.0) + flt(r.get("outstanding_amount"))
+        customer_totals[c] = customer_totals.get(c, 0.0) + r["base_outstanding"]
 
     sorted_customers = sorted(customer_totals.items(), key=lambda x: x[1], reverse=True)[:8]
     top_customers = [
@@ -304,9 +318,10 @@ def get_overdue_invoices() -> dict:
     ]
 
     # Summary metrics
-    over_90 = sum(flt(r.get("outstanding_amount")) for r in rows if r["days_overdue"] > 90)
+    over_90 = sum(r["base_outstanding"] for r in rows if r["days_overdue"] > 90)
     customers_affected = len(customer_totals)
     worst_pct = top_customers[0]["pct_of_total"] if top_customers else 0
+    base_currency = get_base_currency()
     metrics = {
         "total_overdue": round(total_overdue, 2),
         "invoice_count": len(rows),
@@ -314,21 +329,23 @@ def get_overdue_invoices() -> dict:
         "over_90_days": round(over_90, 2),
         "over_90_pct": round(over_90 / total_overdue * 100, 1) if total_overdue else 0,
         "worst_customer_pct": worst_pct,
+        "base_currency": base_currency,
+        "multi_currency": True,
     }
 
     # Chart config for bar chart by aging bucket
     chart = {
         "type": "bar",
-        "title": "Overdue Invoices by Aging Bucket (QAR)",
+        "title": f"Overdue Invoices by Aging Bucket ({base_currency})",
         "labels": list(buckets.keys()),
-        "datasets": [{"name": "Outstanding (QAR)", "values": [round(v, 2) for v in buckets.values()]}],
+        "datasets": [{"name": f"Outstanding ({base_currency})", "values": [round(v, 2) for v in buckets.values()]}],
     }
 
     worst_customer = top_customers[0]["customer"] if top_customers else "N/A"
     message = (
-        f"{len(rows)} overdue invoices totaling QAR {total_overdue:,.0f} "
+        f"{len(rows)} overdue invoices totaling {base_currency} {total_overdue:,.0f} (base currency) "
         f"across {customers_affected} customers. "
-        f"QAR {over_90:,.0f} ({metrics['over_90_pct']}%) is 90+ days past due. "
+        f"{base_currency} {over_90:,.0f} ({metrics['over_90_pct']}%) is 90+ days past due. "
         f"Largest exposure: {worst_customer} ({worst_pct}% of total)."
     )
 
@@ -501,9 +518,9 @@ def analyze_business() -> dict:
     pm_start, pm_end = _month_range(1)
 
     # Sales
-    sales_curr = _sql_sum("`tabSales Invoice`", "`grand_total`",
+    sales_curr = _sql_sum("`tabSales Invoice`", "`base_grand_total`",
                           "docstatus=1 AND posting_date>=%s", (m_start,))
-    sales_prev = _sql_sum("`tabSales Invoice`", "`grand_total`",
+    sales_prev = _sql_sum("`tabSales Invoice`", "`base_grand_total`",
                           "docstatus=1 AND posting_date BETWEEN %s AND %s",
                           (pm_start, pm_end))
     sales_growth = round((sales_curr - sales_prev) / sales_prev * 100, 1) if sales_prev else 0
@@ -525,10 +542,10 @@ def analyze_business() -> dict:
     overdue_rows = frappe.get_all(
         "Sales Invoice",
         filters={"docstatus": 1, "outstanding_amount": [">", 0], "due_date": ["<", t]},
-        fields=["outstanding_amount"],
+        fields=["outstanding_amount", "conversion_rate"],
     )
     overdue_count = len(overdue_rows)
-    overdue_amount = sum(flt(r.get("outstanding_amount")) for r in overdue_rows)
+    overdue_amount = sum(flt(r.get("outstanding_amount")) * flt(r.get("conversion_rate") or 1) for r in overdue_rows)
 
     # Due this week
     due_week = frappe.db.count("Sales Invoice", {
@@ -565,7 +582,7 @@ def analyze_business() -> dict:
 
     # Top customers this month
     top_customers = frappe.db.sql("""
-        SELECT customer, SUM(grand_total) AS total
+        SELECT customer, SUM(base_grand_total) AS total
         FROM `tabSales Invoice`
         WHERE docstatus=1 AND posting_date >= %s
         GROUP BY customer ORDER BY total DESC LIMIT 5
@@ -593,15 +610,16 @@ def analyze_business() -> dict:
             "priority": "warning",
             "text": f"Sales declined {abs(sales_growth):.0f}% vs last month — increase follow-up on pending quotations.",
         })
+    base_currency = get_base_currency()
     if overdue_count >= 5:
         recs.append({
             "priority": "critical",
-            "text": f"{overdue_count} overdue invoices worth {overdue_amount:,.0f} — initiate collection immediately.",
+            "text": f"{overdue_count} overdue invoices worth {base_currency} {overdue_amount:,.0f} — initiate collection immediately.",
         })
     elif overdue_count > 0:
         recs.append({
             "priority": "warning",
-            "text": f"{overdue_count} overdue invoices totaling {overdue_amount:,.0f} — follow up with customers.",
+            "text": f"{overdue_count} overdue invoices totaling {base_currency} {overdue_amount:,.0f} — follow up with customers.",
         })
     if pending_q > 10:
         recs.append({
@@ -647,12 +665,14 @@ def analyze_business() -> dict:
         "critical_stock_items":  critical_stock,
         "open_job_cards":        open_jobs,
         "delayed_job_cards":     delayed_jobs,
+        "base_currency":         base_currency,
+        "multi_currency":        True,
     }
     chart = {
         "type": "bar",
-        "title": "Business Snapshot (QAR)",
+        "title": f"Business Snapshot ({base_currency})",
         "labels": ["Sales This Month", "Sales Last Month", "Overdue AR", "Collected Today"],
-        "datasets": [{"name": "QAR", "values": [
+        "datasets": [{"name": base_currency, "values": [
             round(sales_curr, 2), round(sales_prev, 2),
             round(overdue_amount, 2), round(collected_today, 2),
         ]}],
@@ -695,8 +715,8 @@ def analyze_business() -> dict:
         "department_scores": department_scores,
         "message": (
             f"Business analysis for {t}. "
-            f"Sales: {sales_curr:,.0f} ({sales_growth:+.1f}% vs last month). "
-            f"Overdue: {overdue_count} invoices, {overdue_amount:,.0f}. "
+            f"Sales: {base_currency} {sales_curr:,.0f} ({sales_growth:+.1f}% vs last month). "
+            f"Overdue: {overdue_count} invoices, {base_currency} {overdue_amount:,.0f}. "
             f"{len(recs)} recommendation(s)."
         ),
     }
@@ -721,7 +741,7 @@ def get_management_summary() -> dict:
     # ── Sales ─────────────────────────────────────────────────────────
     def _sales(f, t2):
         r = frappe.db.sql("""
-            SELECT COALESCE(SUM(grand_total), 0) t, COUNT(*) c
+            SELECT COALESCE(SUM(base_grand_total), 0) t, COUNT(*) c
             FROM `tabSales Invoice`
             WHERE docstatus=1 AND posting_date BETWEEN %s AND %s
         """, (f, t2), as_dict=True)
@@ -750,11 +770,11 @@ def get_management_summary() -> dict:
     # ── Invoices ──────────────────────────────────────────────────────
     overdue_inv = frappe.get_all("Sales Invoice",
         filters={"docstatus": 1, "outstanding_amount": [">", 0], "due_date": ["<", t]},
-        fields=["name", "customer", "outstanding_amount", "due_date"],
+        fields=["name", "customer", "outstanding_amount", "due_date", "conversion_rate"],
     )
     due_today_inv = frappe.get_all("Sales Invoice",
         filters={"docstatus": 1, "outstanding_amount": [">", 0], "due_date": t},
-        fields=["name", "customer", "outstanding_amount"],
+        fields=["name", "customer", "outstanding_amount", "conversion_rate"],
     )
 
     # ── Inventory ─────────────────────────────────────────────────────
@@ -799,7 +819,7 @@ def get_management_summary() -> dict:
         for inv in top3:
             priorities.append({
                 "type": "collect",
-                "text": f"Collect {flt(inv['outstanding_amount']):,.0f} from {inv['customer']} ({inv['name']})",
+                "text": f"Collect {flt(inv['outstanding_amount']) * flt(inv.get('conversion_rate') or 1):,.0f} from {inv['customer']} ({inv['name']})",
                 "doctype": "Sales Invoice", "doc": inv["name"],
             })
     for q in expiring_q[:3]:
@@ -823,9 +843,10 @@ def get_management_summary() -> dict:
     greeting = "Good Morning" if hour < 12 else ("Good Afternoon" if hour < 17 else "Good Evening")
 
     overdue_count  = len(overdue_inv)
-    overdue_amount = sum(flt(r.get("outstanding_amount")) for r in overdue_inv)
+    overdue_amount = sum(flt(r.get("outstanding_amount")) * flt(r.get("conversion_rate") or 1) for r in overdue_inv)
 
     # ── Enrichment: flat metrics, chart, alerts ──────────────────────
+    base_currency = get_base_currency()
     metrics = {
         "sales_today":           round(s_today, 2),
         "sales_yesterday":       round(s_yesterday, 2),
@@ -840,18 +861,20 @@ def get_management_summary() -> dict:
         "low_stock_items":       low_stock_count,
         "open_jobs":             open_jobs,
         "delayed_jobs":          delayed_jobs,
+        "base_currency":         base_currency,
+        "multi_currency":        True,
     }
     chart = {
         "type": "bar",
-        "title": "Today vs Yesterday Sales (QAR)",
+        "title": f"Today vs Yesterday Sales ({base_currency})",
         "labels": ["Yesterday", "Today"],
-        "datasets": [{"name": "Sales (QAR)", "values": [round(s_yesterday, 2), round(s_today, 2)]}],
+        "datasets": [{"name": f"Sales ({base_currency})", "values": [round(s_yesterday, 2), round(s_today, 2)]}],
     }
     alerts = []
     if overdue_count >= 5:
-        alerts.append({"level": "critical", "message": f"{overdue_count} overdue invoices totaling QAR {overdue_amount:,.0f}"})
+        alerts.append({"level": "critical", "message": f"{overdue_count} overdue invoices totaling {base_currency} {overdue_amount:,.0f}"})
     elif overdue_count > 0:
-        alerts.append({"level": "warning", "message": f"{overdue_count} overdue invoices — QAR {overdue_amount:,.0f}"})
+        alerts.append({"level": "warning", "message": f"{overdue_count} overdue invoices — {base_currency} {overdue_amount:,.0f}"})
     if len(expiring_q) > 0:
         alerts.append({"level": "warning", "message": f"{len(expiring_q)} quotation(s) expiring within 7 days"})
     if low_stock_count > 3:
@@ -885,7 +908,7 @@ def get_management_summary() -> dict:
             "overdue_count": overdue_count,
             "overdue_amount": overdue_amount,
             "due_today_count": len(due_today_inv),
-            "due_today_amount": sum(flt(r.get("outstanding_amount")) for r in due_today_inv),
+            "due_today_amount": sum(flt(r.get("outstanding_amount")) * flt(r.get("conversion_rate") or 1) for r in due_today_inv),
         },
         "inventory": {
             "low_stock_count": low_stock_count,
@@ -904,8 +927,8 @@ def get_management_summary() -> dict:
         "chart":   chart,
         "alerts":  alerts,
         "message": (
-            f"{greeting}! Today's sales: QAR {s_today:,.0f} ({today_vs_yesterday_pct:+.1f}% vs yesterday). "
-            f"Month: QAR {s_month:,.0f} ({growth:+.1f}%). "
+            f"{greeting}! Today's sales: {base_currency} {s_today:,.0f} ({today_vs_yesterday_pct:+.1f}% vs yesterday). "
+            f"Month: {base_currency} {s_month:,.0f} ({growth:+.1f}%). "
             f"Overdue: {overdue_count} invoices. "
             f"Pending quotations: {len(pending_q)}."
         ),
@@ -932,7 +955,7 @@ def get_sales_analysis() -> dict:
 
     # Revenue by item group
     by_group = frappe.db.sql("""
-        SELECT sii.item_group, SUM(sii.amount) AS revenue, COUNT(DISTINCT si.name) AS orders
+        SELECT sii.item_group, SUM(sii.base_amount) AS revenue, COUNT(DISTINCT si.name) AS orders
         FROM `tabSales Invoice Item` sii
         INNER JOIN `tabSales Invoice` si ON si.name = sii.parent
         WHERE si.docstatus = 1 AND si.posting_date >= %s
@@ -942,7 +965,7 @@ def get_sales_analysis() -> dict:
     # Revenue by salesperson
     by_salesperson = frappe.db.sql("""
         SELECT st.sales_person AS salesperson,
-               SUM(si.grand_total * st.allocated_percentage / 100) AS revenue,
+               SUM(si.base_grand_total * st.allocated_percentage / 100) AS revenue,
                COUNT(DISTINCT si.name) AS orders
         FROM `tabSales Team` st
         INNER JOIN `tabSales Invoice` si ON si.name = st.parent AND si.parenttype='Sales Invoice'
@@ -961,7 +984,7 @@ def get_sales_analysis() -> dict:
 
     # Top customers
     top_customers = frappe.db.sql("""
-        SELECT customer, SUM(grand_total) AS revenue, COUNT(*) AS orders
+        SELECT customer, SUM(base_grand_total) AS revenue, COUNT(*) AS orders
         FROM `tabSales Invoice`
         WHERE docstatus = 1 AND posting_date >= %s
         GROUP BY customer ORDER BY revenue DESC LIMIT 8
@@ -969,8 +992,8 @@ def get_sales_analysis() -> dict:
 
     # Total MTD revenue and orders
     totals_r = frappe.db.sql("""
-        SELECT COALESCE(SUM(grand_total), 0) AS revenue, COUNT(*) AS orders,
-               COALESCE(AVG(grand_total), 0) AS avg_deal
+        SELECT COALESCE(SUM(base_grand_total), 0) AS revenue, COUNT(*) AS orders,
+               COALESCE(AVG(base_grand_total), 0) AS avg_deal
         FROM `tabSales Invoice` WHERE docstatus = 1 AND posting_date >= %s
     """, (m_start,), as_dict=True)
     totals = totals_r[0] if totals_r else {}
@@ -987,6 +1010,7 @@ def get_sales_analysis() -> dict:
     active_cx = int((active_cx_r[0] or {}).get("c", 0))
     returning_cx = max(0, active_cx - new_cx)
 
+    base_currency = get_base_currency()
     metrics = {
         "total_revenue_mtd":       round(total_revenue_mtd, 2),
         "total_orders_mtd":        total_orders_mtd,
@@ -996,12 +1020,14 @@ def get_sales_analysis() -> dict:
         "converted_quotations_mtd": converted_quotations,
         "new_customers_mtd":       new_cx,
         "returning_customers_mtd": returning_cx,
+        "base_currency":           base_currency,
+        "multi_currency":          True,
     }
     chart = {
         "type": "bar",
         "title": "Revenue by Item Group (MTD)",
         "labels": [r.get("item_group") or "Other" for r in by_group],
-        "datasets": [{"name": "Revenue (QAR)", "values": [float(r.get("revenue") or 0) for r in by_group]}],
+        "datasets": [{"name": f"Revenue ({base_currency})", "values": [float(r.get("revenue") or 0) for r in by_group]}],
     }
 
     return {
@@ -1014,7 +1040,7 @@ def get_sales_analysis() -> dict:
         "chart":           chart,
         "message": (
             f"Sales analysis MTD ({m_start} → {t}): "
-            f"QAR {total_revenue_mtd:,.0f} from {total_orders_mtd} orders. "
+            f"{base_currency} {total_revenue_mtd:,.0f} from {total_orders_mtd} orders (base currency). "
             f"Conversion rate: {conversion_rate_pct}%. "
             f"New customers: {new_cx}."
         ),
@@ -1033,7 +1059,7 @@ def get_payables_analysis() -> dict:
             "outstanding_amount": [">", 0],
         },
         fields=["name", "supplier", "posting_date", "due_date",
-                "grand_total", "outstanding_amount"],
+                "grand_total", "outstanding_amount", "conversion_rate"],
         order_by="due_date asc",
         limit=200,
     )
@@ -1045,14 +1071,15 @@ def get_payables_analysis() -> dict:
             r["days_overdue"] = max(0, date_diff(str(_today), str(due)))
         else:
             r["days_overdue"] = 0
+        r["base_outstanding"] = flt(r.get("outstanding_amount")) * flt(r.get("conversion_rate") or 1)
 
-    total_payable = sum(flt(r.get("outstanding_amount")) for r in rows)
+    total_payable = sum(r["base_outstanding"] for r in rows)
 
     # Aging buckets
     buckets = {"0-30": 0.0, "31-60": 0.0, "61-90": 0.0, "90+": 0.0}
     for r in rows:
         d = r["days_overdue"]
-        amt = flt(r.get("outstanding_amount"))
+        amt = r["base_outstanding"]
         if d <= 30:
             buckets["0-30"] += amt
         elif d <= 60:
@@ -1066,7 +1093,7 @@ def get_payables_analysis() -> dict:
     supplier_totals: dict[str, float] = {}
     for r in rows:
         s = r.get("supplier") or "Unknown"
-        supplier_totals[s] = supplier_totals.get(s, 0.0) + flt(r.get("outstanding_amount"))
+        supplier_totals[s] = supplier_totals.get(s, 0.0) + r["base_outstanding"]
 
     sorted_suppliers = sorted(supplier_totals.items(), key=lambda x: x[1], reverse=True)[:8]
     top_suppliers = [
@@ -1087,10 +1114,11 @@ def get_payables_analysis() -> dict:
     ][:20]
 
     # Metrics
-    over_90 = sum(flt(r.get("outstanding_amount")) for r in rows if r["days_overdue"] > 90)
+    over_90 = sum(r["base_outstanding"] for r in rows if r["days_overdue"] > 90)
     suppliers_affected = len(supplier_totals)
-    due_next_7d_amt = sum(flt(r.get("outstanding_amount")) for r in upcoming_due)
+    due_next_7d_amt = sum(r["base_outstanding"] for r in upcoming_due)
 
+    base_currency = get_base_currency()
     metrics = {
         "total_payable":      round(total_payable, 2),
         "invoice_count":      len(rows),
@@ -1098,12 +1126,14 @@ def get_payables_analysis() -> dict:
         "over_90_days":       round(over_90, 2),
         "over_90_pct":        round(over_90 / total_payable * 100, 1) if total_payable else 0,
         "due_next_7_days":    round(due_next_7d_amt, 2),
+        "base_currency":      base_currency,
+        "multi_currency":     True,
     }
     chart = {
         "type": "bar",
-        "title": "Payables by Aging Bucket (QAR)",
+        "title": f"Payables by Aging Bucket ({base_currency})",
         "labels": list(buckets.keys()),
-        "datasets": [{"name": "Outstanding (QAR)", "values": [round(v, 2) for v in buckets.values()]}],
+        "datasets": [{"name": f"Outstanding ({base_currency})", "values": [round(v, 2) for v in buckets.values()]}],
     }
 
     top_supplier_name = top_suppliers[0]["supplier"] if top_suppliers else "N/A"
@@ -1118,9 +1148,9 @@ def get_payables_analysis() -> dict:
         "metrics":          metrics,
         "chart":            chart,
         "message": (
-            f"{len(rows)} outstanding purchase invoices totaling QAR {total_payable:,.0f} "
+            f"{len(rows)} outstanding purchase invoices totaling {base_currency} {total_payable:,.0f} (base currency) "
             f"across {suppliers_affected} suppliers. "
-            f"QAR {due_next_7d_amt:,.0f} due in the next 7 days. "
+            f"{base_currency} {due_next_7d_amt:,.0f} due in the next 7 days. "
             f"Largest exposure: {top_supplier_name}."
         ),
     }
@@ -1205,7 +1235,7 @@ def get_customers_with_overdue_balance() -> dict:
     rows = frappe.db.sql("""
         SELECT customer,
                COUNT(*)                AS invoice_count,
-               SUM(outstanding_amount) AS total_outstanding,
+               SUM(outstanding_amount * COALESCE(conversion_rate, 1)) AS total_outstanding,
                MIN(due_date)           AS oldest_due_date,
                DATEDIFF(CURDATE(), MIN(due_date)) AS max_days_overdue
         FROM `tabSales Invoice`
@@ -1217,12 +1247,14 @@ def get_customers_with_overdue_balance() -> dict:
         LIMIT 20
     """, as_dict=True)
     total = sum(flt(r.get("total_outstanding")) for r in rows)
+    base_currency = get_base_currency()
     return {
         "status": "ok",
         "customer_count": len(rows),
         "total_overdue": total,
+        "base_currency": base_currency,
         "customers": [dict(r) for r in rows],
-        "message": f"{len(rows)} customers with overdue balances totaling {total:,.0f}.",
+        "message": f"{len(rows)} customers with overdue balances totaling {base_currency} {total:,.0f} (base currency).",
     }
 
 
@@ -1233,9 +1265,9 @@ def get_customers_without_recent_orders(days: int = 90) -> dict:
     # Customers who purchased before the cutoff (lapsed)
     lapsed = frappe.db.sql("""
         SELECT si.customer,
-               MAX(si.posting_date)  AS last_purchase,
-               SUM(si.grand_total)   AS lifetime_value,
-               COUNT(*)              AS total_invoices
+               MAX(si.posting_date)      AS last_purchase,
+               SUM(si.base_grand_total)  AS lifetime_value,
+               COUNT(*)                  AS total_invoices
         FROM `tabSales Invoice` si
         WHERE si.docstatus=1 AND si.posting_date < %s
         GROUP BY si.customer
@@ -1277,7 +1309,7 @@ def get_followup_opportunities() -> dict:
     # 1 — Overdue balances (HIGH)
     overdue = frappe.db.sql("""
         SELECT customer,
-               SUM(outstanding_amount) AS total_owed,
+               SUM(outstanding_amount * COALESCE(conversion_rate, 1)) AS total_owed,
                COUNT(*)                AS inv_count,
                DATEDIFF(CURDATE(), MIN(due_date)) AS days_overdue
         FROM `tabSales Invoice`
@@ -1324,7 +1356,7 @@ def get_followup_opportunities() -> dict:
     )
     recent_set = {r["customer"] for r in recent_buyers}
     lapsed = frappe.db.sql("""
-        SELECT customer, MAX(posting_date) AS last_date, SUM(grand_total) AS ltv
+        SELECT customer, MAX(posting_date) AS last_date, SUM(base_grand_total) AS ltv
         FROM `tabSales Invoice` WHERE docstatus=1 AND posting_date < %s
         GROUP BY customer ORDER BY ltv DESC LIMIT 5
     """, (cutoff90,), as_dict=True)
