@@ -921,10 +921,18 @@
 	/* FAB: smaller on mobile */
 	.ai-launcher-fab { width: 46px; height: 46px; font-size: 1.2rem; bottom: 16px; right: 16px; }
 
-	/* Mobile: agent bar */
-	.ai-agent-pill { font-size: 0.7rem; padding: 3px 8px; }
-	.ai-agent-pill-name { display: none; }
-	.ai-agent-pill.active .ai-agent-pill-name { display: inline; }
+	/* Mobile: agent bar — icon-only pills, horizontal scroll, no wrap */
+	.ai-agent-bar { padding: 4px 8px; }
+	.ai-agent-pill { font-size: 0.68rem; padding: 3px 7px; }
+	/* Hide names on ALL pills (including active) — icon alone is enough on small screens */
+	.ai-agent-pill-name,
+	.ai-agent-pill.active .ai-agent-pill-name { display: none !important; }
+
+	/* Header: single-row compact — hide subtitle and usage badge unconditionally */
+	.ai-chat-title    { font-size: 0.78rem; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.ai-chat-subtitle { display: none !important; }
+	.ai-usage-badge   { display: none !important; }
+	.ai-avatar        { font-size: 1.1rem; }
 }
 
 /* ── Agent selector bar ──────────────────────────────────────── */
@@ -940,7 +948,8 @@
 	scrollbar-width: none;
 }
 .ai-agent-bar::-webkit-scrollbar { display: none; }
-.ai-agent-pills { display: flex; gap: 6px; }
+/* nowrap ensures pills never spill to a second row — bar scrolls horizontally instead */
+.ai-agent-pills { display: flex; gap: 6px; flex-wrap: nowrap; }
 .ai-agent-pill {
 	display: flex; align-items: center; gap: 5px;
 	padding: 4px 10px; border-radius: 999px;
