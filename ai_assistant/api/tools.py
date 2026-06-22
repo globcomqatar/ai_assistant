@@ -31,6 +31,8 @@ from ai_assistant.api.bi_tools import (
     get_customers_without_recent_orders,
     get_followup_opportunities,
     diagnose_vehicle_issue,
+    get_sales_analysis,
+    get_payables_analysis,
 )
 
 
@@ -553,8 +555,8 @@ def get_accounts_receivable(customer: str = "") -> dict:
 
 
 def get_sales_summary(from_date: str = "", to_date: str = "") -> dict:
-	from_date = from_date or str(get_first_day(today()))
-	to_date = to_date or today()
+	from_date = str(from_date or str(get_first_day(today())))
+	to_date   = str(to_date   or today())
 	result = frappe.db.sql("""
 		SELECT COUNT(*) AS invoice_count,
 			   COALESCE(SUM(grand_total), 0) AS total_sales,
@@ -569,13 +571,60 @@ def get_sales_summary(from_date: str = "", to_date: str = "") -> dict:
 		GROUP BY customer ORDER BY total DESC LIMIT 5
 	""", (from_date, to_date), as_dict=True)
 	row = result[0] if result else {}
+	invoice_count = int(row.get("invoice_count", 0))
+	total_sales   = float(row.get("total_sales", 0))
+	avg_order_value = round(total_sales / invoice_count, 2) if invoice_count else 0
+
+	# Compare with the previous period of equal length
+	from datetime import datetime as _dt
+	period_days = (_dt.strptime(to_date, "%Y-%m-%d") - _dt.strptime(from_date, "%Y-%m-%d")).days + 1
+	prev_from = str(add_days(from_date, -period_days))
+	prev_to   = str(add_days(to_date,   -period_days))
+	prev_r = frappe.db.sql("""
+		SELECT COALESCE(SUM(grand_total), 0) AS v FROM `tabSales Invoice`
+		WHERE docstatus = 1 AND posting_date BETWEEN %s AND %s
+	""", (prev_from, prev_to), as_dict=True)
+	prev_sales = float((prev_r[0] or {}).get("v", 0))
+	revenue_vs_prev_pct = round((total_sales - prev_sales) / prev_sales * 100, 1) if prev_sales else 0
+
+	# Top item this period
+	top_item_r = frappe.db.sql("""
+		SELECT sii.item_name FROM `tabSales Invoice Item` sii
+		INNER JOIN `tabSales Invoice` si ON si.name = sii.parent
+		WHERE si.docstatus = 1 AND si.posting_date BETWEEN %s AND %s
+		GROUP BY sii.item_code, sii.item_name
+		ORDER BY SUM(sii.amount) DESC LIMIT 1
+	""", (from_date, to_date), as_dict=True)
+	top_item     = (top_item_r[0].get("item_name") or "N/A") if top_item_r else "N/A"
+	top_customer = top_customers[0]["customer"] if top_customers else "N/A"
+
+	metrics = {
+		"total_revenue":       round(total_sales, 2),
+		"total_orders":        invoice_count,
+		"avg_order_value":     avg_order_value,
+		"revenue_vs_prev_pct": revenue_vs_prev_pct,
+		"top_customer":        top_customer,
+		"top_item":            top_item,
+	}
+	chart = {
+		"type": "bar",
+		"title": "Sales Summary",
+		"labels": ["Revenue", "Avg Order Value"],
+		"datasets": [{"name": "QAR", "values": [round(total_sales, 2), avg_order_value]}],
+	}
 	return {
 		"status": "ok",
 		"from_date": from_date, "to_date": to_date,
-		"invoice_count": row.get("invoice_count", 0),
-		"total_sales": float(row.get("total_sales", 0)),
+		"invoice_count":     invoice_count,
+		"total_sales":       total_sales,
 		"total_outstanding": float(row.get("total_outstanding", 0)),
-		"top_customers": top_customers,
+		"top_customers":     top_customers,
+		"message": (
+			f"Sales {from_date} to {to_date}: QAR {total_sales:,.0f} from "
+			f"{invoice_count} orders ({revenue_vs_prev_pct:+.1f}% vs prev period)."
+		),
+		"metrics": metrics,
+		"chart":   chart,
 	}
 
 
@@ -1396,6 +1445,9 @@ TOOL_REGISTRY: dict[str, callable] = {
 	"analyze_business":                      analyze_business,
 	# ── Management Summary ────────────────────────────────────────────
 	"get_management_summary":                get_management_summary,
+	# ── Deep Analytics ────────────────────────────────────────────────
+	"get_sales_analysis":                    get_sales_analysis,
+	"get_payables_analysis":                 get_payables_analysis,
 	# ── Customer Follow-Up ────────────────────────────────────────────
 	"get_inactive_customers":                get_inactive_customers,
 	"get_unconverted_quotations":            get_unconverted_quotations,
@@ -1751,6 +1803,15 @@ TOOLS_SCHEMA: list[dict] = [
 	# ── Management Summary ───────────────────────────────────────────
 	{"name": "get_management_summary",
 	 "description": "Daily management briefing: today/week/month sales, collections, pending quotations, overdue invoices, inventory, and workshop status. Use for 'morning briefing' or 'daily summary' requests.",
+	 "parameters": {}},
+
+	# ── Deep Analytics ───────────────────────────────────────────────
+	{"name": "get_sales_analysis",
+	 "description": "Deep sales analysis for the current month: revenue by item group and salesperson, quotation conversion rate, top customers, top items, new vs returning customers. Use for sales performance deep-dives.",
+	 "parameters": {}},
+
+	{"name": "get_payables_analysis",
+	 "description": "Outstanding purchase invoices with aging buckets, top suppliers by balance, upcoming-due forecast (next 7 days), and payables health metrics. Use for 'what do we owe' or payables/AP analysis.",
 	 "parameters": {}},
 
 	# ── Customer Follow-Up ───────────────────────────────────────────

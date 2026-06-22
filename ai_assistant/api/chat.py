@@ -16,7 +16,12 @@ from ai_assistant.api.executor import execute_actions
 # Add a tool's intent here whenever you enrich it with metrics/chart — no other changes needed.
 ANALYTICAL_TOOLS: frozenset[str] = frozenset({
     "get_overdue_invoices",
-    # future: "get_monthly_sales_trend", "get_stock_alerts", "get_accounts_receivable", ...
+    "get_monthly_sales_trend",
+    "analyze_business",
+    "get_management_summary",
+    "get_sales_summary",
+    "get_sales_analysis",
+    "get_payables_analysis",
 })
 
 

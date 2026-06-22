@@ -1046,3 +1046,30 @@
 .ai-analysis-section ul li {
 	font-size: 0.78rem; color: var(--text-muted); margin-bottom: 2px; line-height: 1.4;
 }
+
+/* ── Department health badges ─────────────────────────────────────────────── */
+.ai-dept-grid { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.ai-dept-badge {
+	flex: 1 1 140px; border-radius: 6px; padding: 8px 12px;
+	border: 1px solid var(--border-color);
+}
+.ai-dept-badge strong { display: block; font-size: 0.8rem; margin-bottom: 2px; }
+.ai-dept-badge span   { font-size: 0.72rem; font-weight: 700; }
+.ai-dept-note         { font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; }
+.ai-dept-good         { background: #dcfce7; border-color: #22c55e; }
+.ai-dept-good span    { color: #16a34a; }
+.ai-dept-warn         { background: #fef9c3; border-color: #eab308; }
+.ai-dept-warn span    { color: #a16207; }
+.ai-dept-critical     { background: #fee2e2; border-color: #ef4444; }
+.ai-dept-critical span { color: #b91c1c; }
+
+/* ── Alerts strip ─────────────────────────────────────────────────────────── */
+.ai-alerts-strip { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.ai-alert {
+	display: flex; align-items: center; gap: 8px;
+	padding: 6px 12px; border-radius: 6px;
+	font-size: 0.78rem; border-left: 3px solid;
+}
+.ai-alert-critical { background: #fef2f2; border-color: #ef4444; color: #991b1b; }
+.ai-alert-warning  { background: #fffbeb; border-color: #eab308; color: #92400e; }
+.ai-alert-info     { background: #eff6ff; border-color: #60a5fa; color: #1e40af; }

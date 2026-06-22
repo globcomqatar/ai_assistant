@@ -503,6 +503,8 @@ class AIChatPage {
 			get_workshop_job_cards: "🔧", get_available_vehicles: "🚗",
 			get_active_rental_contracts: "📋",
 			// Business Intelligence
+			get_sales_analysis: "📊",
+			get_payables_analysis: "💳",
 			get_monthly_sales_trend: "📈",
 			get_top_customers: "🏆",
 			get_top_selling_items: "🛍️",
@@ -585,7 +587,9 @@ class AIChatPage {
 			detail = this._render_doc_table(result.purchase_orders,
 				["name","supplier","transaction_date","grand_total","status"],
 				["PO","Supplier","Date","Total","Status"]);
-		} else if (intent === "get_sales_summary" || intent === "get_purchase_summary") {
+		} else if (intent === "get_sales_summary") {
+			detail = this._render_sales_summary(result);
+		} else if (intent === "get_purchase_summary") {
 			detail = this._render_summary_card(result);
 		} else if (intent === "get_account_balance") {
 			detail = `<div class="ai-result-message">
@@ -622,7 +626,7 @@ class AIChatPage {
 			detail = this._render_bi_analysis(result);
 		} else if (intent === "get_management_summary") {
 			detail = this._render_management_summary(result);
-		} else if (intent === "get_monthly_sales_trend" && result.trend) {
+		} else if (intent === "get_monthly_sales_trend") {
 			detail = this._render_sales_trend(result);
 		} else if (intent === "get_top_customers" && result.customers) {
 			detail = this._render_doc_table(result.customers,
@@ -634,6 +638,10 @@ class AIChatPage {
 				["Code","Item","Qty Sold","Revenue"]);
 		} else if (intent === "get_pending_quotations" && result.quotations) {
 			detail = this._render_pending_quotations(result);
+		} else if (intent === "get_sales_analysis") {
+			detail = this._render_sales_analysis(result);
+		} else if (intent === "get_payables_analysis") {
+			detail = this._render_payables_analysis(result);
 		} else if (intent === "get_overdue_invoices") {
 			detail = this._render_overdue_analysis(result);
 		} else if (intent === "get_stock_alerts") {
@@ -982,10 +990,29 @@ class AIChatPage {
 			</div>`;
 		}
 
+		let deptHtml = "";
+		if (r.department_scores && r.department_scores.length) {
+			const badges = r.department_scores.map(d => {
+				const cls = {Good:"ai-dept-good", Warning:"ai-dept-warn", Critical:"ai-dept-critical"}[d.status] || "ai-dept-warn";
+				return `<div class="ai-dept-badge ${cls}">
+					<strong>${frappe.utils.escape_html(d.department)}</strong>
+					<span>${d.status}</span>
+					<div class="ai-dept-note">${frappe.utils.escape_html(d.note)}</div>
+				</div>`;
+			}).join("");
+			deptHtml = `<div class="ai-bi-section">
+				<div class="ai-bi-section-title">🏢 ${__("Department Health")}</div>
+				<div class="ai-dept-grid">${badges}</div>
+			</div>`;
+		}
+		const analysisHtml = r.analysis ? this._render_analysis_sections(r.analysis) : "";
+
 		return `<div class="ai-bi-report">
 			<div class="ai-kpi-grid">${kpiHtml}</div>
 			${recsHtml}
 			${topCustHtml}
+			${deptHtml}
+			${analysisHtml}
 		</div>`;
 	}
 
@@ -1040,37 +1067,91 @@ class AIChatPage {
 			</div>`;
 		}
 
+		// Alerts strip
+		let alertsHtml = "";
+		if (r.alerts && r.alerts.length) {
+			const items = r.alerts.map(a => {
+				const cls = a.level === "critical" ? "ai-alert-critical" : a.level === "warning" ? "ai-alert-warning" : "ai-alert-info";
+				const icon = a.level === "critical" ? "🔴" : a.level === "warning" ? "⚠️" : "ℹ️";
+				return `<div class="ai-alert ${cls}">${icon} ${frappe.utils.escape_html(a.message)}</div>`;
+			}).join("");
+			alertsHtml = `<div class="ai-alerts-strip">${items}</div>`;
+		}
+
+		let chartHtml = "";
+		if (r.chart && r.chart.labels && r.chart.labels.length) {
+			const mountId = "ai-chart-" + Date.now() + "-" + Math.floor(Math.random() * 9999);
+			chartHtml = this._render_chart(r.chart, mountId);
+		}
+
+		const analysisHtml = r.analysis ? this._render_analysis_sections(r.analysis) : "";
+
 		return `<div class="ai-bi-report">
+			${alertsHtml}
 			<div class="ai-summary-greeting">${frappe.utils.escape_html(r.greeting || "Hello")} — ${frappe.utils.escape_html(r.date || "")}</div>
 			<div class="ai-bi-section-title">💰 ${__("Sales")}</div>
 			<div class="ai-kpi-grid">${kpiHtml}</div>
+			${chartHtml}
 			<div class="ai-bi-section">
 				<div class="ai-bi-section-title">📊 ${__("Key Metrics")}</div>
 				<div class="ai-metrics-grid">${metricsRows}</div>
 			</div>
 			${prioritiesHtml}
+			${analysisHtml}
 		</div>`;
 	}
 
 	_render_sales_trend(r) {
 		const fmt = v => this._fmt_currency(v);
-		const rows = (r.trend || []).map(m =>
-			`<tr>
-				<td>${frappe.utils.escape_html(m.month)}</td>
-				<td>${fmt(m.total_sales)}</td>
-				<td>${m.invoice_count}</td>
-			</tr>`
+		let html = "";
+
+		if (r.metrics) {
+			html += this._render_kpi_cards([
+				{ label: __("This Month"),   value: fmt(r.metrics.revenue_current_month), danger: false },
+				{ label: __("Last Month"),   value: fmt(r.metrics.revenue_prev_month),    danger: false },
+				{ label: __("MoM Change"),   value: this._growth_badge(r.metrics.mom_change_pct), danger: r.metrics.mom_change_pct < -10 },
+				{ label: __("YTD Revenue"),  value: fmt(r.metrics.revenue_ytd),           danger: false },
+				{ label: __("Best Month"),   value: r.metrics.best_month_name || "—",     danger: false },
+				{ label: __("Avg Monthly"),  value: fmt(r.metrics.avg_monthly_revenue),   danger: false },
+			]);
+		} else {
+			html += `<div class="ai-kv-grid" style="margin-bottom:10px">
+				<div class="ai-kv-row"><span class="ai-kv-label">Current Month</span><span class="ai-kv-val">${fmt(r.current_month_sales)}</span></div>
+				<div class="ai-kv-row"><span class="ai-kv-label">vs Last Month</span><span class="ai-kv-val">${this._growth_badge(r.growth_vs_last_month)}</span></div>
+			</div>`;
+		}
+
+		if (r.chart && r.chart.labels && r.chart.labels.length) {
+			const mountId = "ai-chart-" + Date.now() + "-" + Math.floor(Math.random() * 9999);
+			html += this._render_chart(r.chart, mountId);
+		}
+
+		if (r.top_customers && r.top_customers.length) {
+			const rows = r.top_customers.map(c =>
+				`<tr><td>${frappe.utils.escape_html(c.customer)}</td><td class="text-right">${fmt(c.revenue || c.total)}</td><td class="text-right">${c.orders || "—"}</td></tr>`
+			).join("");
+			html += `<p style="font-weight:600;margin:10px 0 4px">🏆 ${__("Top Customers This Month")}</p>
+				<table class="ai-table"><thead><tr><th>${__("Customer")}</th><th class="text-right">${__("Revenue")}</th><th class="text-right">${__("Orders")}</th></tr></thead><tbody>${rows}</tbody></table>`;
+		}
+
+		if (r.top_items && r.top_items.length) {
+			const rows = r.top_items.map(i =>
+				`<tr><td>${frappe.utils.escape_html(i.item_name || i.item_code)}</td><td class="text-right">${fmt(i.total_revenue)}</td><td class="text-right">${i.total_qty}</td></tr>`
+			).join("");
+			html += `<p style="font-weight:600;margin:10px 0 4px">🛍️ ${__("Top Items This Month")}</p>
+				<table class="ai-table"><thead><tr><th>${__("Item")}</th><th class="text-right">${__("Revenue")}</th><th class="text-right">${__("Qty")}</th></tr></thead><tbody>${rows}</tbody></table>`;
+		}
+
+		const trendRows = (r.trend || []).map(m =>
+			`<tr><td>${frappe.utils.escape_html(m.month)}</td><td class="text-right">${fmt(m.total_sales)}</td><td class="text-right">${m.invoice_count}</td></tr>`
 		).join("");
+		if (trendRows) {
+			html += `<p style="font-weight:600;margin:10px 0 4px">📅 ${__("Monthly Breakdown")}</p>
+				<table class="ai-table"><thead><tr><th>${__("Month")}</th><th class="text-right">${__("Sales")}</th><th class="text-right">${__("Invoices")}</th></tr></thead><tbody>${trendRows}</tbody></table>`;
+		}
 
-		const header = `<div class="ai-kv-grid" style="margin-bottom:10px">
-			<div class="ai-kv-row"><span class="ai-kv-label">Current Month</span><span class="ai-kv-val">${fmt(r.current_month_sales)}</span></div>
-			<div class="ai-kv-row"><span class="ai-kv-label">vs Last Month</span><span class="ai-kv-val">${this._growth_badge(r.growth_vs_last_month)}</span></div>
-		</div>`;
-
-		return header + `<table class="ai-mini-table">
-			<thead><tr><th>Month</th><th>Sales</th><th>Invoices</th></tr></thead>
-			<tbody>${rows}</tbody>
-		</table>`;
+		if (r.analysis) html += this._render_analysis_sections(r.analysis);
+		return html;
 	}
 
 	_render_pending_quotations(r) {
@@ -1116,23 +1197,28 @@ class AIChatPage {
 		</table>`;
 	}
 
+	_render_kpi_cards(kpis) {
+		// k.value may be HTML (from frappe.format/frappe.Chart etc.) — render directly.
+		// Callers must pre-escape any user-supplied string values before passing here.
+		const cards = kpis.map(k =>
+			`<div class="ai-kpi-card">
+				<div class="ai-kpi-value${k.danger ? " ai-kpi-danger" : ""}">${k.value}</div>
+				<div class="ai-kpi-label">${k.label}</div>
+			</div>`
+		).join("");
+		return `<div class="ai-kpi-strip">${cards}</div>`;
+	}
+
 	_render_kpi_strip(metrics) {
 		const fmt = v => this._fmt_currency(v);
-		const kpis = [
+		return this._render_kpi_cards([
 			{ label: __("Total Overdue (QAR)"), value: fmt(metrics.total_overdue),        danger: true  },
 			{ label: __("Invoices"),             value: metrics.invoice_count,             danger: false },
 			{ label: __("Customers Affected"),   value: metrics.customers_affected,        danger: false },
 			{ label: __("90+ Days (QAR)"),       value: fmt(metrics.over_90_days),         danger: metrics.over_90_pct > 20 },
 			{ label: __("90+ %"),                value: `${metrics.over_90_pct}%`,         danger: metrics.over_90_pct > 20 },
 			{ label: __("Top Account %"),        value: `${metrics.worst_customer_pct}%`,  danger: metrics.worst_customer_pct > 30 },
-		];
-		const cards = kpis.map(k =>
-			`<div class="ai-kpi-card">
-				<div class="ai-kpi-value${k.danger ? " ai-kpi-danger" : ""}">${frappe.utils.escape_html(String(k.value))}</div>
-				<div class="ai-kpi-label">${k.label}</div>
-			</div>`
-		).join("");
-		return `<div class="ai-kpi-strip">${cards}</div>`;
+		]);
 	}
 
 	// Renders a frappe.Chart into a placeholder div after it is in the DOM.
@@ -1238,6 +1324,105 @@ class AIChatPage {
 		}
 		if (!rendered) return "";
 		return html + `</div>`;
+	}
+
+	_render_sales_summary(result) {
+		const fmt = v => this._fmt_currency(v);
+		if (!result.metrics) return this._render_summary_card(result);
+		let html = this._render_kpi_cards([
+			{ label: __("Revenue"),         value: fmt(result.metrics.total_revenue),       danger: false },
+			{ label: __("Orders"),          value: result.metrics.total_orders,             danger: false },
+			{ label: __("Avg Order Value"), value: fmt(result.metrics.avg_order_value),     danger: false },
+			{ label: __("vs Prev Period"),  value: this._growth_badge(result.metrics.revenue_vs_prev_pct), danger: result.metrics.revenue_vs_prev_pct < -10 },
+			{ label: __("Top Customer"),    value: frappe.utils.escape_html(result.metrics.top_customer || "—"), danger: false },
+			{ label: __("Top Item"),        value: frappe.utils.escape_html(result.metrics.top_item || "—"),     danger: false },
+		]);
+		if (result.chart && result.chart.labels) {
+			const mountId = "ai-chart-" + Date.now() + "-" + Math.floor(Math.random() * 9999);
+			html += this._render_chart(result.chart, mountId);
+		}
+		if (result.top_customers && result.top_customers.length) {
+			const rows = result.top_customers.map(c =>
+				`<tr><td>${frappe.utils.escape_html(c.customer)}</td><td class="text-right">${fmt(c.total || c.revenue)}</td></tr>`
+			).join("");
+			html += `<p style="font-weight:600;margin:8px 0 4px">🏆 ${__("Top Customers")}</p>
+				<table class="ai-table"><thead><tr><th>${__("Customer")}</th><th class="text-right">${__("Revenue")}</th></tr></thead><tbody>${rows}</tbody></table>`;
+		}
+		if (result.analysis) html += this._render_analysis_sections(result.analysis);
+		return html;
+	}
+
+	_render_sales_analysis(result) {
+		const fmt = v => this._fmt_currency(v);
+		let html = "";
+		if (result.metrics) {
+			html += this._render_kpi_cards([
+				{ label: __("Revenue MTD"),      value: fmt(result.metrics.total_revenue_mtd),     danger: false },
+				{ label: __("Orders MTD"),       value: result.metrics.total_orders_mtd,           danger: false },
+				{ label: __("Avg Deal Size"),    value: fmt(result.metrics.avg_deal_size),         danger: false },
+				{ label: __("Conversion Rate"),  value: `${result.metrics.conversion_rate_pct}%`,  danger: result.metrics.conversion_rate_pct < 20 },
+				{ label: __("New Customers"),    value: result.metrics.new_customers_mtd,          danger: false },
+				{ label: __("Returning"),        value: result.metrics.returning_customers_mtd,    danger: false },
+			]);
+		}
+		if (result.chart && result.chart.labels && result.chart.labels.length) {
+			const mountId = "ai-chart-" + Date.now() + "-" + Math.floor(Math.random() * 9999);
+			html += this._render_chart(result.chart, mountId);
+		}
+		if (result.by_salesperson && result.by_salesperson.length) {
+			const rows = result.by_salesperson.map(s =>
+				`<tr><td>${frappe.utils.escape_html(s.salesperson)}</td><td class="text-right">${fmt(s.revenue)}</td><td class="text-right">${s.orders}</td></tr>`
+			).join("");
+			html += `<p style="font-weight:600;margin:10px 0 4px">👤 ${__("Revenue by Salesperson")}</p>
+				<table class="ai-table"><thead><tr><th>${__("Salesperson")}</th><th class="text-right">${__("Revenue")}</th><th class="text-right">${__("Orders")}</th></tr></thead><tbody>${rows}</tbody></table>`;
+		}
+		if (result.top_customers && result.top_customers.length) {
+			const rows = result.top_customers.map(c =>
+				`<tr><td>${frappe.utils.escape_html(c.customer)}</td><td class="text-right">${fmt(c.revenue)}</td><td class="text-right">${c.orders}</td></tr>`
+			).join("");
+			html += `<p style="font-weight:600;margin:10px 0 4px">🏆 ${__("Top Customers MTD")}</p>
+				<table class="ai-table"><thead><tr><th>${__("Customer")}</th><th class="text-right">${__("Revenue")}</th><th class="text-right">${__("Orders")}</th></tr></thead><tbody>${rows}</tbody></table>`;
+		}
+		if (result.analysis) html += this._render_analysis_sections(result.analysis);
+		return html;
+	}
+
+	_render_payables_analysis(result) {
+		const fmt = v => this._fmt_currency(v);
+		let html = "";
+		if (result.metrics) {
+			html += this._render_kpi_cards([
+				{ label: __("Total Payable (QAR)"), value: fmt(result.metrics.total_payable),      danger: false },
+				{ label: __("Invoices"),             value: result.metrics.invoice_count,           danger: false },
+				{ label: __("Suppliers"),            value: result.metrics.suppliers_affected,      danger: false },
+				{ label: __("90+ Days (QAR)"),       value: fmt(result.metrics.over_90_days),       danger: result.metrics.over_90_pct > 20 },
+				{ label: __("90+ %"),                value: `${result.metrics.over_90_pct}%`,       danger: result.metrics.over_90_pct > 20 },
+				{ label: __("Due in 7 Days"),        value: fmt(result.metrics.due_next_7_days),    danger: true },
+			]);
+		}
+		if (result.chart && result.chart.labels && result.chart.labels.length) {
+			const mountId = "ai-chart-" + Date.now() + "-" + Math.floor(Math.random() * 9999);
+			html += this._render_chart(result.chart, mountId);
+		}
+		if (result.upcoming_due && result.upcoming_due.length) {
+			const rows = result.upcoming_due.map(i =>
+				`<tr><td><a href="/app/purchase-invoice/${encodeURIComponent(i.name)}" target="_blank">${i.name}</a></td>
+				<td>${frappe.utils.escape_html(i.supplier || "")}</td>
+				<td>${i.due_date || ""}</td>
+				<td class="text-right">${fmt(i.outstanding_amount)}</td></tr>`
+			).join("");
+			html += `<p style="font-weight:600;margin:10px 0 4px">📅 ${__("Due in Next 7 Days")}</p>
+				<table class="ai-table"><thead><tr><th>${__("Invoice")}</th><th>${__("Supplier")}</th><th>${__("Due Date")}</th><th class="text-right">${__("Amount")}</th></tr></thead><tbody>${rows}</tbody></table>`;
+		}
+		if (result.top_suppliers && result.top_suppliers.length) {
+			const rows = result.top_suppliers.map(s =>
+				`<tr><td>${frappe.utils.escape_html(s.supplier)}</td><td class="text-right">${fmt(s.outstanding)}</td><td class="text-right">${s.pct_of_total}%</td></tr>`
+			).join("");
+			html += `<p style="font-weight:600;margin:10px 0 4px">🏭 ${__("Top Suppliers by Outstanding")}</p>
+				<table class="ai-table"><thead><tr><th>${__("Supplier")}</th><th class="text-right">${__("Outstanding")}</th><th class="text-right">${__("% of Total")}</th></tr></thead><tbody>${rows}</tbody></table>`;
+		}
+		if (result.analysis) html += this._render_analysis_sections(result.analysis);
+		return html;
 	}
 
 	_render_stock_alerts(r) {

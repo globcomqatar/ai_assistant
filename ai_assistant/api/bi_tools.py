@@ -49,8 +49,9 @@ def _sql_count(table: str, where: str, params: tuple) -> int:
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 
 def get_monthly_sales_trend(months: int = 6) -> dict:
-    """Monthly sales totals + invoice counts for the past N months."""
+    """Monthly sales totals + invoice counts for the past N months — enriched with metrics and chart."""
     months = max(1, min(months, 24))
+    from datetime import datetime as _dt
     trend = []
     for i in range(months - 1, -1, -1):
         m_start, m_end = _month_range(i)
@@ -62,8 +63,7 @@ def get_monthly_sales_trend(months: int = 6) -> dict:
               AND posting_date BETWEEN %s AND %s
         """, (m_start, m_end), as_dict=True)
         row = rows[0] if rows else {}
-        from datetime import datetime
-        label = datetime.strptime(m_start, "%Y-%m-%d").strftime("%b %Y")
+        label = _dt.strptime(m_start, "%Y-%m-%d").strftime("%b %Y")
         trend.append({
             "month": label,
             "start": m_start,
@@ -76,6 +76,43 @@ def get_monthly_sales_trend(months: int = 6) -> dict:
     previous = trend[-2]["total_sales"] if len(trend) >= 2 else 0
     growth = round((current - previous) / previous * 100, 1) if previous else 0
 
+    # ── Enrichment ──────────────────────────────────────────────────────
+    revenue_ytd = sum(m["total_sales"] for m in trend)
+    avg_monthly = round(revenue_ytd / len(trend), 2) if trend else 0
+    best = max(trend, key=lambda m: m["total_sales"]) if trend else {}
+    best_month_name = best.get("month", "—")
+
+    m_start_curr, _ = _month_range(0)
+    top_customers = frappe.db.sql("""
+        SELECT customer, SUM(grand_total) AS revenue, COUNT(*) AS orders
+        FROM `tabSales Invoice`
+        WHERE docstatus = 1 AND posting_date >= %s
+        GROUP BY customer ORDER BY revenue DESC LIMIT 5
+    """, (m_start_curr,), as_dict=True)
+
+    top_items = frappe.db.sql("""
+        SELECT sii.item_code, sii.item_name, SUM(sii.amount) AS total_revenue, SUM(sii.qty) AS total_qty
+        FROM `tabSales Invoice Item` sii
+        INNER JOIN `tabSales Invoice` si ON si.name = sii.parent
+        WHERE si.docstatus = 1 AND si.posting_date >= %s
+        GROUP BY sii.item_code, sii.item_name ORDER BY total_revenue DESC LIMIT 5
+    """, (m_start_curr,), as_dict=True)
+
+    metrics = {
+        "revenue_current_month": round(current, 2),
+        "revenue_prev_month":    round(previous, 2),
+        "mom_change_pct":        growth,
+        "revenue_ytd":           round(revenue_ytd, 2),
+        "avg_monthly_revenue":   avg_monthly,
+        "best_month_name":       best_month_name,
+    }
+    chart = {
+        "type": "line",
+        "title": f"Monthly Sales Trend (Last {months} Months)",
+        "labels": [m["month"] for m in trend],
+        "datasets": [{"name": "Sales (QAR)", "values": [m["total_sales"] for m in trend]}],
+    }
+
     return {
         "status": "ok",
         "months": months,
@@ -83,7 +120,15 @@ def get_monthly_sales_trend(months: int = 6) -> dict:
         "current_month_sales": current,
         "previous_month_sales": previous,
         "growth_vs_last_month": growth,
-        "message": f"Sales trend for {months} months. Current month: {current:,.0f}. Growth: {growth:+.1f}%.",
+        "top_customers": top_customers,
+        "top_items":     top_items,
+        "metrics":       metrics,
+        "chart":         chart,
+        "message": (
+            f"Sales trend for {months} months. "
+            f"Current month: QAR {current:,.0f}. MoM: {growth:+.1f}%. "
+            f"YTD: QAR {revenue_ytd:,.0f}. Best month: {best_month_name}."
+        ),
     }
 
 
@@ -359,6 +404,53 @@ def get_open_job_cards(status: str = "", limit: int = 20) -> dict:
     }
 
 
+def _build_dept_scores(
+    revenue_mom_pct: float,
+    overdue_ar_pct: float,
+    low_stock: int,
+    open_pos: int,
+    delayed_jobs: int,
+) -> list:
+    """Derive Green/Amber/Red health status for Sales, Accounts, Operations."""
+    scores = []
+
+    # Sales
+    if revenue_mom_pct >= 5:
+        scores.append({"department": "Sales", "status": "Good",
+                        "note": f"Revenue up {revenue_mom_pct:+.1f}% MoM"})
+    elif revenue_mom_pct >= -5:
+        scores.append({"department": "Sales", "status": "Warning",
+                        "note": f"Revenue flat ({revenue_mom_pct:+.1f}% MoM)"})
+    else:
+        scores.append({"department": "Sales", "status": "Critical",
+                        "note": f"Revenue down {revenue_mom_pct:.1f}% MoM"})
+
+    # Accounts
+    if overdue_ar_pct < 15:
+        scores.append({"department": "Accounts", "status": "Good",
+                        "note": f"Overdue AR is {overdue_ar_pct:.1f}% of monthly sales"})
+    elif overdue_ar_pct < 40:
+        scores.append({"department": "Accounts", "status": "Warning",
+                        "note": f"Overdue AR at {overdue_ar_pct:.1f}% of monthly sales"})
+    else:
+        scores.append({"department": "Accounts", "status": "Critical",
+                        "note": f"Overdue AR is {overdue_ar_pct:.1f}% of monthly sales — high risk"})
+
+    # Operations
+    ops_issues = (1 if low_stock > 3 else 0) + (1 if open_pos > 5 else 0) + (1 if delayed_jobs > 0 else 0)
+    if ops_issues == 0:
+        scores.append({"department": "Operations", "status": "Good",
+                        "note": "Stock, POs, and workshop within normal range"})
+    elif ops_issues == 1:
+        scores.append({"department": "Operations", "status": "Warning",
+                        "note": f"Minor issues: low_stock={low_stock}, open_POs={open_pos}, delayed_jobs={delayed_jobs}"})
+    else:
+        scores.append({"department": "Operations", "status": "Critical",
+                        "note": f"Multiple issues: low_stock={low_stock}, open_POs={open_pos}, delayed_jobs={delayed_jobs}"})
+
+    return scores
+
+
 def analyze_business() -> dict:
     """
     Comprehensive business intelligence snapshot.
@@ -443,6 +535,13 @@ def analyze_business() -> dict:
     # New customers this month
     new_customers = frappe.db.count("Customer", {"creation": [">=", m_start]})
 
+    # Open leads + open POs (for department scoring)
+    open_leads = frappe.db.count("Lead", {"status": ["in", ["New", "Open", "Replied", "Contacted"]]})
+    open_pos   = frappe.db.count("Purchase Order",
+                                  {"docstatus": 1, "status": ["in", ["To Receive and Bill", "To Bill", "To Receive"]]})
+
+    overdue_ar_pct = round(overdue_amount / sales_curr * 100, 1) if sales_curr else 0
+
     # ── Build prioritised recommendations ──────────────────────────────
     recs = []
     if sales_growth < -15:
@@ -496,6 +595,37 @@ def analyze_business() -> dict:
             "text": "Business is running well. Keep monitoring KPIs daily.",
         })
 
+    # ── Enrichment ──────────────────────────────────────────────────────
+    metrics = {
+        "sales_this_month":      round(sales_curr, 2),
+        "sales_last_month":      round(sales_prev, 2),
+        "revenue_mom_pct":       sales_growth,
+        "collected_today":       round(collected_today, 2),
+        "overdue_ar_pct":        overdue_ar_pct,
+        "overdue_amount":        round(overdue_amount, 2),
+        "overdue_invoice_count": overdue_count,
+        "pending_quotations":    pending_q,
+        "critical_stock_items":  critical_stock,
+        "open_job_cards":        open_jobs,
+        "delayed_job_cards":     delayed_jobs,
+    }
+    chart = {
+        "type": "bar",
+        "title": "Business Snapshot (QAR)",
+        "labels": ["Sales This Month", "Sales Last Month", "Overdue AR", "Collected Today"],
+        "datasets": [{"name": "QAR", "values": [
+            round(sales_curr, 2), round(sales_prev, 2),
+            round(overdue_amount, 2), round(collected_today, 2),
+        ]}],
+    }
+    department_scores = _build_dept_scores(
+        revenue_mom_pct=sales_growth,
+        overdue_ar_pct=overdue_ar_pct,
+        low_stock=critical_stock,
+        open_pos=open_pos,
+        delayed_jobs=delayed_jobs,
+    )
+
     return {
         "status": "ok",
         "analysis_date": t,
@@ -520,6 +650,10 @@ def analyze_business() -> dict:
         "top_customers": [dict(r) for r in top_customers],
         # Intelligence
         "recommendations": recs,
+        # Enrichment
+        "metrics":           metrics,
+        "chart":             chart,
+        "department_scores": department_scores,
         "message": (
             f"Business analysis for {t}. "
             f"Sales: {sales_curr:,.0f} ({sales_growth:+.1f}% vs last month). "
@@ -556,10 +690,12 @@ def get_management_summary() -> dict:
         return float(row.get("t", 0)), int(row.get("c", 0))
 
     s_today, c_today = _sales(t, t)
+    s_yesterday, c_yesterday = _sales(add_days(t, -1), add_days(t, -1))
     s_week, c_week = _sales(week_start, t)
     s_month, c_month = _sales(m_start, t)
     s_last, _ = _sales(pm_start, pm_end)
     growth = round((s_month - s_last) / s_last * 100, 1) if s_last else 0
+    today_vs_yesterday_pct = round((s_today - s_yesterday) / s_yesterday * 100, 1) if s_yesterday else 0
 
     collected_today = _sql_sum("`tabPayment Entry`", "`paid_amount`",
                                "docstatus=1 AND payment_type='Receive' AND posting_date=%s", (t,))
@@ -647,6 +783,45 @@ def get_management_summary() -> dict:
     hour = datetime.now().hour
     greeting = "Good Morning" if hour < 12 else ("Good Afternoon" if hour < 17 else "Good Evening")
 
+    overdue_count  = len(overdue_inv)
+    overdue_amount = sum(flt(r.get("outstanding_amount")) for r in overdue_inv)
+
+    # ── Enrichment: flat metrics, chart, alerts ──────────────────────
+    metrics = {
+        "sales_today":           round(s_today, 2),
+        "sales_yesterday":       round(s_yesterday, 2),
+        "today_vs_yesterday_pct": today_vs_yesterday_pct,
+        "sales_this_week":       round(s_week, 2),
+        "sales_this_month":      round(s_month, 2),
+        "revenue_mom_pct":       growth,
+        "collected_today":       round(collected_today, 2),
+        "overdue_invoice_count": overdue_count,
+        "overdue_amount":        round(overdue_amount, 2),
+        "pending_quotations":    len(pending_q),
+        "low_stock_items":       low_stock_count,
+        "open_jobs":             open_jobs,
+        "delayed_jobs":          delayed_jobs,
+    }
+    chart = {
+        "type": "bar",
+        "title": "Today vs Yesterday Sales (QAR)",
+        "labels": ["Yesterday", "Today"],
+        "datasets": [{"name": "Sales (QAR)", "values": [round(s_yesterday, 2), round(s_today, 2)]}],
+    }
+    alerts = []
+    if overdue_count >= 5:
+        alerts.append({"level": "critical", "message": f"{overdue_count} overdue invoices totaling QAR {overdue_amount:,.0f}"})
+    elif overdue_count > 0:
+        alerts.append({"level": "warning", "message": f"{overdue_count} overdue invoices — QAR {overdue_amount:,.0f}"})
+    if len(expiring_q) > 0:
+        alerts.append({"level": "warning", "message": f"{len(expiring_q)} quotation(s) expiring within 7 days"})
+    if low_stock_count > 3:
+        alerts.append({"level": "warning", "message": f"{low_stock_count} items below safety stock"})
+    if delayed_jobs > 0:
+        alerts.append({"level": "info", "message": f"{delayed_jobs} workshop job(s) delayed beyond 2 days"})
+    if today_vs_yesterday_pct < -20:
+        alerts.append({"level": "warning", "message": f"Today's sales {today_vs_yesterday_pct:+.1f}% vs yesterday"})
+
     return {
         "status": "ok",
         "greeting": greeting,
@@ -668,8 +843,8 @@ def get_management_summary() -> dict:
             "expiring_soon": len(expiring_q),
         },
         "invoices": {
-            "overdue_count": len(overdue_inv),
-            "overdue_amount": sum(flt(r.get("outstanding_amount")) for r in overdue_inv),
+            "overdue_count": overdue_count,
+            "overdue_amount": overdue_amount,
             "due_today_count": len(due_today_inv),
             "due_today_amount": sum(flt(r.get("outstanding_amount")) for r in due_today_inv),
         },
@@ -685,11 +860,220 @@ def get_management_summary() -> dict:
             "new_this_month": new_customers,
         },
         "priorities": priorities,
+        # Enrichment
+        "metrics": metrics,
+        "chart":   chart,
+        "alerts":  alerts,
         "message": (
-            f"{greeting}! Today's sales: {s_today:,.0f}. "
-            f"Month: {s_month:,.0f} ({growth:+.1f}%). "
-            f"Overdue: {len(overdue_inv)} invoices. "
+            f"{greeting}! Today's sales: QAR {s_today:,.0f} ({today_vs_yesterday_pct:+.1f}% vs yesterday). "
+            f"Month: QAR {s_month:,.0f} ({growth:+.1f}%). "
+            f"Overdue: {overdue_count} invoices. "
             f"Pending quotations: {len(pending_q)}."
+        ),
+    }
+
+
+def get_sales_analysis() -> dict:
+    """
+    Deep sales analysis for the current month:
+    revenue by item group, by salesperson, quotation conversion rate,
+    top customers, top items, new vs returning customers.
+    """
+    m_start, _ = _month_range(0)
+    t = today()
+
+    # Revenue by item group
+    by_group = frappe.db.sql("""
+        SELECT sii.item_group, SUM(sii.amount) AS revenue, COUNT(DISTINCT si.name) AS orders
+        FROM `tabSales Invoice Item` sii
+        INNER JOIN `tabSales Invoice` si ON si.name = sii.parent
+        WHERE si.docstatus = 1 AND si.posting_date >= %s
+        GROUP BY sii.item_group ORDER BY revenue DESC LIMIT 8
+    """, (m_start,), as_dict=True)
+
+    # Revenue by salesperson
+    by_salesperson = frappe.db.sql("""
+        SELECT st.sales_person AS salesperson,
+               SUM(si.grand_total * st.allocated_percentage / 100) AS revenue,
+               COUNT(DISTINCT si.name) AS orders
+        FROM `tabSales Team` st
+        INNER JOIN `tabSales Invoice` si ON si.name = st.parent AND si.parenttype='Sales Invoice'
+        WHERE si.docstatus = 1 AND si.posting_date >= %s
+        GROUP BY st.sales_person ORDER BY revenue DESC LIMIT 8
+    """, (m_start,), as_dict=True)
+
+    # Quotation conversion rate
+    total_quotations = frappe.db.count("Quotation", {
+        "docstatus": ["in", [0, 1]], "transaction_date": [">=", m_start]
+    })
+    converted_quotations = frappe.db.count("Quotation", {
+        "docstatus": 1, "status": "Ordered", "transaction_date": [">=", m_start]
+    })
+    conversion_rate_pct = round(converted_quotations / total_quotations * 100, 1) if total_quotations else 0
+
+    # Top customers
+    top_customers = frappe.db.sql("""
+        SELECT customer, SUM(grand_total) AS revenue, COUNT(*) AS orders
+        FROM `tabSales Invoice`
+        WHERE docstatus = 1 AND posting_date >= %s
+        GROUP BY customer ORDER BY revenue DESC LIMIT 8
+    """, (m_start,), as_dict=True)
+
+    # Total MTD revenue and orders
+    totals_r = frappe.db.sql("""
+        SELECT COALESCE(SUM(grand_total), 0) AS revenue, COUNT(*) AS orders,
+               COALESCE(AVG(grand_total), 0) AS avg_deal
+        FROM `tabSales Invoice` WHERE docstatus = 1 AND posting_date >= %s
+    """, (m_start,), as_dict=True)
+    totals = totals_r[0] if totals_r else {}
+    total_revenue_mtd = float(totals.get("revenue", 0))
+    total_orders_mtd  = int(totals.get("orders", 0))
+    avg_deal_size     = round(float(totals.get("avg_deal", 0)), 2)
+
+    # New vs returning customers this month
+    new_cx = frappe.db.count("Customer", {"creation": [">=", m_start]})
+    active_cx_r = frappe.db.sql(
+        "SELECT COUNT(DISTINCT customer) AS c FROM `tabSales Invoice` WHERE docstatus=1 AND posting_date>=%s",
+        (m_start,), as_dict=True,
+    )
+    active_cx = int((active_cx_r[0] or {}).get("c", 0))
+    returning_cx = max(0, active_cx - new_cx)
+
+    metrics = {
+        "total_revenue_mtd":       round(total_revenue_mtd, 2),
+        "total_orders_mtd":        total_orders_mtd,
+        "avg_deal_size":           avg_deal_size,
+        "conversion_rate_pct":     conversion_rate_pct,
+        "total_quotations_mtd":    total_quotations,
+        "converted_quotations_mtd": converted_quotations,
+        "new_customers_mtd":       new_cx,
+        "returning_customers_mtd": returning_cx,
+    }
+    chart = {
+        "type": "bar",
+        "title": "Revenue by Item Group (MTD)",
+        "labels": [r.get("item_group") or "Other" for r in by_group],
+        "datasets": [{"name": "Revenue (QAR)", "values": [float(r.get("revenue") or 0) for r in by_group]}],
+    }
+
+    return {
+        "status": "ok",
+        "period_start": m_start,
+        "by_item_group":   by_group,
+        "by_salesperson":  by_salesperson,
+        "top_customers":   top_customers,
+        "metrics":         metrics,
+        "chart":           chart,
+        "message": (
+            f"Sales analysis MTD ({m_start} → {t}): "
+            f"QAR {total_revenue_mtd:,.0f} from {total_orders_mtd} orders. "
+            f"Conversion rate: {conversion_rate_pct}%. "
+            f"New customers: {new_cx}."
+        ),
+    }
+
+
+def get_payables_analysis() -> dict:
+    """
+    Outstanding purchase invoices with aging buckets, top suppliers by balance,
+    upcoming-due forecast (next 7 days), and payables health metrics.
+    """
+    rows = frappe.get_all(
+        "Purchase Invoice",
+        filters={
+            "docstatus": 1,
+            "outstanding_amount": [">", 0],
+        },
+        fields=["name", "supplier", "posting_date", "due_date",
+                "grand_total", "outstanding_amount"],
+        order_by="due_date asc",
+        limit=200,
+    )
+
+    _today = getdate(today())
+    for r in rows:
+        due = r.get("due_date")
+        if due:
+            r["days_overdue"] = max(0, date_diff(str(_today), str(due)))
+        else:
+            r["days_overdue"] = 0
+
+    total_payable = sum(flt(r.get("outstanding_amount")) for r in rows)
+
+    # Aging buckets
+    buckets = {"0-30": 0.0, "31-60": 0.0, "61-90": 0.0, "90+": 0.0}
+    for r in rows:
+        d = r["days_overdue"]
+        amt = flt(r.get("outstanding_amount"))
+        if d <= 30:
+            buckets["0-30"] += amt
+        elif d <= 60:
+            buckets["31-60"] += amt
+        elif d <= 90:
+            buckets["61-90"] += amt
+        else:
+            buckets["90+"] += amt
+
+    # Top suppliers by outstanding
+    supplier_totals: dict[str, float] = {}
+    for r in rows:
+        s = r.get("supplier") or "Unknown"
+        supplier_totals[s] = supplier_totals.get(s, 0.0) + flt(r.get("outstanding_amount"))
+
+    sorted_suppliers = sorted(supplier_totals.items(), key=lambda x: x[1], reverse=True)[:8]
+    top_suppliers = [
+        {
+            "supplier":         name,
+            "outstanding":      round(amt, 2),
+            "pct_of_total":     round(amt / total_payable * 100, 1) if total_payable else 0,
+            "days_overdue_avg": 0,  # simplified
+        }
+        for name, amt in sorted_suppliers
+    ]
+
+    # Upcoming due in next 7 days
+    due_7d = str(add_days(today(), 7))
+    upcoming_due = [
+        r for r in rows
+        if r.get("due_date") and str(r["due_date"]) <= due_7d
+    ][:20]
+
+    # Metrics
+    over_90 = sum(flt(r.get("outstanding_amount")) for r in rows if r["days_overdue"] > 90)
+    suppliers_affected = len(supplier_totals)
+    due_next_7d_amt = sum(flt(r.get("outstanding_amount")) for r in upcoming_due)
+
+    metrics = {
+        "total_payable":      round(total_payable, 2),
+        "invoice_count":      len(rows),
+        "suppliers_affected": suppliers_affected,
+        "over_90_days":       round(over_90, 2),
+        "over_90_pct":        round(over_90 / total_payable * 100, 1) if total_payable else 0,
+        "due_next_7_days":    round(due_next_7d_amt, 2),
+    }
+    chart = {
+        "type": "bar",
+        "title": "Payables by Aging Bucket (QAR)",
+        "labels": list(buckets.keys()),
+        "datasets": [{"name": "Outstanding (QAR)", "values": [round(v, 2) for v in buckets.values()]}],
+    }
+
+    top_supplier_name = top_suppliers[0]["supplier"] if top_suppliers else "N/A"
+    return {
+        "status": "ok",
+        "invoice_count":    len(rows),
+        "total_payable":    total_payable,
+        "invoices":         rows[:50],
+        "aging_buckets":    buckets,
+        "top_suppliers":    top_suppliers,
+        "upcoming_due":     upcoming_due,
+        "metrics":          metrics,
+        "chart":            chart,
+        "message": (
+            f"{len(rows)} outstanding purchase invoices totaling QAR {total_payable:,.0f} "
+            f"across {suppliers_affected} suppliers. "
+            f"QAR {due_next_7d_amt:,.0f} due in the next 7 days. "
+            f"Largest exposure: {top_supplier_name}."
         ),
     }
 
