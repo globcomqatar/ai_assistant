@@ -97,7 +97,6 @@ class AIChatPage {
 				items: [
 					{ icon: "👤", label: __("New Customer"),          msg: "Create customer " },
 					{ icon: "📄", label: __("New Quotation"),         msg: "Create quotation for customer " },
-					{ icon: "🔧", label: __("Diagnose Vehicle"),      msg: "Diagnose Toyota Camry 2020 with check engine light" },
 				],
 			},
 		];
