@@ -142,6 +142,11 @@ def _ensure_dashboard():
 
     doc.flags.ignore_permissions = True
     doc.flags.ignore_mandatory   = True
+    # ignore_links: Number Cards and Dashboard Charts are guaranteed to exist (created above
+    # by _ensure_number_cards / _ensure_dashboard_charts and as fixtures). Bypassing link
+    # validation avoids a timing edge case on Frappe Cloud where after_install runs before
+    # fixture sync has committed.
+    doc.flags.ignore_links       = True
     if exists:
         doc.save()
     else:

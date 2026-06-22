@@ -8,8 +8,11 @@ app_license = "mit"
 required_apps = ["erpnext"]
 
 fixtures = [
-	# Number Card must load before Workspace — Workspace link-validates against card names on save
+	# Load order matters — each entry must exist before anything that link-validates against it.
+	# Number Card  →  Dashboard Chart  →  Dashboard  →  Workspace
 	{"dt": "Number Card",        "filters": [["module", "=", "AI Assistant"]]},
+	{"dt": "Dashboard Chart",    "filters": [["module", "=", "AI Assistant"]]},
+	{"dt": "Dashboard",          "filters": [["module", "=", "AI Assistant"]]},
 	{"dt": "Workspace",          "filters": [["module", "=", "AI Assistant"]]},
 	{"dt": "AI Tool Permission", "filters": [["name", "like", "%"]]},
 	{"dt": "AI Agent",           "filters": [["name", "like", "%"]]},
