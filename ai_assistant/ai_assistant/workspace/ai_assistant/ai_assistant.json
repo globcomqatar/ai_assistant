@@ -154,33 +154,33 @@
    "type": "Link"
   }
  ],
- "modified": "2026-06-23 11:27:07.295352",
+ "modified": "2026-06-23 12:02:24.048647",
  "modified_by": "Administrator",
  "module": "AI Assistant",
  "name": "AI Assistant",
  "number_cards": [
   {
-   "label": "Sales This Month",
+   "label": "",
    "number_card_name": "AI - Sales This Month"
   },
   {
-   "label": "Pending Quotations",
+   "label": "",
    "number_card_name": "AI - Pending Quotations"
   },
   {
-   "label": "Overdue Invoices",
+   "label": "",
    "number_card_name": "AI - Overdue Invoices"
   },
   {
-   "label": "Low Stock Items",
+   "label": "",
    "number_card_name": "AI - Low Stock Items"
   },
   {
-   "label": "New Customers",
+   "label": "",
    "number_card_name": "AI - New Customers"
   },
   {
-   "label": "Open Job Cards",
+   "label": "",
    "number_card_name": "AI - Open Job Cards"
   }
  ],
