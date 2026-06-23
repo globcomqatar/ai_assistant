@@ -958,8 +958,8 @@
 }
 .ai-agent-pill:hover { border-color: var(--agent-color, #2563EB); color: var(--agent-color, #2563EB); }
 .ai-agent-pill.active {
-	background: var(--agent-color, #2563EB);
-	border-color: var(--agent-color, #2563EB);
+	background: #2563EB;
+	border-color: #2563EB;
 	color: #fff;
 }
 .ai-agent-pill-icon { font-size: 0.9rem; }
