@@ -1899,30 +1899,46 @@ class VoiceInput {
 			return;
 		}
 
-		// Stop any stale instance to prevent "already started" error
-		if (this._recog) { try { this._recog.stop(); } catch (_) {} }
+		// Null out old handlers before stopping so stale callbacks never fire
+		if (this._recog) {
+			this._recog.onstart  = null;
+			this._recog.onresult = null;
+			this._recog.onerror  = null;
+			this._recog.onend    = null;
+			try { this._recog.stop(); } catch (_) {}
+		}
 
-		this._recog                = new SR();
-		this._recog.lang           = this._recognition_lang();
-		this._recog.continuous     = true;   // keep listening until user clicks stop
-		this._recog.interimResults = true;
+		const recog           = new SR();
+		this._recog           = recog;
+		recog.lang            = this._recognition_lang();
+		recog.continuous      = true;   // keep listening until user clicks stop
+		recog.interimResults  = true;
 
-		this._recog.onstart = () => {
+		recog.onstart = () => {
 			this._recording = true;
 			$("#ai-mic-btn").addClass("recording");
 			this._show_status(this._status_text());
 		};
 
-		// Concatenate all results for real-time interim display
-		this._recog.onresult = (e) => {
+		// Build full transcript from all accumulated results and write to input
+		recog.onresult = (e) => {
+			if (recog !== this._recog) return;   // guard against stale instance
 			let transcript = "";
 			for (let i = 0; i < e.results.length; i++) {
-				transcript += e.results[i][0].transcript;
+				const res = e.results[i];
+				if (res && res[0]) transcript += res[0].transcript;
 			}
-			if (transcript) this._chat.$input.val(transcript).trigger("input");
+			if (!transcript) return;
+			// Native DOM API — most compatible way to update a controlled textarea
+			const el = document.getElementById("ai-input");
+			if (el) {
+				el.value = transcript;
+				el.dispatchEvent(new Event("input", { bubbles: true }));
+			}
 		};
 
-		this._recog.onerror = (e) => {
+		recog.onerror = (e) => {
+			if (recog !== this._recog) return;
 			// no-speech is non-fatal in continuous mode — just keep listening
 			if (e.error === "no-speech") return;
 			this._stop_state();
@@ -1933,15 +1949,16 @@ class VoiceInput {
 		// browser ended it unexpectedly (e.g. Android tab switch) — restart.
 		// If _stop() was called first it already set _recording=false, so we
 		// simply finalise the state.
-		this._recog.onend = () => {
+		recog.onend = () => {
+			if (recog !== this._recog) return;   // stale instance — ignore
 			if (this._recording) {
-				try { this._recog.start(); return; } catch (_) {}
+				try { recog.start(); return; } catch (_) {}
 			}
 			this._stop_state();
 		};
 
 		try {
-			this._recog.start();
+			recog.start();
 		} catch (e) {
 			this._show_error(this._error_msg(e.name === "NotAllowedError" ? "not-allowed" : "other"));
 			this._stop_state();
