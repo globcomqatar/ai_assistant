@@ -1928,12 +1928,17 @@ class VoiceInput {
 				const res = e.results[i];
 				if (res && res[0]) transcript += res[0].transcript;
 			}
+			console.log("AI Voice onresult:", JSON.stringify(transcript));
 			if (!transcript) return;
+			// Mirror live transcript in the status bar so recognition is visible
+			this._show_status(transcript);
 			// Native DOM API — most compatible way to update a controlled textarea
 			const el = document.getElementById("ai-input");
 			if (el) {
 				el.value = transcript;
 				el.dispatchEvent(new Event("input", { bubbles: true }));
+				// jQuery fallback in case the framework's listener needs it
+				$(el).trigger("input");
 			}
 		};
 
