@@ -1926,3 +1926,634 @@ def diagnose_vehicle_issue(
             + (f"⚠ URGENT — {urgency} attention needed." if urgency == "immediate" else "")
         ),
     }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# COMPOSITE CROSS-MODULE TOOLS
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+def get_so_invoice_gap(days: int = 30) -> dict:
+    """Revenue leakage: Sales Orders fulfilled but not invoiced / not yet paid."""
+    try:
+        from frappe.utils import add_days, nowdate
+
+        base_curr = get_base_currency()
+        from_date = add_days(nowdate(), -int(days))
+
+        so_list = frappe.get_all(
+            "Sales Order",
+            filters=[
+                ["docstatus", "=", 1],
+                ["status", "in", ["To Bill", "To Deliver and Bill", "Completed"]],
+                ["transaction_date", ">=", from_date],
+            ],
+            fields=["name", "customer", "transaction_date", "base_grand_total",
+                    "currency", "status"],
+            order_by="transaction_date desc",
+            limit=500,
+        )
+
+        data = []
+        not_inv_count = 0;  not_inv_val = 0.0
+        inv_unpaid_count = 0;  inv_unpaid_val = 0.0
+        fully_paid_count = 0
+        total_val = 0.0
+
+        for so in so_list:
+            total_val += flt(so.base_grand_total)
+            inv_items = frappe.get_all(
+                "Sales Invoice Item",
+                filters=[["sales_order", "=", so.name], ["docstatus", "=", 1]],
+                fields=["parent"],
+                limit=1,
+            )
+            if not inv_items:
+                inv_status = "Not Invoiced"
+                not_inv_count += 1
+                not_inv_val += flt(so.base_grand_total)
+            else:
+                outstanding = flt(frappe.db.get_value(
+                    "Sales Invoice", inv_items[0].parent, "outstanding_amount") or 0)
+                if outstanding <= 0:
+                    inv_status = "Fully Paid"
+                    fully_paid_count += 1
+                else:
+                    inv_status = "Invoiced Unpaid"
+                    inv_unpaid_count += 1
+                    inv_unpaid_val += flt(so.base_grand_total)
+
+            if inv_status != "Fully Paid":
+                row = {k: so[k] for k in so}
+                row["base_grand_total"] = flt(so.base_grand_total)
+                row["invoice_status"]   = inv_status
+                data.append(row)
+
+        value_at_risk     = not_inv_val + inv_unpaid_val
+        collection_gap_pct = round(value_at_risk / total_val * 100, 1) if total_val else 0.0
+
+        return {
+            "status":   "ok",
+            "intent":   "get_so_invoice_gap",
+            "multi_currency": False,
+            "metrics": {
+                "base_currency":         base_curr,
+                "period_days":           int(days),
+                "total_orders":          len(so_list),
+                "not_invoiced_count":    not_inv_count,
+                "not_invoiced_value":    round(not_inv_val, 2),
+                "invoiced_unpaid_count": inv_unpaid_count,
+                "invoiced_unpaid_value": round(inv_unpaid_val, 2),
+                "fully_paid_count":      fully_paid_count,
+                "value_at_risk":         round(value_at_risk, 2),
+                "collection_gap_pct":    collection_gap_pct,
+            },
+            "chart": {
+                "type":   "bar",
+                "title":  "Sales Order Billing Status",
+                "labels": ["Not Invoiced", "Invoiced Unpaid", "Fully Paid"],
+                "datasets": [{"name": "Orders",
+                               "values": [not_inv_count, inv_unpaid_count, fully_paid_count]}],
+            },
+            "data": data,
+            "message": (
+                f"{not_inv_count + inv_unpaid_count} orders worth "
+                f"{base_curr} {not_inv_val + inv_unpaid_val:,.0f} have not been fully invoiced or collected. "
+                f"Revenue at risk: {base_curr} {value_at_risk:,.0f}."
+            ),
+        }
+    except Exception as exc:
+        frappe.log_error(title="get_so_invoice_gap failed", message=str(exc))
+        return {"status": "error", "data": [],
+                "message": "Could not load SO invoice gap report. Please try again."}
+
+
+def get_sales_pipeline_status(days: int = 90) -> dict:
+    """Full funnel: Quotation → Sales Order → Invoice → Payment with conversion rates."""
+    try:
+        from frappe.utils import add_days, nowdate, date_diff
+
+        base_curr = get_base_currency()
+        from_date = add_days(nowdate(), -int(days))
+
+        quotes = frappe.get_all(
+            "Quotation",
+            filters=[["docstatus", "=", 1], ["transaction_date", ">=", from_date]],
+            fields=["name", "party_name", "transaction_date", "base_grand_total",
+                    "currency", "status"],
+            limit=1000,
+        )
+        total_quotes      = len(quotes)
+        pipeline_val_quotes = sum(flt(q.base_grand_total) for q in quotes)
+
+        # quotes → SO
+        converted_names   = set()
+        pipeline_val_orders = 0.0
+        days_q_so         = []
+        for q in quotes:
+            sos = frappe.get_all(
+                "Sales Order",
+                filters=[["quotation_name", "=", q.name], ["docstatus", "=", 1]],
+                fields=["name", "transaction_date", "base_grand_total"],
+                limit=1,
+            )
+            if sos:
+                converted_names.add(q.name)
+                pipeline_val_orders += flt(sos[0].base_grand_total)
+                delta = date_diff(str(sos[0].transaction_date), str(q.transaction_date))
+                if delta >= 0:
+                    days_q_so.append(delta)
+
+        # SO → Invoice
+        invoiced_names    = set()
+        pipeline_val_inv  = 0.0
+        days_so_inv       = []
+        for q in quotes:
+            if q.name not in converted_names:
+                continue
+            sos = frappe.get_all(
+                "Sales Order",
+                filters=[["quotation_name", "=", q.name], ["docstatus", "=", 1]],
+                fields=["name", "transaction_date"],
+                limit=1,
+            )
+            if not sos:
+                continue
+            so = sos[0]
+            inv_items = frappe.get_all(
+                "Sales Invoice Item",
+                filters=[["sales_order", "=", so.name], ["docstatus", "=", 1]],
+                fields=["parent"],
+                limit=1,
+            )
+            if inv_items:
+                invoiced_names.add(q.name)
+                inv = frappe.db.get_value(
+                    "Sales Invoice", inv_items[0].parent,
+                    ["posting_date", "base_grand_total"], as_dict=True)
+                if inv:
+                    pipeline_val_inv += flt(inv.base_grand_total)
+                    delta = date_diff(str(inv.posting_date), str(so.transaction_date))
+                    if delta >= 0:
+                        days_so_inv.append(delta)
+
+        # Invoice → Paid
+        invoices_paid     = 0
+        pipeline_val_coll = 0.0
+        for q in quotes:
+            if q.name not in invoiced_names:
+                continue
+            sos = frappe.get_all(
+                "Sales Order",
+                filters=[["quotation_name", "=", q.name], ["docstatus", "=", 1]],
+                fields=["name"],
+                limit=1,
+            )
+            if not sos:
+                continue
+            inv_items = frappe.get_all(
+                "Sales Invoice Item",
+                filters=[["sales_order", "=", sos[0].name], ["docstatus", "=", 1]],
+                fields=["parent"],
+                limit=1,
+            )
+            if not inv_items:
+                continue
+            outstanding = flt(frappe.db.get_value(
+                "Sales Invoice", inv_items[0].parent, "outstanding_amount") or 0)
+            if outstanding <= 0:
+                invoices_paid += 1
+                pipeline_val_coll += flt(frappe.db.get_value(
+                    "Sales Invoice", inv_items[0].parent, "base_grand_total") or 0)
+
+        converted_to_order = len(converted_names)
+        orders_invoiced    = len(invoiced_names)
+        q2o  = round(converted_to_order / total_quotes * 100, 1) if total_quotes else 0.0
+        o2i  = round(orders_invoiced    / converted_to_order * 100, 1) if converted_to_order else 0.0
+        i2p  = round(invoices_paid      / orders_invoiced * 100, 1) if orders_invoiced else 0.0
+        q2c  = round(invoices_paid      / total_quotes * 100, 1) if total_quotes else 0.0
+        avg_q2so = round(sum(days_q_so) / len(days_q_so), 1) if days_q_so else 0.0
+        avg_so2inv = round(sum(days_so_inv) / len(days_so_inv), 1) if days_so_inv else 0.0
+
+        today_str = nowdate()
+        open_quotes = sorted(
+            [
+                dict(q,
+                     base_grand_total=flt(q.base_grand_total),
+                     days_open=date_diff(today_str, str(q.transaction_date)))
+                for q in quotes
+                if q.name not in converted_names
+                   and (q.status or "") not in ("Cancelled", "Lost")
+            ],
+            key=lambda x: x["base_grand_total"], reverse=True,
+        )[:10]
+
+        return {
+            "status":   "ok",
+            "intent":   "get_sales_pipeline_status",
+            "multi_currency": False,
+            "metrics": {
+                "base_currency":             base_curr,
+                "period_days":               int(days),
+                "total_quotes":              total_quotes,
+                "converted_to_order":        converted_to_order,
+                "quote_to_order_pct":        q2o,
+                "orders_invoiced":           orders_invoiced,
+                "order_to_invoice_pct":      o2i,
+                "invoices_paid":             invoices_paid,
+                "invoice_to_paid_pct":       i2p,
+                "quote_to_cash_pct":         q2c,
+                "avg_days_quote_to_order":   avg_q2so,
+                "avg_days_order_to_invoice": avg_so2inv,
+                "pipeline_value_quotes":     round(pipeline_val_quotes, 2),
+                "pipeline_value_orders":     round(pipeline_val_orders, 2),
+                "pipeline_value_invoiced":   round(pipeline_val_inv, 2),
+                "pipeline_value_collected":  round(pipeline_val_coll, 2),
+            },
+            "chart": {
+                "type":   "bar",
+                "title":  "Sales Pipeline Funnel",
+                "labels": ["Quotations", "Sales Orders", "Invoices", "Collected"],
+                "datasets": [{"name": "Count",
+                               "values": [total_quotes, converted_to_order,
+                                          orders_invoiced, invoices_paid]}],
+            },
+            "data": open_quotes,
+            "message": (
+                f"{total_quotes} quotes created in {days} days. "
+                f"Quote-to-cash conversion: {q2c}%. "
+                f"Average quote-to-order: {avg_q2so} days."
+            ),
+        }
+    except Exception as exc:
+        frappe.log_error(title="get_sales_pipeline_status failed", message=str(exc))
+        return {"status": "error", "data": [],
+                "message": "Could not load sales pipeline report. Please try again."}
+
+
+def get_customer_360(customer: str, days: int = 180) -> dict:
+    """360° customer profile: revenue, open orders, unpaid invoices, top items, health."""
+    try:
+        from frappe.utils import add_days, nowdate, date_diff
+
+        if not customer:
+            return {"status": "error", "data": [],
+                    "message": "Customer name is required."}
+
+        base_curr = get_base_currency()
+        from_date = add_days(nowdate(), -int(days))
+        today     = nowdate()
+
+        open_orders = frappe.get_all(
+            "Sales Order",
+            filters=[["customer", "=", customer], ["docstatus", "=", 1],
+                     ["status", "not in", ["Completed", "Cancelled"]]],
+            fields=["name", "transaction_date", "base_grand_total", "currency", "status"],
+            order_by="transaction_date desc",
+            limit=50,
+        )
+        open_orders_val = sum(flt(o.base_grand_total) for o in open_orders)
+
+        unpaid_inv = frappe.get_all(
+            "Sales Invoice",
+            filters=[["customer", "=", customer], ["docstatus", "=", 1],
+                     ["outstanding_amount", ">", 0]],
+            fields=["name", "posting_date", "due_date", "base_grand_total",
+                    "outstanding_amount", "currency", "conversion_rate"],
+            order_by="due_date asc",
+            limit=100,
+        )
+        total_outstanding = sum(
+            flt(i.outstanding_amount) * flt(i.conversion_rate or 1) for i in unpaid_inv)
+        overdue_amount = sum(
+            flt(i.outstanding_amount) * flt(i.conversion_rate or 1)
+            for i in unpaid_inv
+            if i.due_date and str(i.due_date) < today)
+
+        period_inv = frappe.get_all(
+            "Sales Invoice",
+            filters=[["customer", "=", customer], ["docstatus", "=", 1],
+                     ["posting_date", ">=", from_date]],
+            fields=["base_grand_total"],
+        )
+        total_revenue = sum(flt(i.base_grand_total) for i in period_inv)
+
+        last_so = frappe.get_all(
+            "Sales Order",
+            filters=[["customer", "=", customer], ["docstatus", "=", 1]],
+            fields=["transaction_date"],
+            order_by="transaction_date desc",
+            limit=1,
+        )
+        last_order_date = str(last_so[0].transaction_date) if last_so else None
+
+        payments = frappe.get_all(
+            "Payment Entry",
+            filters=[["party_type", "=", "Customer"], ["party", "=", customer],
+                     ["docstatus", "=", 1], ["posting_date", ">=", from_date]],
+            fields=["posting_date"],
+            order_by="posting_date desc",
+            limit=1,
+        )
+        last_payment_date = str(payments[0].posting_date) if payments else None
+
+        open_quotes = frappe.get_all(
+            "Quotation",
+            filters=[["party_name", "=", customer], ["docstatus", "=", 1],
+                     ["status", "in", ["Open", "Draft"]]],
+            fields=["name", "transaction_date", "base_grand_total", "currency"],
+            limit=20,
+        )
+        open_quotes_val = sum(flt(q.base_grand_total) for q in open_quotes)
+
+        top_items = frappe.db.sql("""
+            SELECT sii.item_code, sii.item_name,
+                   SUM(sii.qty)         AS total_qty,
+                   SUM(sii.base_amount) AS total_amount
+            FROM   `tabSales Invoice Item` sii
+            JOIN   `tabSales Invoice`      si  ON si.name = sii.parent
+            WHERE  si.customer    = %s
+              AND  si.docstatus   = 1
+              AND  si.posting_date >= %s
+            GROUP  BY sii.item_code, sii.item_name
+            ORDER  BY total_amount DESC
+            LIMIT  5
+        """, (customer, from_date), as_dict=True)
+
+        if overdue_amount <= 0:
+            health = "Good"
+        elif total_outstanding and overdue_amount / total_outstanding < 0.30:
+            health = "Warning"
+        else:
+            health = "Critical"
+
+        return {
+            "status":   "ok",
+            "intent":   "get_customer_360",
+            "multi_currency": False,
+            "metrics": {
+                "base_currency":     base_curr,
+                "customer":          customer,
+                "period_days":       int(days),
+                "total_revenue":     round(total_revenue, 2),
+                "total_outstanding": round(total_outstanding, 2),
+                "overdue_amount":    round(overdue_amount, 2),
+                "open_orders_count": len(open_orders),
+                "open_orders_value": round(open_orders_val, 2),
+                "open_quotes_count": len(open_quotes),
+                "open_quotes_value": round(open_quotes_val, 2),
+                "last_order_date":   last_order_date,
+                "last_payment_date": last_payment_date,
+                "customer_health":   health,
+            },
+            "chart": {
+                "type":   "bar",
+                "title":  f"Customer Activity — {customer} (last {days} days)",
+                "labels": ["Revenue", "Outstanding", "Overdue"],
+                "datasets": [{"name": base_curr,
+                               "values": [round(total_revenue, 2),
+                                          round(total_outstanding, 2),
+                                          round(overdue_amount, 2)]}],
+            },
+            "data": {
+                "open_orders":     [dict(o, base_grand_total=flt(o.base_grand_total))
+                                    for o in open_orders],
+                "unpaid_invoices": [dict(i, base_grand_total=flt(i.base_grand_total),
+                                        outstanding_amount=flt(i.outstanding_amount))
+                                    for i in unpaid_inv],
+                "open_quotations": [dict(q, base_grand_total=flt(q.base_grand_total))
+                                    for q in open_quotes],
+                "top_items":       [dict(r) for r in top_items],
+            },
+            "message": (
+                f"Customer {customer} — Revenue {base_curr} {total_revenue:,.0f} in {days} days. "
+                f"Outstanding {base_curr} {total_outstanding:,.0f}. "
+                f"Health: {health}."
+            ),
+        }
+    except Exception as exc:
+        frappe.log_error(title="get_customer_360 failed", message=str(exc))
+        return {"status": "error", "data": [],
+                "message": "Could not load customer 360 profile. Please try again."}
+
+
+def get_po_receipt_gap(days_overdue: int = 0) -> dict:
+    """Purchase Orders pending receipt, with stockout risk flags per item."""
+    try:
+        from frappe.utils import nowdate, date_diff
+
+        base_curr  = get_base_currency()
+        today      = nowdate()
+
+        open_pos = frappe.get_all(
+            "Purchase Order",
+            filters=[["docstatus", "=", 1],
+                     ["status", "in", ["To Receive and Bill", "To Receive"]]],
+            fields=["name", "supplier", "schedule_date", "base_grand_total",
+                    "currency", "status"],
+            order_by="schedule_date asc",
+            limit=500,
+        )
+
+        data = []
+        not_recv_count = 0;  not_recv_val = 0.0
+        partial_count  = 0
+        overdue_days_list  = []
+        stockout_risk_count = 0
+
+        for po in open_pos:
+            receipts = frappe.get_all(
+                "Purchase Receipt Item",
+                filters=[["purchase_order", "=", po.name], ["docstatus", "=", 1]],
+                fields=["qty"],
+                limit=1,
+            )
+            if not receipts:
+                receipt_status = "Not Received"
+                not_recv_count += 1
+                not_recv_val   += flt(po.base_grand_total)
+            else:
+                receipt_status = "Partially Received"
+                partial_count += 1
+
+            d_overdue = 0
+            if po.schedule_date:
+                d_overdue = date_diff(today, str(po.schedule_date))
+                if d_overdue > 0:
+                    overdue_days_list.append(d_overdue)
+
+            if int(days_overdue) > 0 and d_overdue < int(days_overdue):
+                continue
+
+            # Stockout risk: any PO item with negative projected_qty in Bin
+            po_items = frappe.get_all(
+                "Purchase Order Item",
+                filters=[["parent", "=", po.name]],
+                fields=["item_code"],
+            )
+            stockout_risk = False
+            for pi in po_items:
+                if frappe.get_all("Bin",
+                                  filters=[["item_code", "=", pi.item_code],
+                                           ["projected_qty", "<", 0]],
+                                  limit=1):
+                    stockout_risk = True
+                    break
+            if stockout_risk:
+                stockout_risk_count += 1
+
+            data.append({
+                "name":           po.name,
+                "supplier":       po.supplier,
+                "schedule_date":  str(po.schedule_date) if po.schedule_date else None,
+                "days_overdue":   max(d_overdue, 0),
+                "base_grand_total": flt(po.base_grand_total),
+                "currency":       po.currency,
+                "receipt_status": receipt_status,
+                "stockout_risk":  stockout_risk,
+            })
+
+        data.sort(key=lambda x: x["days_overdue"], reverse=True)
+        avg_overdue    = round(sum(overdue_days_list) / len(overdue_days_list), 1) if overdue_days_list else 0.0
+
+        return {
+            "status":   "ok",
+            "intent":   "get_po_receipt_gap",
+            "multi_currency": False,
+            "metrics": {
+                "base_currency":            base_curr,
+                "total_open_pos":           len(open_pos),
+                "not_received_count":       not_recv_count,
+                "not_received_value":       round(not_recv_val, 2),
+                "partially_received_count": partial_count,
+                "avg_days_overdue":         avg_overdue,
+                "stockout_risk_count":      stockout_risk_count,
+                "total_exposure_value":     round(not_recv_val, 2),
+            },
+            "chart": {
+                "type":   "bar",
+                "title":  "Purchase Order Receipt Status",
+                "labels": ["Not Received", "Partially Received"],
+                "datasets": [{"name": "POs",
+                               "values": [not_recv_count, partial_count]}],
+            },
+            "data": data,
+            "message": (
+                f"{len(open_pos)} purchase orders worth {base_curr} {not_recv_val:,.0f} pending receipt. "
+                f"{len(overdue_days_list)} are overdue. "
+                f"{stockout_risk_count} items at stockout risk."
+            ),
+        }
+    except Exception as exc:
+        frappe.log_error(title="get_po_receipt_gap failed", message=str(exc))
+        return {"status": "error", "data": [],
+                "message": "Could not load PO receipt gap report. Please try again."}
+
+
+def get_monthly_pl_bridge(months: int = 6) -> dict:
+    """Monthly P&L bridge: revenue vs purchase cost, gross margin, MoM comparison."""
+    try:
+        from frappe.utils import nowdate, getdate, get_first_day, get_last_day, add_months
+
+        base_curr = get_base_currency()
+        today     = getdate(nowdate())
+
+        rows = []
+        for i in range(int(months) - 1, -1, -1):
+            month_first = get_first_day(add_months(today, -i))
+            month_last  = get_last_day(month_first)
+            label       = month_first.strftime("%b %Y")
+
+            rev = frappe.db.sql("""
+                SELECT COALESCE(SUM(base_grand_total), 0) AS total
+                FROM   `tabSales Invoice`
+                WHERE  docstatus = 1
+                  AND  posting_date BETWEEN %s AND %s
+            """, (str(month_first), str(month_last)), as_dict=True)
+            revenue = flt(rev[0].total) if rev else 0.0
+
+            cost_q = frappe.db.sql("""
+                SELECT COALESCE(SUM(base_grand_total), 0) AS total
+                FROM   `tabPurchase Invoice`
+                WHERE  docstatus = 1
+                  AND  posting_date BETWEEN %s AND %s
+            """, (str(month_first), str(month_last)), as_dict=True)
+            cost = flt(cost_q[0].total) if cost_q else 0.0
+
+            gross_profit = revenue - cost
+            margin_pct   = round(gross_profit / revenue * 100, 1) if revenue else 0.0
+
+            prev_cost_ratio = (rows[-1]["cost"] / rows[-1]["revenue"]
+                               if rows and rows[-1]["revenue"] else 0.0)
+            curr_cost_ratio = cost / revenue if revenue else 0.0
+            margin_squeeze  = bool(rows and curr_cost_ratio > prev_cost_ratio)
+
+            rows.append({
+                "month_label":   label,
+                "revenue":       round(revenue, 2),
+                "cost":          round(cost, 2),
+                "gross_profit":  round(gross_profit, 2),
+                "margin_pct":    margin_pct,
+                "margin_squeeze": margin_squeeze,
+            })
+
+        curr = rows[-1] if rows else {}
+        prev = rows[-2] if len(rows) >= 2 else {}
+
+        def _mom(c, p, key):
+            pv = p.get(key, 0)
+            cv = c.get(key, 0)
+            return round((cv - pv) / pv * 100, 1) if pv else 0.0
+
+        ytd_revenue = sum(r["revenue"]      for r in rows)
+        ytd_cost    = sum(r["cost"]         for r in rows)
+        ytd_gp      = sum(r["gross_profit"] for r in rows)
+
+        rev_mom  = _mom(curr, prev, "revenue")
+        cost_mom = _mom(curr, prev, "cost")
+        marg_mom = round(curr.get("margin_pct", 0) - prev.get("margin_pct", 0), 1)
+        direction = "up" if marg_mom >= 0 else "down"
+
+        return {
+            "status":   "ok",
+            "intent":   "get_monthly_pl_bridge",
+            "multi_currency": False,
+            "metrics": {
+                "base_currency":               base_curr,
+                "months":                      int(months),
+                "current_month_revenue":       curr.get("revenue", 0),
+                "current_month_cost":          curr.get("cost", 0),
+                "current_month_gross_profit":  curr.get("gross_profit", 0),
+                "current_month_margin_pct":    curr.get("margin_pct", 0),
+                "prev_month_revenue":          prev.get("revenue", 0),
+                "prev_month_margin_pct":       prev.get("margin_pct", 0),
+                "revenue_mom_pct":             rev_mom,
+                "cost_mom_pct":                cost_mom,
+                "margin_mom_pct":              marg_mom,
+                "margin_squeeze":              curr.get("margin_squeeze", False),
+                "ytd_revenue":                 round(ytd_revenue, 2),
+                "ytd_cost":                    round(ytd_cost, 2),
+                "ytd_gross_profit":            round(ytd_gp, 2),
+            },
+            "chart": {
+                "type":   "composed",
+                "title":  f"Revenue vs Cost — Last {months} Months ({base_curr})",
+                "labels": [r["month_label"] for r in rows],
+                "datasets": [
+                    {"name": "Revenue",  "type": "bar",  "values": [r["revenue"]    for r in rows]},
+                    {"name": "Cost",     "type": "bar",  "values": [r["cost"]       for r in rows]},
+                    {"name": "Margin %", "type": "line", "values": [r["margin_pct"] for r in rows]},
+                ],
+            },
+            "data": rows,
+            "message": (
+                f"Gross margin this month is {curr.get('margin_pct', 0)}%. "
+                f"Revenue {base_curr} {curr.get('revenue', 0):,.0f}, "
+                f"cost {base_curr} {curr.get('cost', 0):,.0f}. "
+                f"Margin is {direction} {abs(marg_mom):.1f}% vs last month."
+            ),
+        }
+    except Exception as exc:
+        frappe.log_error(title="get_monthly_pl_bridge failed", message=str(exc))
+        return {"status": "error", "data": [],
+                "message": "Could not load P&L bridge report. Please try again."}

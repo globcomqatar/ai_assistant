@@ -33,6 +33,12 @@ from ai_assistant.api.bi_tools import (
     diagnose_vehicle_issue,
     get_sales_analysis,
     get_payables_analysis,
+    # Composite cross-module tools
+    get_so_invoice_gap,
+    get_sales_pipeline_status,
+    get_customer_360,
+    get_po_receipt_gap,
+    get_monthly_pl_bridge,
 )
 
 
@@ -1497,6 +1503,12 @@ TOOL_REGISTRY: dict[str, callable] = {
 	# ── Expense Claims ───────────────────────────────────────────────
 	"create_expense_claim":         create_expense_claim,
 	"get_expense_claims":           get_expense_claims,
+	# ── Composite Cross-Module Reports ───────────────────────────────
+	"get_so_invoice_gap":           get_so_invoice_gap,
+	"get_sales_pipeline_status":    get_sales_pipeline_status,
+	"get_customer_360":             get_customer_360,
+	"get_po_receipt_gap":           get_po_receipt_gap,
+	"get_monthly_pl_bridge":        get_monthly_pl_bridge,
 }
 
 TOOLS_SCHEMA: list[dict] = [
@@ -1998,4 +2010,54 @@ TOOLS_SCHEMA: list[dict] = [
 	 "parameters": {"employee": {"type": "string"},
 					"status": {"type": "string",
 							   "description": "Draft / Approved / Rejected / Cancelled / Paid"}}},
+
+	# ── Composite Cross-Module Reports ───────────────────────────────
+	{"name": "get_so_invoice_gap",
+	 "description": (
+		 "Revenue leakage report. Finds Sales Orders fulfilled but not yet invoiced, "
+		 "or invoiced but unpaid. Use when asked about unbilled orders, billing gaps, "
+		 "missing invoices, or revenue not yet collected."
+	 ),
+	 "parameters": {"days": {"type": "integer",
+							 "description": "Look-back period in days (default 30)"}}},
+
+	{"name": "get_sales_pipeline_status",
+	 "description": (
+		 "Full sales pipeline funnel from Quotation to Sales Order to Invoice to Payment. "
+		 "Shows conversion rates at each stage and drop-off. Use when asked about pipeline, "
+		 "sales funnel, conversion rates, or tracking deals from quote to cash."
+	 ),
+	 "parameters": {"days": {"type": "integer",
+							 "description": "Look-back period in days (default 90)"}}},
+
+	{"name": "get_customer_360",
+	 "description": (
+		 "Complete 360-degree customer profile combining open orders, unpaid invoices, "
+		 "payment history, buying patterns, and pending quotations. Use when asked for a "
+		 "full picture, health check, or complete summary of a specific customer."
+	 ),
+	 "parameters": {
+		 "customer": {"type": "string", "required": True, "description": "Exact customer name"},
+		 "days":     {"type": "integer", "description": "Look-back period in days (default 180)"},
+	 }},
+
+	{"name": "get_po_receipt_gap",
+	 "description": (
+		 "Finds Purchase Orders not yet received or partially received. Crosses purchasing "
+		 "and stock data to flag overdue supplier deliveries and whether unreceived items "
+		 "are causing or about to cause a stockout. Use when asked about pending supplier "
+		 "deliveries, overdue purchase orders, or stock shortage risk from supply delays."
+	 ),
+	 "parameters": {"days_overdue": {"type": "integer",
+									 "description": "Filter POs at least this many days past schedule_date (default 0 = all open)"}}},
+
+	{"name": "get_monthly_pl_bridge",
+	 "description": (
+		 "Monthly profit and loss bridge showing total revenue versus total purchase cost "
+		 "and gross margin. Compares current month to previous month and flags if costs "
+		 "grew faster than revenue. Use when asked about profit, margin, P&L, gross profit, "
+		 "revenue vs cost, or business profitability."
+	 ),
+	 "parameters": {"months": {"type": "integer",
+							   "description": "Number of months to include (default 6)"}}},
 ]

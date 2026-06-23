@@ -22,6 +22,12 @@ ANALYTICAL_TOOLS: frozenset[str] = frozenset({
     "get_sales_summary",
     "get_sales_analysis",
     "get_payables_analysis",
+    # Composite cross-module tools
+    "get_so_invoice_gap",
+    "get_sales_pipeline_status",
+    "get_customer_360",
+    "get_po_receipt_gap",
+    "get_monthly_pl_bridge",
 })
 
 

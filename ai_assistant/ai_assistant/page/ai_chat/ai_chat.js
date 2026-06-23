@@ -99,6 +99,19 @@ class AIChatPage {
 					{ icon: "📄", label: __("New Quotation"),         msg: "Create quotation for customer " },
 				],
 			},
+			{
+				label: "🔗 " + __("Composite Reports"),
+				items: [
+					{ icon: "⚠️",  label: __("Revenue Leakage"),     msg: "show me sales orders that have not been invoiced" },
+					{ icon: "🔽",  label: __("Sales Pipeline"),       msg: "show full sales pipeline from quote to cash" },
+					{ icon: "👤",  label: __("Customer 360"),         msg: "give me a full customer health check" },
+					{ icon: "🚚",  label: __("PO Receipt Gap"),       msg: "show purchase orders not yet received" },
+					{ icon: "📊",  label: __("P&L Bridge"),           msg: "show monthly profit and loss bridge" },
+					{ icon: "🕐",  label: __("Overdue Invoices"),     msg: "show overdue invoices analysis" },
+					{ icon: "📈",  label: __("Monthly Sales"),        msg: "show monthly sales trend" },
+					{ icon: "🏢",  label: __("Business Overview"),    msg: "analyze my business" },
+				],
+			},
 		];
 	}
 
