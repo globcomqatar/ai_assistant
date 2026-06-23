@@ -9,16 +9,14 @@
    "label": "AI - Usage by Status"
   }
  ],
- "content": "[{\"id\": \"hdr-dash\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>\\ud83d\\udcca Business Dashboard</b></span>\", \"col\": 12}}, {\"id\": \"nc-sales\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"AI - Sales This Month\", \"col\": 4}}, {\"id\": \"nc-quotations\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"AI - Pending Quotations\", \"col\": 4}}, {\"id\": \"nc-overdue\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"AI - Overdue Invoices\", \"col\": 4}}, {\"id\": \"nc-stock\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"AI - Low Stock Items\", \"col\": 4}}, {\"id\": \"nc-customers\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"AI - New Customers\", \"col\": 4}}, {\"id\": \"nc-jobs\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"AI - Open Job Cards\", \"col\": 4}}, {\"id\": \"chart-trend\", \"type\": \"chart\", \"data\": {\"chart_name\": \"AI - Daily Usage Trend\", \"col\": 6}}, {\"id\": \"chart-status\", \"type\": \"chart\", \"data\": {\"chart_name\": \"AI - Usage by Status\", \"col\": 6}}, {\"id\": \"spacer-1\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"hdr-quick\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>\\u26a1 Quick Shortcuts</b></span>\", \"col\": 12}}, {\"id\": \"sc-aichat\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"AI Chat\", \"col\": 3}}, {\"id\": \"sc-aisett\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"AI Settings\", \"col\": 3}}, {\"id\": \"sc-ailog\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"AI Usage Log\", \"col\": 3}}, {\"id\": \"sc-aiperm\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"AI Tool Permission\", \"col\": 3}}, {\"id\": \"sc-aidash\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"AI Dashboard\", \"col\": 3}}, {\"id\": \"sc-aiagent\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"AI Agent\", \"col\": 3}}, {\"id\": \"spacer-2\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"hdr-masters\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>\\ud83d\\udccb Masters &amp; Reports</b></span>\", \"col\": 12}}, {\"id\": \"card-logs\", \"type\": \"card\", \"data\": {\"card_name\": \"AI Logs\", \"col\": 4}}, {\"id\": \"card-admin\", \"type\": \"card\", \"data\": {\"card_name\": \"AI Administration\", \"col\": 4}}, {\"id\": \"card-reports\", \"type\": \"card\", \"data\": {\"card_name\": \"AI Reports\", \"col\": 4}}]",
- "creation": "2026-06-21 00:00:00",
+ "content": "[{\"id\": \"hdr-dash\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Business Dashboard</b></span>\", \"col\": 12}}, {\"id\": \"nc-sales\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"AI - Sales This Month\", \"col\": 4}}, {\"id\": \"nc-quotations\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"AI - Pending Quotations\", \"col\": 4}}, {\"id\": \"nc-overdue\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"AI - Overdue Invoices\", \"col\": 4}}, {\"id\": \"nc-stock\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"AI - Low Stock Items\", \"col\": 4}}, {\"id\": \"nc-customers\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"AI - New Customers\", \"col\": 4}}, {\"id\": \"nc-jobs\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"AI - Open Job Cards\", \"col\": 4}}, {\"id\": \"chart-trend\", \"type\": \"chart\", \"data\": {\"chart_name\": \"AI - Daily Usage Trend\", \"col\": 6}}, {\"id\": \"chart-status\", \"type\": \"chart\", \"data\": {\"chart_name\": \"AI - Usage by Status\", \"col\": 6}}, {\"id\": \"spacer-1\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"hdr-quick\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Quick Shortcuts</b></span>\", \"col\": 12}}, {\"id\": \"sc-aichat\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"AI Chat\", \"col\": 3}}, {\"id\": \"sc-aisett\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"AI Settings\", \"col\": 3}}, {\"id\": \"sc-ailog\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"AI Usage Log\", \"col\": 3}}, {\"id\": \"sc-aiperm\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"AI Tool Permission\", \"col\": 3}}, {\"id\": \"sc-aidash\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"AI Dashboard\", \"col\": 3}}, {\"id\": \"sc-aiagent\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"AI Agent\", \"col\": 3}}, {\"id\": \"spacer-2\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"hdr-masters\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Masters &amp; Reports</b></span>\", \"col\": 12}}, {\"id\": \"card-logs\", \"type\": \"card\", \"data\": {\"card_name\": \"AI Logs\", \"col\": 4}}, {\"id\": \"card-admin\", \"type\": \"card\", \"data\": {\"card_name\": \"AI Administration\", \"col\": 4}}, {\"id\": \"card-reports\", \"type\": \"card\", \"data\": {\"card_name\": \"AI Reports\", \"col\": 4}}, {\"id\": \"card-ai\", \"type\": \"card\", \"data\": {\"card_name\": \"AI\", \"col\": 4}}]",
+ "creation": "2026-06-22 17:42:59.784225",
  "custom_blocks": [],
  "docstatus": 0,
  "doctype": "Workspace",
  "for_user": "",
  "hide_custom": 0,
- "icon": "workflow",
  "idx": 0,
- "indicator_color": "",
  "is_hidden": 0,
  "label": "AI Assistant",
  "links": [
@@ -125,35 +123,64 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "AI",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "AI Chat",
+   "link_count": 0,
+   "link_to": "ai-chat",
+   "link_type": "Page",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "AI Agent",
+   "link_count": 0,
+   "link_to": "AI Agent",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
   }
  ],
- "modified": "2026-06-22 17:27:55.684014",
+ "modified": "2026-06-23 11:27:07.295352",
  "modified_by": "Administrator",
  "module": "AI Assistant",
  "name": "AI Assistant",
  "number_cards": [
   {
-   "label": "AI - Sales This Month",
+   "label": "Sales This Month",
    "number_card_name": "AI - Sales This Month"
   },
   {
-   "label": "AI - Pending Quotations",
+   "label": "Pending Quotations",
    "number_card_name": "AI - Pending Quotations"
   },
   {
-   "label": "AI - Overdue Invoices",
+   "label": "Overdue Invoices",
    "number_card_name": "AI - Overdue Invoices"
   },
   {
-   "label": "AI - Low Stock Items",
+   "label": "Low Stock Items",
    "number_card_name": "AI - Low Stock Items"
   },
   {
-   "label": "AI - New Customers",
+   "label": "New Customers",
    "number_card_name": "AI - New Customers"
   },
   {
-   "label": "AI - Open Job Cards",
+   "label": "Open Job Cards",
    "number_card_name": "AI - Open Job Cards"
   }
  ],
