@@ -875,7 +875,7 @@
   "docstatus": 0,
   "doctype": "AI Tool",
   "enabled": 1,
-  "modified": "2026-06-23 00:00:00.000000",
+  "modified": "2026-06-23 14:06:17.077803",
   "name": "get_so_invoice_gap",
   "tool_name": "get_so_invoice_gap"
  },
@@ -885,7 +885,7 @@
   "docstatus": 0,
   "doctype": "AI Tool",
   "enabled": 1,
-  "modified": "2026-06-23 00:00:00.000000",
+  "modified": "2026-06-23 14:06:17.689813",
   "name": "get_sales_pipeline_status",
   "tool_name": "get_sales_pipeline_status"
  },
@@ -895,7 +895,7 @@
   "docstatus": 0,
   "doctype": "AI Tool",
   "enabled": 1,
-  "modified": "2026-06-23 00:00:00.000000",
+  "modified": "2026-06-23 14:06:17.693678",
   "name": "get_customer_360",
   "tool_name": "get_customer_360"
  },
@@ -905,7 +905,7 @@
   "docstatus": 0,
   "doctype": "AI Tool",
   "enabled": 1,
-  "modified": "2026-06-23 00:00:00.000000",
+  "modified": "2026-06-23 14:06:17.696645",
   "name": "get_po_receipt_gap",
   "tool_name": "get_po_receipt_gap"
  },
@@ -915,7 +915,7 @@
   "docstatus": 0,
   "doctype": "AI Tool",
   "enabled": 1,
-  "modified": "2026-06-23 00:00:00.000000",
+  "modified": "2026-06-23 14:06:17.699888",
   "name": "get_monthly_pl_bridge",
   "tool_name": "get_monthly_pl_bridge"
  }
