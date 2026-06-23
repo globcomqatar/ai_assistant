@@ -1792,12 +1792,16 @@ class AIChatPage {
 
 class VoiceInput {
 	constructor(chatPage) {
-		this._chat      = chatPage;
-		this._recog     = null;
-		this._recording = false;
-		this._errTimer  = null;
-		this._lang      = this._detect_lang();
-		this._supported = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+		this._chat        = chatPage;
+		this._recog       = null;
+		this._recording   = false;
+		this._errTimer    = null;
+		this._lang        = this._detect_lang();
+		this._supported   = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+		this._use_paid_api = false;   // set to true when a paid STT provider is configured
+		this._mr          = null;     // MediaRecorder instance (paid API mode)
+		this._stream      = null;     // MediaStream (paid API mode)
+		this._chunks      = [];       // recorded audio chunks (paid API mode)
 		this._init();
 	}
 
@@ -1862,14 +1866,40 @@ class VoiceInput {
 		this._apply_direction();
 	}
 
+	// ── Initialisation ────────────────────────────────────────────────────────
+
 	_init() {
-		console.log(`AI Voice: detected lang="${this._lang}", recognition lang="${this._recognition_lang()}"`);
-		if (!this._supported) {
-			$("#ai-mic-btn, #ai-lang-toggle").hide();
-			return;
-		}
-		this._update_lang_btn();
-		this._bind_events();
+		// Ask the server whether voice input is enabled and which provider is set.
+		// Mic/lang buttons stay visible until we know; if disabled we hide them.
+		frappe.call({
+			method: "ai_assistant.api.chat.get_settings_status",
+			callback: (r) => {
+				const s = r.message || {};
+				if (s.enable_voice_input === false) {
+					$("#ai-mic-btn, #ai-lang-toggle").hide();
+					return;
+				}
+				const provider = s.voice_provider || "Browser (Free)";
+				this._use_paid_api = provider !== "Browser (Free)";
+
+				// For browser mode, Web Speech API must be supported
+				if (!this._use_paid_api && !this._supported) {
+					$("#ai-mic-btn, #ai-lang-toggle").hide();
+					return;
+				}
+				this._update_lang_btn();
+				this._bind_events();
+			},
+			error: () => {
+				// On API error fall back to browser STT if the device supports it
+				if (!this._supported) {
+					$("#ai-mic-btn, #ai-lang-toggle").hide();
+				} else {
+					this._update_lang_btn();
+					this._bind_events();
+				}
+			},
+		});
 	}
 
 	_bind_events() {
@@ -1882,15 +1912,34 @@ class VoiceInput {
 			this._lang  = cycle[key];
 			localStorage.setItem("ai_assistant_voice_lang", this._lang);
 			this._update_lang_btn();
-			console.log(`AI Voice: lang switched to "${this._lang}", recognition lang="${this._recognition_lang()}"`);
 		});
 	}
 
+	// ── Public start / stop (dispatch to right mode) ───────────────────────
+
 	_start() {
+		if (this._use_paid_api) {
+			this._start_media();
+		} else {
+			this._start_browser();
+		}
+	}
+
+	_stop() {
+		if (this._use_paid_api) {
+			this._stop_media();
+		} else {
+			this._stop_browser();
+		}
+	}
+
+	// ── Browser Web Speech API (free, cloud-routed) ────────────────────────
+
+	_start_browser() {
 		const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 		if (!SR) return;
 
-		// iOS Safari: show one-time warning (voice works best in Chrome)
+		// iOS Safari: show one-time warning
 		const isIOS    = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 		const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 		if (isIOS && isSafari && !localStorage.getItem("ai_voice_ios_warned")) {
@@ -1911,7 +1960,7 @@ class VoiceInput {
 		const recog           = new SR();
 		this._recog           = recog;
 		recog.lang            = this._recognition_lang();
-		recog.continuous      = true;   // keep listening until user clicks stop
+		recog.continuous      = true;
 		recog.interimResults  = true;
 
 		recog.onstart = () => {
@@ -1920,42 +1969,27 @@ class VoiceInput {
 			this._show_status(this._status_text());
 		};
 
-		// Build full transcript from all accumulated results and write to input
 		recog.onresult = (e) => {
-			if (recog !== this._recog) return;   // guard against stale instance
+			if (recog !== this._recog) return;
 			let transcript = "";
 			for (let i = 0; i < e.results.length; i++) {
 				const res = e.results[i];
 				if (res && res[0]) transcript += res[0].transcript;
 			}
-			console.log("AI Voice onresult:", JSON.stringify(transcript));
 			if (!transcript) return;
-			// Mirror live transcript in the status bar so recognition is visible
 			this._show_status(transcript);
-			// Native DOM API — most compatible way to update a controlled textarea
-			const el = document.getElementById("ai-input");
-			if (el) {
-				el.value = transcript;
-				el.dispatchEvent(new Event("input", { bubbles: true }));
-				// jQuery fallback in case the framework's listener needs it
-				$(el).trigger("input");
-			}
+			this._write_to_input(transcript);
 		};
 
 		recog.onerror = (e) => {
 			if (recog !== this._recog) return;
-			// no-speech is non-fatal in continuous mode — just keep listening
 			if (e.error === "no-speech") return;
 			this._stop_state();
 			this._show_error(this._error_msg(e.error));
 		};
 
-		// onend fires when recognition stops. If _recording is still true the
-		// browser ended it unexpectedly (e.g. Android tab switch) — restart.
-		// If _stop() was called first it already set _recording=false, so we
-		// simply finalise the state.
 		recog.onend = () => {
-			if (recog !== this._recog) return;   // stale instance — ignore
+			if (recog !== this._recog) return;
 			if (this._recording) {
 				try { recog.start(); return; } catch (_) {}
 			}
@@ -1970,9 +2004,98 @@ class VoiceInput {
 		}
 	}
 
-	_stop() {
+	_stop_browser() {
 		if (this._recog) { try { this._recog.stop(); } catch (_) {} }
 		this._stop_state();
+	}
+
+	// ── Paid API (MediaRecorder → backend → transcript) ───────────────────
+
+	_start_media() {
+		const isAr = (this._lang || "en").toLowerCase().startsWith("ar");
+		const isUr = (this._lang || "en").toLowerCase().startsWith("ur");
+		const hint = isAr ? "سجّل ... انقر مرة أخرى لإرسال"
+			: isUr ? "ریکارڈ کریں ... بھیجنے کے لیے دوبارہ کلک کریں"
+			: "Recording — click mic again to transcribe";
+
+		navigator.mediaDevices.getUserMedia({ audio: true })
+			.then((stream) => {
+				this._stream = stream;
+				this._chunks = [];
+
+				const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+					? "audio/webm;codecs=opus"
+					: "audio/webm";
+				const mr = new MediaRecorder(stream, { mimeType });
+				this._mr = mr;
+
+				mr.ondataavailable = (e) => {
+					if (e.data && e.data.size > 0) this._chunks.push(e.data);
+				};
+				mr.onstop = () => this._send_to_backend();
+				mr.start(250);   // collect chunks every 250 ms
+
+				this._recording = true;
+				$("#ai-mic-btn").addClass("recording");
+				this._show_status(hint);
+			})
+			.catch(() => {
+				this._show_error(this._error_msg("not-allowed"));
+			});
+	}
+
+	_stop_media() {
+		this._recording = false;
+		$("#ai-mic-btn").removeClass("recording");
+		const isAr = (this._lang || "en").toLowerCase().startsWith("ar");
+		const isUr = (this._lang || "en").toLowerCase().startsWith("ur");
+		this._show_status(isAr ? "جارٍ التعرف..." : isUr ? "پہچان ہو رہی ہے..." : "Transcribing…");
+
+		if (this._mr && this._mr.state !== "inactive") {
+			this._mr.stop();
+		}
+		if (this._stream) {
+			this._stream.getTracks().forEach((t) => t.stop());
+			this._stream = null;
+		}
+	}
+
+	_send_to_backend() {
+		const blob = new Blob(this._chunks, { type: "audio/webm" });
+		this._chunks = [];
+		const reader = new FileReader();
+		reader.onload = () => {
+			// reader.result is "data:audio/webm;base64,AAAA..." — strip the prefix
+			const base64 = reader.result.split(",")[1];
+			frappe.call({
+				method: "ai_assistant.api.voice.transcribe_audio",
+				args: { audio_base64: base64, language: this._recognition_lang() },
+				callback: (r) => {
+					const transcript = (r.message && r.message.transcript) || "";
+					this._hide_status();
+					if (transcript) {
+						this._write_to_input(transcript);
+					} else {
+						this._show_error("No speech detected — please try again");
+					}
+				},
+				error: (err) => {
+					const msg = (err && err.message) || "Transcription failed, please try again";
+					this._show_error(msg.replace(/^Server Error:\s*/i, "").slice(0, 120));
+				},
+			});
+		};
+		reader.readAsDataURL(blob);
+	}
+
+	// ── Shared helpers ─────────────────────────────────────────────────────
+
+	_write_to_input(transcript) {
+		const el = document.getElementById("ai-input");
+		if (!el) return;
+		el.value = transcript;
+		el.dispatchEvent(new Event("input", { bubbles: true }));
+		$(el).trigger("input");
 	}
 
 	_stop_state() {

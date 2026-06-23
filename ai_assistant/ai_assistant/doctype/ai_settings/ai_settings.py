@@ -53,6 +53,10 @@ class AISettings(Document):
 		_, model_field = self._provider_fields()
 		return self.get(model_field) or "" if model_field else ""
 
+	def get_voice_api_key(self) -> str:
+		"""Return the decrypted API key for the configured voice provider."""
+		return self._stored_api_key("voice_api_key")
+
 	# ── Private ─────────────────────────────────────────────────────────────────
 
 	def _provider_fields(self) -> tuple[str | None, str | None]:

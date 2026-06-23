@@ -35,6 +35,12 @@
   "fallback_mode",
   "section_agents",
   "agent_routing_mode",
+  "section_voice",
+  "enable_voice_input",
+  "col_break_voice",
+  "voice_provider",
+  "voice_api_key",
+  "azure_speech_region",
   "section_system_prompt",
   "system_prompt_override"
  ],
@@ -257,6 +263,46 @@
    "label": "Agent Routing Mode",
    "options": "Manual\nAuto",
    "description": "Manual: user picks an agent from the selector bar. Auto: the Supervisor Agent classifies each message and routes it to the most appropriate specialist agent automatically (System Manager only)."
+  },
+
+  {
+   "fieldname": "section_voice",
+   "fieldtype": "Section Break",
+   "label": "Voice Input"
+  },
+  {
+   "default": "1",
+   "fieldname": "enable_voice_input",
+   "fieldtype": "Check",
+   "label": "Enable Voice Input in Chat",
+   "description": "Show the microphone button in the chat input area."
+  },
+  {
+   "fieldname": "col_break_voice",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Browser (Free)",
+   "fieldname": "voice_provider",
+   "fieldtype": "Select",
+   "label": "Voice-to-Text Provider",
+   "options": "Browser (Free)\nOpenAI Whisper\nGoogle Speech-to-Text\nAzure Speech",
+   "description": "Browser (Free) uses the device's built-in speech recognition — no API key needed but requires an internet connection to Google/Microsoft servers. Paid providers send audio to your own API key.",
+   "depends_on": "eval:doc.enable_voice_input == 1"
+  },
+  {
+   "fieldname": "voice_api_key",
+   "fieldtype": "Password",
+   "label": "Voice API Key",
+   "description": "API key for OpenAI / Google / Azure. Leave blank when using Browser (Free).",
+   "depends_on": "eval:doc.enable_voice_input == 1 && doc.voice_provider != 'Browser (Free)'"
+  },
+  {
+   "fieldname": "azure_speech_region",
+   "fieldtype": "Data",
+   "label": "Azure Speech Region",
+   "description": "Required for Azure Speech only — e.g. eastus, westeurope, uaenorth.",
+   "depends_on": "eval:doc.enable_voice_input == 1 && doc.voice_provider == 'Azure Speech'"
   },
 
   {

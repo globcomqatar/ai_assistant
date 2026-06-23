@@ -330,6 +330,12 @@ def get_settings_status() -> dict:
         has_key = bool(settings.get_active_api_key())
     except Exception:
         pass
+    voice_provider = settings.voice_provider or "Browser (Free)"
+    has_voice_key = False
+    try:
+        has_voice_key = bool(settings.get_voice_api_key())
+    except Exception:
+        pass
     return {
         "enabled": bool(settings.enabled),
         "provider": settings.provider,
@@ -337,4 +343,7 @@ def get_settings_status() -> dict:
         "allow_tool_execution": bool(settings.allow_tool_execution),
         "fallback_mode": settings.fallback_mode,
         "has_api_key": has_key,
+        "enable_voice_input": bool(settings.enable_voice_input),
+        "voice_provider": voice_provider,
+        "has_voice_key": has_voice_key,
     }
