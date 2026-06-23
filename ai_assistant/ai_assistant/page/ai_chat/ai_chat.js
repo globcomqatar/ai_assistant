@@ -66,60 +66,69 @@ class AIChatPage {
 	_sidebar_groups() {
 		return [
 			{
-				label: "📊 " + __("Business Intelligence"),
+				label: __("Business Intelligence"),
 				items: [
-					{ icon: "🧠", label: __("Business Analysis"),    msg: "Analyze my business and give me recommendations" },
-					{ icon: "🌅", label: __("Daily Summary"),         msg: "Give me the management daily summary" },
-					{ icon: "📈", label: __("Monthly Sales Trend"),   msg: "Show me the monthly sales trend for 6 months" },
-					{ icon: "🏆", label: __("Top Customers"),         msg: "Show top customers this month" },
-					{ icon: "🛍️", label: __("Top Selling Items"),    msg: "Show top selling items this month" },
+					{ icon: "ti-brain",          label: __("Business Analysis"),   msg: "Analyze my business and give me recommendations" },
+					{ icon: "ti-calendar-stats", label: __("Daily Summary"),       msg: "Give me the management daily summary" },
+					{ icon: "ti-trending-up",    label: __("Monthly Sales Trend"), msg: "Show me the monthly sales trend for 6 months" },
+					{ icon: "ti-trophy",         label: __("Top Customers"),       msg: "Show top customers this month" },
+					{ icon: "ti-shopping-bag",   label: __("Top Selling Items"),   msg: "Show top selling items this month" },
 				],
 			},
 			{
-				label: "💰 " + __("Collections & AR"),
+				label: __("Collections & AR"),
 				items: [
-					{ icon: "⚠️",  label: __("Overdue Invoices"),     msg: "Show overdue invoices" },
-					{ icon: "🎯", label: __("Follow-Up List"),        msg: "Who needs follow-up? Show me follow-up opportunities" },
-					{ icon: "💸", label: __("Overdue Customers"),     msg: "Show customers with overdue balance" },
-					{ icon: "📄", label: __("Pending Quotations"),    msg: "Show pending quotations" },
+					{ icon: "ti-alert-triangle", label: __("Overdue Invoices"),   msg: "Show overdue invoices" },
+					{ icon: "ti-target",         label: __("Follow-Up List"),     msg: "Who needs follow-up? Show me follow-up opportunities" },
+					{ icon: "ti-users",          label: __("Overdue Customers"),  msg: "Show customers with overdue balance" },
+					{ icon: "ti-file-invoice",   label: __("Pending Quotations"), msg: "Show pending quotations" },
 				],
 			},
 			{
-				label: "📦 " + __("Operations"),
+				label: __("Composite Reports"),
 				items: [
-					{ icon: "📦", label: __("Stock Alerts"),          msg: "Show stock alerts and low stock items" },
-					{ icon: "🔧", label: __("Open Job Cards"),        msg: "Show open workshop job cards" },
-					{ icon: "💤", label: __("Inactive Customers"),    msg: "Show inactive customers in the last 60 days" },
+					{ icon: "ti-alert-circle",   label: __("Revenue Leakage"),    msg: "show me sales orders that have not been invoiced" },
+					{ icon: "ti-filter",         label: __("Sales Pipeline"),     msg: "show full sales pipeline from quote to cash" },
+					{ icon: "ti-user-check",     label: __("Customer 360"),       msg: "give me a full customer health check" },
+					{ icon: "ti-truck",          label: __("PO Receipt Gap"),     msg: "show purchase orders not yet received" },
+					{ icon: "ti-chart-bar",      label: __("P&L Bridge"),         msg: "show monthly profit and loss bridge" },
 				],
 			},
 			{
-				label: "⚡ " + __("Quick Actions"),
+				label: __("Operations"),
 				items: [
-					{ icon: "👤", label: __("New Customer"),          msg: "Create customer " },
-					{ icon: "📄", label: __("New Quotation"),         msg: "Create quotation for customer " },
+					{ icon: "ti-package",        label: __("Stock Alerts"),       msg: "Show stock alerts and low stock items" },
+					{ icon: "ti-tool",           label: __("Open Job Cards"),     msg: "Show open workshop job cards" },
+					{ icon: "ti-user-off",       label: __("Inactive Customers"), msg: "Show inactive customers in the last 60 days" },
 				],
 			},
 			{
-				label: "🔗 " + __("Composite Reports"),
+				label: __("Quick Actions"),
 				items: [
-					{ icon: "⚠️",  label: __("Revenue Leakage"),     msg: "show me sales orders that have not been invoiced" },
-					{ icon: "🔽",  label: __("Sales Pipeline"),       msg: "show full sales pipeline from quote to cash" },
-					{ icon: "👤",  label: __("Customer 360"),         msg: "give me a full customer health check" },
-					{ icon: "🚚",  label: __("PO Receipt Gap"),       msg: "show purchase orders not yet received" },
-					{ icon: "📊",  label: __("P&L Bridge"),           msg: "show monthly profit and loss bridge" },
+					{ icon: "ti-user-plus",      label: __("New Customer"),       msg: "Create customer " },
+					{ icon: "ti-file-plus",      label: __("New Quotation"),      msg: "Create quotation for customer " },
 				],
 			},
 		];
 	}
 
 	_render() {
-		const sidebarHtml = this._sidebar_groups().map(group => `
+		const sidebarHtml = this._sidebar_groups()
+			.map((group, idx) => `
 			<div class="ai-sn-section">
-				<div class="ai-sn-section-label">${group.label}</div>
-				<div class="ai-sn-items">
+				<button class="ai-sn-section-label ${idx === 0 ? "open" : ""}"
+						data-idx="${idx}" type="button">
+					${group.label}
+					<i class="ti ti-chevron-down ai-sn-section-chevron"
+					   aria-hidden="true"></i>
+				</button>
+				<div class="ai-sn-items ${idx === 0 ? "open" : ""}">
 					${group.items.map(item => `
-						<button class="ai-sn-item" data-msg="${frappe.utils.escape_html(item.msg)}">
-							<span class="ai-sn-ico">${item.icon}</span>
+						<button class="ai-sn-item"
+								data-msg="${frappe.utils.escape_html(item.msg)}"
+								type="button">
+							<i class="ti ${item.icon} ai-sn-ico"
+							   aria-hidden="true"></i>
 							<span class="ai-sn-lbl">${item.label}</span>
 						</button>`).join("")}
 				</div>
@@ -135,7 +144,7 @@ class AIChatPage {
 			<div class="ai-sn" id="ai-sidebar">
 				<header class="ai-sn-hdr">
 					<div class="ai-sn-brand">
-						<span class="ai-sn-brand-icon">⚡</span>
+						<div class="ai-sn-logo-mark"><i class="ti ti-sparkles" aria-hidden="true"></i></div>
 						<span class="ai-sn-brand-text">${__("Quick Actions")}</span>
 					</div>
 					<button class="ai-sn-close-btn" id="ai-sb-toggle" title="${__("Collapse sidebar")}">
@@ -266,7 +275,7 @@ class AIChatPage {
 
 		// Set non-position sidebar styles (these don't conflict with CSS !important on left)
 		$sidebar.css({
-			background: "linear-gradient(180deg,#1e1b4b 0%,#2d2467 100%)",
+			background: "var(--bg-color)",
 			display: "flex", flexDirection: "column", overflow: "hidden",
 		});
 		// zIndex must beat CSS z-index:1 on overlay
@@ -342,6 +351,23 @@ class AIChatPage {
 		// Auto-close sidebar on mobile after clicking a quick-action
 		$(document).on("click.ai_sidebar", ".ai-sn-item", () => {
 			if (this._is_overlay()) this._collapse_sidebar();
+		});
+
+		// Accordion — click group label to expand/collapse
+		$(this.wrapper).on("click", ".ai-sn-section-label", function () {
+			const $label = $(this);
+			const $items = $label.next(".ai-sn-items");
+			const isOpen = $label.hasClass("open");
+
+			// Close all groups
+			$(".ai-sn-section-label").removeClass("open");
+			$(".ai-sn-items").removeClass("open");
+
+			// Open clicked group if it was closed
+			if (!isOpen) {
+				$label.addClass("open");
+				$items.addClass("open");
+			}
 		});
 	}
 
@@ -580,7 +606,7 @@ class AIChatPage {
 			create_expense_claim: "💳", get_expense_claims: "💳",
 		}[intent] || "✅";
 
-		const title = intent.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+		const title = intent.replace(/^(get|create|update|delete)_/i, "").replace(/_/g, " ");
 
 		let detail = "";
 		if (status === "error" || status === "validation_error") {
@@ -822,7 +848,18 @@ class AIChatPage {
 				<div class="ai-result-card-header">
 					<span class="ai-result-icon">${icon}</span>
 					<span class="ai-result-title">${title}</span>
-					${isError ? '<span class="ai-result-badge ai-result-badge--error">Error</span>' : '<span class="ai-result-badge ai-result-badge--ok">Done</span>'}
+					${isError ? '<span class="ai-result-badge ai-result-badge--error">Error</span>' : (() => {
+					const count = result.invoices?.length
+						|| result.customers?.length
+						|| result.items?.length
+						|| result.quotations?.length
+						|| result.sales_orders?.length
+						|| result.job_cards?.length
+						|| result.employees?.length
+						|| null;
+					const label = count != null ? `${count} records` : "Done";
+					return `<span class="ai-result-badge ai-result-badge--ok">${label}</span>`;
+				})()}
 				</div>
 				<div class="ai-result-body">${detail}</div>
 			</div>
@@ -1354,21 +1391,42 @@ class AIChatPage {
 	// Generic renderer for the four analysis arrays — used by all analytical tools.
 	_render_analysis_sections(analysis) {
 		if (!analysis) return "";
-		const sections = [
-			{ key: "findings",         label: __("Findings"),         icon: "🔍", cls: "ai-section-findings" },
-			{ key: "risks",            label: __("Risks"),            icon: "⚠️", cls: "ai-section-risks" },
-			{ key: "recommendations",  label: __("Recommendations"),  icon: "💡", cls: "ai-section-recommendations" },
-			{ key: "required_actions", label: __("Required Actions"), icon: "▶️", cls: "ai-section-required-actions" },
-		];
 		let html = `<div class="ai-analysis-sections">`;
 		let rendered = 0;
-		for (const sec of sections) {
-			const items = analysis[sec.key];
-			if (!items || !items.length) continue;
-			const cards = items.map(item =>
-				`<div class="ai-section-item"><span class="ai-section-icon">${sec.icon}</span><span>${frappe.utils.escape_html(String(item))}</span></div>`
-			).join("");
-			html += `<div class="ai-analysis-section ${sec.cls}"><h4>${sec.icon} ${sec.label}</h4>${cards}</div>`;
+		if (analysis.findings?.length) {
+			html += `<div class="ai-analysis-section findings">
+				<div class="ai-analysis-section-header">
+					<i class="ti ti-search" aria-hidden="true"></i> ${__("Findings")}
+				</div>
+				<ul>${analysis.findings.map(f => `<li>${frappe.utils.escape_html(String(f))}</li>`).join("")}</ul>
+			</div>`;
+			rendered++;
+		}
+		if (analysis.risks?.length) {
+			html += `<div class="ai-analysis-section risks">
+				<div class="ai-analysis-section-header">
+					<i class="ti ti-alert-triangle" aria-hidden="true"></i> ${__("Risks")}
+				</div>
+				<ul>${analysis.risks.map(r => `<li>${frappe.utils.escape_html(String(r))}</li>`).join("")}</ul>
+			</div>`;
+			rendered++;
+		}
+		if (analysis.recommendations?.length) {
+			html += `<div class="ai-analysis-section recommendations">
+				<div class="ai-analysis-section-header">
+					<i class="ti ti-bulb" aria-hidden="true"></i> ${__("Recommendations")}
+				</div>
+				<ul>${analysis.recommendations.map(r => `<li>${frappe.utils.escape_html(String(r))}</li>`).join("")}</ul>
+			</div>`;
+			rendered++;
+		}
+		if (analysis.required_actions?.length) {
+			html += `<div class="ai-analysis-section required-actions">
+				<div class="ai-analysis-section-header">
+					<i class="ti ti-player-play" aria-hidden="true"></i> ${__("Required Actions")}
+				</div>
+				<ul>${analysis.required_actions.map(a => `<li>${frappe.utils.escape_html(String(a))}</li>`).join("")}</ul>
+			</div>`;
 			rendered++;
 		}
 		if (!rendered) return "";
@@ -2024,13 +2082,38 @@ class AIChatPage {
 	}
 
 	_render_agent_bar(agents) {
+		const agentIconMap = {
+			"supervisor":                    "ti-robot",
+			"sales":                         "ti-currency-dollar",
+			"sales agent":                   "ti-currency-dollar",
+			"marketing":                     "ti-speakerphone",
+			"marketing agent":               "ti-speakerphone",
+			"accounts":                      "ti-report-money",
+			"accounts agent":                "ti-report-money",
+			"operations":                    "ti-package",
+			"operations agent":              "ti-package",
+			"business intelligence":         "ti-chart-line",
+			"business intelligence agent":   "ti-chart-line",
+			"bi":                            "ti-chart-line",
+			"bi agent":                      "ti-chart-line",
+			"hr":                            "ti-users",
+			"hr agent":                      "ti-users",
+			"general":                       "ti-message-circle",
+		};
 		const pills = agents.map(a => {
 			const isActive = a.agent_code === this.current_agent;
+			const agentKey = (
+				a.agent_code ||
+				a.agent_name ||
+				a.name ||
+				""
+			).toLowerCase().trim();
+			const pillIcon = agentIconMap[agentKey] || "ti-robot";
 			return `<button class="ai-agent-pill${isActive ? " active" : ""}"
 				data-agent="${frappe.utils.escape_html(a.agent_code)}"
-				style="--agent-color: ${frappe.utils.escape_html(a.color || "#2563EB")}"
+				style="--agent-color: ${frappe.utils.escape_html(a.color || "#2563eb")}"
 				title="${frappe.utils.escape_html(a.description || a.agent_name)}">
-				<span class="ai-agent-pill-icon">${a.icon || "🤖"}</span>
+				<i class="ti ${pillIcon} ai-agent-pill-icon" aria-hidden="true"></i>
 				<span class="ai-agent-pill-name">${frappe.utils.escape_html(a.agent_name)}</span>
 			</button>`;
 		}).join("");
