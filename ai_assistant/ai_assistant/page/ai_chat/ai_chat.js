@@ -1904,7 +1904,7 @@ class VoiceInput {
 
 		this._recog                = new SR();
 		this._recog.lang           = this._recognition_lang();
-		this._recog.continuous     = false;
+		this._recog.continuous     = true;   // keep listening until user clicks stop
 		this._recog.interimResults = true;
 
 		this._recog.onstart = () => {
@@ -1923,11 +1923,22 @@ class VoiceInput {
 		};
 
 		this._recog.onerror = (e) => {
+			// no-speech is non-fatal in continuous mode — just keep listening
+			if (e.error === "no-speech") return;
 			this._stop_state();
 			this._show_error(this._error_msg(e.error));
 		};
 
-		this._recog.onend = () => this._stop_state();
+		// onend fires when recognition stops. If _recording is still true the
+		// browser ended it unexpectedly (e.g. Android tab switch) — restart.
+		// If _stop() was called first it already set _recording=false, so we
+		// simply finalise the state.
+		this._recog.onend = () => {
+			if (this._recording) {
+				try { this._recog.start(); return; } catch (_) {}
+			}
+			this._stop_state();
+		};
 
 		try {
 			this._recog.start();
