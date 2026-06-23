@@ -539,6 +539,12 @@ class AIChatPage {
 			get_top_selling_items: "🛍️",
 			get_pending_quotations: "📄",
 			get_overdue_invoices: "⚠️",
+			// Composite cross-module tools
+			get_so_invoice_gap: "⚠️",
+			get_sales_pipeline_status: "🔽",
+			get_customer_360: "👤",
+			get_po_receipt_gap: "🚚",
+			get_monthly_pl_bridge: "📊",
 			get_stock_alerts: "📦",
 			get_open_job_cards: "🔧",
 			analyze_business: "🧠",
@@ -745,6 +751,18 @@ class AIChatPage {
 		// ── Vehicle Diagnostics renderer ─────────────────────────────
 		} else if (intent === "diagnose_vehicle_issue") {
 			detail = this._render_diagnostic(result);
+
+		// ── Composite cross-module renderers ──────────────────────────
+		} else if (intent === "get_so_invoice_gap") {
+			detail = this._render_so_invoice_gap(result);
+		} else if (intent === "get_sales_pipeline_status") {
+			detail = this._render_sales_pipeline_status(result);
+		} else if (intent === "get_customer_360") {
+			detail = this._render_customer_360(result);
+		} else if (intent === "get_po_receipt_gap") {
+			detail = this._render_po_receipt_gap(result);
+		} else if (intent === "get_monthly_pl_bridge") {
+			detail = this._render_monthly_pl_bridge(result);
 
 		} else {
 			detail = `<div class="ai-result-message">${frappe.utils.escape_html(message)}</div>`;
@@ -1333,26 +1351,307 @@ class AIChatPage {
 		return html;
 	}
 
-	// Generic renderer for the four analysis arrays — used by all future analytical tools.
+	// Generic renderer for the four analysis arrays — used by all analytical tools.
 	_render_analysis_sections(analysis) {
 		if (!analysis) return "";
 		const sections = [
-			{ key: "findings",         label: __("Findings"),         icon: "📌" },
-			{ key: "risks",            label: __("Risks"),            icon: "⚠️" },
-			{ key: "recommendations",  label: __("Recommendations"),  icon: "💡" },
-			{ key: "required_actions", label: __("Required Actions"), icon: "✅" },
+			{ key: "findings",         label: __("Findings"),         icon: "🔍", cls: "ai-section-findings" },
+			{ key: "risks",            label: __("Risks"),            icon: "⚠️", cls: "ai-section-risks" },
+			{ key: "recommendations",  label: __("Recommendations"),  icon: "💡", cls: "ai-section-recommendations" },
+			{ key: "required_actions", label: __("Required Actions"), icon: "▶️", cls: "ai-section-required-actions" },
 		];
 		let html = `<div class="ai-analysis-sections">`;
 		let rendered = 0;
 		for (const sec of sections) {
 			const items = analysis[sec.key];
 			if (!items || !items.length) continue;
-			const lis = items.map(item => `<li>${frappe.utils.escape_html(String(item))}</li>`).join("");
-			html += `<div class="ai-analysis-section"><h4>${sec.icon} ${sec.label}</h4><ul>${lis}</ul></div>`;
+			const cards = items.map(item =>
+				`<div class="ai-section-item"><span class="ai-section-icon">${sec.icon}</span><span>${frappe.utils.escape_html(String(item))}</span></div>`
+			).join("");
+			html += `<div class="ai-analysis-section ${sec.cls}"><h4>${sec.icon} ${sec.label}</h4>${cards}</div>`;
 			rendered++;
 		}
 		if (!rendered) return "";
 		return html + `</div>`;
+	}
+
+	_render_so_invoice_gap(r) {
+		const fmt = v => this._fmt_currency(v);
+		const m = r.metrics || {};
+		let html = "";
+		if (r.multi_currency) {
+			html += `<div class="ai-multicurrency-banner">ℹ️ ${__("Amounts shown in base currency equivalent. Original transaction currencies vary.")}</div>`;
+		}
+		html += this._render_kpi_cards([
+			{ label: __("Total Orders"),         value: m.total_orders || 0,                  danger: false },
+			{ label: __("Not Invoiced"),         value: m.not_invoiced_count || 0,            danger: (m.not_invoiced_count || 0) > 0 },
+			{ label: __("Revenue Not Invoiced"), value: fmt(m.not_invoiced_value),            danger: (m.not_invoiced_value || 0) > 0 },
+			{ label: __("Invoiced Unpaid"),      value: m.invoiced_unpaid_count || 0,         danger: false },
+			{ label: __("Unpaid Amount"),        value: fmt(m.invoiced_unpaid_value),         danger: false },
+			{ label: __("Total At Risk"),        value: fmt(m.value_at_risk),                 danger: (m.value_at_risk || 0) > 0 },
+			{ label: __("Gap Percentage"),       value: `${m.collection_gap_pct || 0}%`,      danger: (m.collection_gap_pct || 0) > 20 },
+		]);
+		if (r.chart && r.chart.labels && r.chart.labels.length) {
+			const mountId = "ai-chart-" + Date.now() + "-" + Math.floor(Math.random() * 9999);
+			html += this._render_chart(r.chart, mountId);
+		}
+		if (r.data && r.data.length) {
+			const capped = r.data.slice(0, 15);
+			const statusColor = s => s === "Not Invoiced" ? "var(--red-500)" : s === "Invoiced Unpaid" ? "var(--orange-500)" : "var(--green-600)";
+			const rows = capped.map(row =>
+				`<tr>
+					<td><a href="/app/sales-order/${encodeURIComponent(row.name)}" target="_blank">${row.name}</a></td>
+					<td>${frappe.utils.escape_html(row.customer || "")}</td>
+					<td>${row.transaction_date || ""}</td>
+					<td class="text-right">${fmt(row.base_grand_total)}</td>
+					<td>${frappe.utils.escape_html(row.currency || "")}</td>
+					<td style="color:${statusColor(row.invoice_status)};font-weight:600">${frappe.utils.escape_html(row.invoice_status || "")}</td>
+				</tr>`
+			).join("");
+			const note = r.data.length > 15
+				? `<p style="font-size:0.75rem;color:var(--text-muted);margin-top:4px">${__("Showing 15 of")} ${r.data.length} ${__("orders")}</p>`
+				: "";
+			html += `<p style="font-weight:600;margin:10px 0 4px">📋 ${__("Sales Orders — Revenue Gap")}</p>
+				<table class="ai-table">
+					<thead><tr><th>${__("Order")}</th><th>${__("Customer")}</th><th>${__("Date")}</th><th class="text-right">${__("Amount")}</th><th>${__("Currency")}</th><th>${__("Status")}</th></tr></thead>
+					<tbody>${rows}</tbody>
+				</table>${note}`;
+		}
+		if (r.analysis) html += this._render_analysis_sections(r.analysis);
+		return html;
+	}
+
+	_render_sales_pipeline_status(r) {
+		const fmt = v => this._fmt_currency(v);
+		const m = r.metrics || {};
+		let html = "";
+		if (r.multi_currency) {
+			html += `<div class="ai-multicurrency-banner">ℹ️ ${__("Amounts shown in base currency equivalent. Original transaction currencies vary.")}</div>`;
+		}
+		html += this._render_kpi_cards([
+			{ label: __("Total Quotes"),     value: m.total_quotes || 0,                     danger: false },
+			{ label: __("Quote to Order"),   value: `${m.quote_to_order_pct || 0}%`,         danger: (m.quote_to_order_pct || 0) < 20 },
+			{ label: __("Order to Invoice"), value: `${m.order_to_invoice_pct || 0}%`,       danger: false },
+			{ label: __("Invoice to Paid"),  value: `${m.invoice_to_paid_pct || 0}%`,        danger: false },
+			{ label: __("Quote to Cash"),    value: `${m.quote_to_cash_pct || 0}%`,          danger: (m.quote_to_cash_pct || 0) < 10 },
+			{ label: __("Avg Days Q→O"),     value: `${m.avg_days_quote_to_order || 0}d`,    danger: false },
+			{ label: __("Avg Days O→I"),     value: `${m.avg_days_order_to_invoice || 0}d`,  danger: false },
+		]);
+		if (r.chart && r.chart.labels && r.chart.labels.length) {
+			const mountId = "ai-chart-" + Date.now() + "-" + Math.floor(Math.random() * 9999);
+			html += this._render_chart(r.chart, mountId);
+		}
+		if (r.data && r.data.length) {
+			const rows = r.data.map(q =>
+				`<tr>
+					<td><a href="/app/quotation/${encodeURIComponent(q.name)}" target="_blank">${q.name}</a></td>
+					<td>${frappe.utils.escape_html(q.party_name || "")}</td>
+					<td>${q.transaction_date || ""}</td>
+					<td class="text-right">${fmt(q.base_grand_total)}</td>
+					<td class="text-right" style="color:var(--orange-500)">${q.days_open || 0}d</td>
+				</tr>`
+			).join("");
+			html += `<p style="font-weight:600;margin:10px 0 4px">📄 ${__("Top Open Unconverted Quotations")}</p>
+				<table class="ai-table">
+					<thead><tr><th>${__("Quote")}</th><th>${__("Customer")}</th><th>${__("Date")}</th><th class="text-right">${__("Value")}</th><th class="text-right">${__("Days Open")}</th></tr></thead>
+					<tbody>${rows}</tbody>
+				</table>`;
+		}
+		if (r.analysis) html += this._render_analysis_sections(r.analysis);
+		return html;
+	}
+
+	_render_customer_360(r) {
+		const fmt = v => this._fmt_currency(v);
+		const m = r.metrics || {};
+		let html = "";
+		if (r.multi_currency) {
+			html += `<div class="ai-multicurrency-banner">ℹ️ ${__("Amounts shown in base currency equivalent. Original transaction currencies vary.")}</div>`;
+		}
+		const healthColor = h => h === "Good" ? "var(--green-600)" : h === "Warning" ? "var(--orange-500)" : "var(--red-500)";
+		html += this._render_kpi_cards([
+			{ label: __("Revenue"),          value: fmt(m.total_revenue),          danger: false },
+			{ label: __("Outstanding"),      value: fmt(m.total_outstanding),       danger: (m.total_outstanding || 0) > 0 },
+			{ label: __("Overdue"),          value: fmt(m.overdue_amount),          danger: (m.overdue_amount || 0) > 0 },
+			{ label: __("Open Orders"),      value: m.open_orders_count || 0,       danger: false },
+			{ label: __("Open Quotes"),      value: m.open_quotes_count || 0,       danger: false },
+			{ label: __("Avg Payment Days"), value: m.avg_payment_delay_days != null ? `${m.avg_payment_delay_days}d` : "—", danger: false },
+			{ label: __("Health Status"),    value: `<span style="color:${healthColor(m.customer_health)};font-weight:700">${frappe.utils.escape_html(m.customer_health || "—")}</span>`, danger: false },
+		]);
+		if (r.chart && r.chart.labels && r.chart.labels.length) {
+			const mountId = "ai-chart-" + Date.now() + "-" + Math.floor(Math.random() * 9999);
+			html += this._render_chart(r.chart, mountId);
+		}
+		const d = r.data || {};
+		if (d.open_orders && d.open_orders.length) {
+			const rows = d.open_orders.map(o =>
+				`<tr>
+					<td><a href="/app/sales-order/${encodeURIComponent(o.name)}" target="_blank">${o.name}</a></td>
+					<td>${o.transaction_date || ""}</td>
+					<td class="text-right">${fmt(o.base_grand_total)}</td>
+					<td>${frappe.utils.escape_html(o.status || "")}</td>
+				</tr>`
+			).join("");
+			html += `<p style="font-weight:600;margin:10px 0 4px">📦 ${__("Open Orders")}</p>
+				<table class="ai-table">
+					<thead><tr><th>${__("Order")}</th><th>${__("Date")}</th><th class="text-right">${__("Value")}</th><th>${__("Status")}</th></tr></thead>
+					<tbody>${rows}</tbody>
+				</table>`;
+		}
+		if (d.unpaid_invoices && d.unpaid_invoices.length) {
+			const rows = d.unpaid_invoices.map(i =>
+				`<tr>
+					<td><a href="/app/sales-invoice/${encodeURIComponent(i.name)}" target="_blank">${i.name}</a></td>
+					<td>${i.posting_date || ""}</td>
+					<td class="text-right">${fmt(i.outstanding_amount)}</td>
+					<td>${i.due_date || ""}</td>
+				</tr>`
+			).join("");
+			html += `<p style="font-weight:600;margin:10px 0 4px">💰 ${__("Unpaid Invoices")}</p>
+				<table class="ai-table">
+					<thead><tr><th>${__("Invoice")}</th><th>${__("Date")}</th><th class="text-right">${__("Outstanding")}</th><th>${__("Due Date")}</th></tr></thead>
+					<tbody>${rows}</tbody>
+				</table>`;
+		}
+		if (d.top_items && d.top_items.length) {
+			const rows = d.top_items.map(it =>
+				`<tr>
+					<td>${frappe.utils.escape_html(it.item_name || it.item_code || "")}</td>
+					<td class="text-right">${(it.total_qty || 0).toFixed(1)}</td>
+					<td class="text-right">${fmt(it.total_amount)}</td>
+				</tr>`
+			).join("");
+			html += `<p style="font-weight:600;margin:10px 0 4px">🛍️ ${__("Top Items Purchased")}</p>
+				<table class="ai-table">
+					<thead><tr><th>${__("Item")}</th><th class="text-right">${__("Qty")}</th><th class="text-right">${__("Revenue")}</th></tr></thead>
+					<tbody>${rows}</tbody>
+				</table>`;
+		}
+		if (r.analysis) html += this._render_analysis_sections(r.analysis);
+		return html;
+	}
+
+	_render_po_receipt_gap(r) {
+		const fmt = v => this._fmt_currency(v);
+		const m = r.metrics || {};
+		let html = "";
+		if (r.multi_currency) {
+			html += `<div class="ai-multicurrency-banner">ℹ️ ${__("Amounts shown in base currency equivalent. Original transaction currencies vary.")}</div>`;
+		}
+		html += this._render_kpi_cards([
+			{ label: __("Open POs"),         value: m.total_open_pos || 0,         danger: false },
+			{ label: __("Not Received"),     value: m.not_received_count || 0,      danger: (m.not_received_count || 0) > 0 },
+			{ label: __("Value Pending"),    value: fmt(m.not_received_value),       danger: false },
+			{ label: __("Avg Days Overdue"), value: `${m.avg_days_overdue || 0}d`,  danger: (m.avg_days_overdue || 0) > 14 },
+			{ label: __("Stockout Risk"),    value: m.stockout_risk_count || 0,      danger: (m.stockout_risk_count || 0) > 0 },
+			{ label: __("Total Exposure"),   value: fmt(m.total_exposure_value),     danger: false },
+		]);
+		if (r.chart && r.chart.labels && r.chart.labels.length) {
+			const mountId = "ai-chart-" + Date.now() + "-" + Math.floor(Math.random() * 9999);
+			html += this._render_chart(r.chart, mountId);
+		}
+		if (r.data && r.data.length) {
+			const overdueColor = d => d > 14 ? "var(--red-500)" : d > 0 ? "var(--orange-500)" : "var(--green-600)";
+			const rows = r.data.map(row =>
+				`<tr>
+					<td><a href="/app/purchase-order/${encodeURIComponent(row.name)}" target="_blank">${row.name}</a></td>
+					<td>${frappe.utils.escape_html(row.supplier || "")}</td>
+					<td>${row.schedule_date || ""}</td>
+					<td class="text-right" style="color:${overdueColor(row.days_overdue)};font-weight:600">${row.days_overdue || 0}d</td>
+					<td class="text-right">${fmt(row.base_grand_total)}</td>
+					<td>${frappe.utils.escape_html(row.receipt_status || "")}</td>
+					<td style="text-align:center">${row.stockout_risk ? '<span style="color:var(--red-500)" title="Stockout Risk">⚠️</span>' : ""}</td>
+				</tr>`
+			).join("");
+			html += `<p style="font-weight:600;margin:10px 0 4px">🚚 ${__("Purchase Orders Pending Receipt")}</p>
+				<table class="ai-table">
+					<thead><tr><th>${__("PO")}</th><th>${__("Supplier")}</th><th>${__("Expected Date")}</th><th class="text-right">${__("Days Overdue")}</th><th class="text-right">${__("Value")}</th><th>${__("Status")}</th><th>${__("Stockout")}</th></tr></thead>
+					<tbody>${rows}</tbody>
+				</table>`;
+		}
+		if (r.analysis) html += this._render_analysis_sections(r.analysis);
+		return html;
+	}
+
+	_render_monthly_pl_bridge(r) {
+		const fmt = v => this._fmt_currency(v);
+		const m = r.metrics || {};
+		let html = "";
+		if (r.multi_currency) {
+			html += `<div class="ai-multicurrency-banner">ℹ️ ${__("Amounts shown in base currency equivalent. Original transaction currencies vary.")}</div>`;
+		}
+		const momBadge = v => {
+			if (v == null) return "—";
+			const sign = v >= 0 ? "+" : "";
+			const color = v >= 0 ? "var(--green-600)" : "var(--red-500)";
+			return `<span style="color:${color};font-weight:700">${sign}${v}%</span>`;
+		};
+		html += this._render_kpi_cards([
+			{ label: __("Revenue"),      value: fmt(m.current_month_revenue),        danger: false },
+			{ label: __("Cost"),         value: fmt(m.current_month_cost),           danger: false },
+			{ label: __("Gross Profit"), value: fmt(m.current_month_gross_profit),   danger: false },
+			{ label: __("Margin"),       value: `${m.current_month_margin_pct || 0}%`, danger: (m.current_month_margin_pct || 0) < 15 },
+			{ label: __("Revenue MoM"),  value: momBadge(m.revenue_mom_pct),         danger: false },
+			{ label: __("Cost MoM"),     value: momBadge(m.cost_mom_pct),            danger: false },
+			{ label: __("Margin MoM"),   value: momBadge(m.margin_mom_pct),          danger: false },
+			{ label: __("YTD Revenue"),  value: fmt(m.ytd_revenue),                  danger: false },
+			{ label: __("YTD Profit"),   value: fmt(m.ytd_gross_profit),             danger: false },
+		]);
+		if (r.chart) {
+			const mountId = "ai-chart-" + Date.now() + "-" + Math.floor(Math.random() * 9999);
+			if (r.chart.type === "composed") {
+				html += this._render_composed_chart(r.chart, mountId);
+			} else if (r.chart.labels && r.chart.labels.length) {
+				html += this._render_chart(r.chart, mountId);
+			}
+		}
+		if (r.data && r.data.length) {
+			const currentLabel = r.data[r.data.length - 1]?.month_label;
+			const rows = r.data.map(row => {
+				const isCurrent = row.month_label === currentLabel;
+				const rowStyle = isCurrent ? ' style="background:var(--blue-50,#eff6ff);font-weight:600"' : "";
+				return `<tr${rowStyle}>
+					<td>${frappe.utils.escape_html(row.month_label || "")}</td>
+					<td class="text-right">${fmt(row.revenue)}</td>
+					<td class="text-right">${fmt(row.cost)}</td>
+					<td class="text-right">${fmt(row.gross_profit)}</td>
+					<td class="text-right">${row.margin_pct || 0}%</td>
+					<td style="text-align:center">${row.margin_squeeze ? '<span style="color:var(--red-500)" title="Margin Squeeze">⚠️</span>' : ""}</td>
+				</tr>`;
+			}).join("");
+			html += `<p style="font-weight:600;margin:10px 0 4px">📅 ${__("Monthly Breakdown")}</p>
+				<table class="ai-table">
+					<thead><tr><th>${__("Month")}</th><th class="text-right">${__("Revenue")}</th><th class="text-right">${__("Cost")}</th><th class="text-right">${__("Gross Profit")}</th><th class="text-right">${__("Margin %")}</th><th>${__("Squeeze")}</th></tr></thead>
+					<tbody>${rows}</tbody>
+				</table>`;
+		}
+		if (r.analysis) html += this._render_analysis_sections(r.analysis);
+		return html;
+	}
+
+	_render_composed_chart(chartData, mountId) {
+		// frappe.Chart axis-mixed: per-dataset chartType "bar" or "line"
+		setTimeout(() => {
+			const el = document.getElementById(mountId);
+			if (!el || !window.frappe || !frappe.Chart) return;
+			const datasets = (chartData.datasets || []).map(ds => ({
+				name: ds.name,
+				chartType: ds.type || "bar",
+				values: ds.values || [],
+			}));
+			try {
+				new frappe.Chart(el, {
+					type: "axis-mixed",
+					title: chartData.title || "",
+					data: { labels: chartData.labels || [], datasets },
+					height: 260,
+					colors: ["#2563EB", "#EA580C", "#16a34a"],
+				});
+			} catch (_e) {
+				el.innerHTML = `<p style="color:var(--text-muted);font-size:0.8rem;padding:8px">${__("Chart unavailable")}</p>`;
+			}
+		}, 150);
+		return `<div id="${mountId}" class="ai-chart"></div>`;
 	}
 
 	_render_sales_summary(result) {

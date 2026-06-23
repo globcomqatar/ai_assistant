@@ -1157,6 +1157,25 @@
 	font-size: 0.78rem; color: var(--text-muted); margin-bottom: 2px; line-height: 1.4;
 }
 
+/* ── Analysis section colored borders ────────────────────────────────────── */
+.ai-section-findings         { border-left: 3px solid #2563EB; }
+.ai-section-risks            { border-left: 3px solid var(--red-500); }
+.ai-section-recommendations  { border-left: 3px solid var(--green-600); }
+.ai-section-required-actions { border-left: 3px solid var(--orange-500); }
+
+.ai-section-item {
+	display: flex; align-items: flex-start; gap: 6px;
+	font-size: 0.78rem; color: var(--text-muted); margin-bottom: 4px; line-height: 1.4;
+}
+.ai-section-icon { flex-shrink: 0; }
+
+/* ── Multi-currency info banner ──────────────────────────────────────────── */
+.ai-multicurrency-banner {
+	background: var(--blue-50, #eff6ff); color: var(--blue-700, #1d4ed8);
+	border: 1px solid var(--blue-200, #bfdbfe);
+	border-radius: 4px; padding: 5px 10px; font-size: 0.75rem; margin-bottom: 8px;
+}
+
 /* ── Department health badges ─────────────────────────────────────────────── */
 .ai-dept-grid { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
 .ai-dept-badge {
