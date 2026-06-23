@@ -868,5 +868,55 @@
   "modified": "2026-06-21 17:08:05.223487",
   "name": "get_invoices_summary",
   "tool_name": "get_invoices_summary"
+ },
+ {
+  "category": "BI Analytics",
+  "description": "Revenue leakage report. Finds Sales Orders fulfilled but not yet invoiced, or invoiced but unpaid.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-23 00:00:00.000000",
+  "name": "get_so_invoice_gap",
+  "tool_name": "get_so_invoice_gap"
+ },
+ {
+  "category": "BI Analytics",
+  "description": "Full sales pipeline funnel from Quotation to Sales Order to Invoice to Payment with conversion rates.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-23 00:00:00.000000",
+  "name": "get_sales_pipeline_status",
+  "tool_name": "get_sales_pipeline_status"
+ },
+ {
+  "category": "BI Analytics",
+  "description": "Complete 360-degree customer profile combining open orders, unpaid invoices, payment history, and buying patterns.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-23 00:00:00.000000",
+  "name": "get_customer_360",
+  "tool_name": "get_customer_360"
+ },
+ {
+  "category": "BI Analytics",
+  "description": "Finds Purchase Orders not yet received or partially received, with stockout risk flags.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-23 00:00:00.000000",
+  "name": "get_po_receipt_gap",
+  "tool_name": "get_po_receipt_gap"
+ },
+ {
+  "category": "BI Analytics",
+  "description": "Monthly profit and loss bridge showing revenue versus purchase cost and gross margin.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "modified": "2026-06-23 00:00:00.000000",
+  "name": "get_monthly_pl_bridge",
+  "tool_name": "get_monthly_pl_bridge"
  }
 ]

@@ -2049,5 +2049,168 @@
   "modified": "2026-06-21 11:14:26.791639",
   "name": "get_expense_claims",
   "tool_name": "get_expense_claims"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_so_invoice_gap",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   },
+   {
+    "parent": "get_so_invoice_gap",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   },
+   {
+    "parent": "get_so_invoice_gap",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   },
+   {
+    "parent": "get_so_invoice_gap",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts User"
+   }
+  ],
+  "description": "Revenue leakage report. Finds Sales Orders fulfilled but not yet invoiced, or invoiced but unpaid.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-23 00:00:00.000000",
+  "name": "get_so_invoice_gap",
+  "tool_name": "get_so_invoice_gap"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_sales_pipeline_status",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   },
+   {
+    "parent": "get_sales_pipeline_status",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   },
+   {
+    "parent": "get_sales_pipeline_status",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   }
+  ],
+  "description": "Full sales pipeline funnel from Quotation to Sales Order to Invoice to Payment with conversion rates.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-23 00:00:00.000000",
+  "name": "get_sales_pipeline_status",
+  "tool_name": "get_sales_pipeline_status"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_customer_360",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   },
+   {
+    "parent": "get_customer_360",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   },
+   {
+    "parent": "get_customer_360",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   },
+   {
+    "parent": "get_customer_360",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts User"
+   }
+  ],
+  "description": "Complete 360-degree customer profile combining open orders, unpaid invoices, payment history, and buying patterns.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-23 00:00:00.000000",
+  "name": "get_customer_360",
+  "tool_name": "get_customer_360"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_po_receipt_gap",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Purchase Manager"
+   },
+   {
+    "parent": "get_po_receipt_gap",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Purchase User"
+   },
+   {
+    "parent": "get_po_receipt_gap",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Stock Manager"
+   },
+   {
+    "parent": "get_po_receipt_gap",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Stock User"
+   }
+  ],
+  "description": "Finds Purchase Orders not yet received or partially received, with stockout risk flags.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-23 00:00:00.000000",
+  "name": "get_po_receipt_gap",
+  "tool_name": "get_po_receipt_gap"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_monthly_pl_bridge",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   },
+   {
+    "parent": "get_monthly_pl_bridge",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts User"
+   },
+   {
+    "parent": "get_monthly_pl_bridge",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   }
+  ],
+  "description": "Monthly profit and loss bridge showing revenue versus purchase cost and gross margin.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-23 00:00:00.000000",
+  "name": "get_monthly_pl_bridge",
+  "tool_name": "get_monthly_pl_bridge"
  }
 ]
