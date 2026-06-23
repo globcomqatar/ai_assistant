@@ -190,8 +190,27 @@ class AIChatPage {
 
 				<!-- Input area -->
 				<div class="ai-input-area">
-					<textarea id="ai-input" class="ai-input" rows="1"
-						placeholder="${__("Type your message… (Enter to send, Shift+Enter for new line)")}"></textarea>
+					<div class="ai-voice-status hidden" id="ai-voice-status"></div>
+					<div class="ai-input-wrapper">
+						<textarea id="ai-input" class="ai-input" rows="1"
+							placeholder="${__("Type your message… (Enter to send, Shift+Enter for new line)")}"></textarea>
+					</div>
+					<button class="ai-lang-toggle" id="ai-lang-toggle" aria-label="Switch voice language" title="EN">
+						<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<circle cx="12" cy="12" r="10"></circle>
+							<line x1="2" y1="12" x2="22" y2="12"></line>
+							<path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+						</svg>
+						<span class="ai-lang-label">EN</span>
+					</button>
+					<button class="ai-mic-btn" id="ai-mic-btn" aria-label="Start voice input">
+						<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+							<path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+							<line x1="12" y1="19" x2="12" y2="23"></line>
+							<line x1="8" y1="23" x2="16" y2="23"></line>
+						</svg>
+					</button>
 					<button class="ai-send-btn" id="ai-send-btn" disabled>
 						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 							<line x1="22" y1="2" x2="11" y2="13"></line>
@@ -217,6 +236,7 @@ class AIChatPage {
 		}, 200));
 
 		this._bind_events();
+		this.voice = new VoiceInput(this);
 	}
 
 	_is_mobile()  { return window.innerWidth < 768; }
@@ -1763,5 +1783,183 @@ class AIChatPage {
 				}
 			},
 		});
+	}
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// VoiceInput — self-contained speech-to-text, fed into existing send flow
+// ──────────────────────────────────────────────────────────────────────────────
+
+class VoiceInput {
+	constructor(chatPage) {
+		this._chat      = chatPage;
+		this._recog     = null;
+		this._recording = false;
+		this._errTimer  = null;
+		this._lang      = this._detect_lang();
+		this._supported = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+		this._init();
+	}
+
+	// Priority: localStorage > frappe.boot.lang > session.user_lang > html[lang] > en
+	_detect_lang() {
+		const saved = localStorage.getItem("ai_assistant_voice_lang");
+		if (saved) return saved;
+		if (frappe.boot && frappe.boot.lang) return frappe.boot.lang;
+		if (frappe.session && frappe.session.user_lang) return frappe.session.user_lang;
+		const htmlLang = document.documentElement.lang;
+		if (htmlLang) return htmlLang;
+		return "en";
+	}
+
+	_recognition_lang() {
+		const l = (this._lang || "en").toLowerCase();
+		if (l.startsWith("ar")) return "ar-SA";
+		if (l.startsWith("ur")) return "ur-PK";
+		if (l.startsWith("en")) return "en-US";
+		return this._lang; // pass through; falls back to en-US on recognition error
+	}
+
+	_lang_code() {
+		const l = (this._lang || "en").toLowerCase();
+		if (l.startsWith("ar")) return "AR";
+		if (l.startsWith("ur")) return "UR";
+		return "EN";
+	}
+
+	_status_text() {
+		const l = (this._lang || "en").toLowerCase();
+		if (l.startsWith("ar")) return "يستمع";
+		if (l.startsWith("ur")) return "سن رہا ہے";
+		return "Listening";
+	}
+
+	_error_msg(code) {
+		const l = (this._lang || "en").toLowerCase();
+		const isAr = l.startsWith("ar");
+		const isUr = l.startsWith("ur");
+		const tbl = {
+			"no-speech":   { en: "No speech detected, please try again",                                 ar: "لم يتم الكشف عن كلام",         ur: "کوئی آواز نہیں ملی"        },
+			"not-allowed": { en: "Microphone access denied, please allow microphone in browser settings", ar: "تم رفض الوصول إلى الميكروفون", ur: "مائیکروفون کی اجازت نہیں"  },
+			"network":     { en: "Voice recognition unavailable, please check your connection",           ar: "التعرف على الصوت غير متاح",     ur: "آواز کی پہچان دستیاب نہیں" },
+		};
+		const entry = tbl[code];
+		if (entry) return isAr ? entry.ar : isUr ? entry.ur : entry.en;
+		return isAr ? "خطأ في إدخال الصوت" : isUr ? "آواز کی غلطی" : "Voice input error, please try again";
+	}
+
+	_apply_direction() {
+		const rtl = this._recognition_lang() === "ar-SA";
+		this._chat.$input.css({
+			direction:  rtl ? "rtl" : "ltr",
+			fontFamily: rtl ? "system-ui, Arial, sans-serif" : "",
+		});
+	}
+
+	_update_lang_btn() {
+		const code = this._lang_code();
+		$("#ai-lang-toggle").attr("title", code).find(".ai-lang-label").text(code);
+		this._apply_direction();
+	}
+
+	_init() {
+		console.log(`AI Voice: detected lang="${this._lang}", recognition lang="${this._recognition_lang()}"`);
+		if (!this._supported) {
+			$("#ai-mic-btn, #ai-lang-toggle").hide();
+			return;
+		}
+		this._update_lang_btn();
+		this._bind_events();
+	}
+
+	_bind_events() {
+		$("#ai-mic-btn").on("click", () => (this._recording ? this._stop() : this._start()));
+
+		$("#ai-lang-toggle").on("click", () => {
+			const cycle = { en: "ar", ar: "ur", ur: "en" };
+			const l     = (this._lang || "en").toLowerCase();
+			const key   = l.startsWith("ar") ? "ar" : l.startsWith("ur") ? "ur" : "en";
+			this._lang  = cycle[key];
+			localStorage.setItem("ai_assistant_voice_lang", this._lang);
+			this._update_lang_btn();
+			console.log(`AI Voice: lang switched to "${this._lang}", recognition lang="${this._recognition_lang()}"`);
+		});
+	}
+
+	_start() {
+		const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+		if (!SR) return;
+
+		// iOS Safari: show one-time warning (voice works best in Chrome)
+		const isIOS    = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+		const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+		if (isIOS && isSafari && !localStorage.getItem("ai_voice_ios_warned")) {
+			localStorage.setItem("ai_voice_ios_warned", "1");
+			this._show_error("Voice input works best in Chrome");
+			return;
+		}
+
+		// Stop any stale instance to prevent "already started" error
+		if (this._recog) { try { this._recog.stop(); } catch (_) {} }
+
+		this._recog                = new SR();
+		this._recog.lang           = this._recognition_lang();
+		this._recog.continuous     = false;
+		this._recog.interimResults = true;
+
+		this._recog.onstart = () => {
+			this._recording = true;
+			$("#ai-mic-btn").addClass("recording");
+			this._show_status(this._status_text());
+		};
+
+		// Concatenate all results for real-time interim display
+		this._recog.onresult = (e) => {
+			let transcript = "";
+			for (let i = 0; i < e.results.length; i++) {
+				transcript += e.results[i][0].transcript;
+			}
+			if (transcript) this._chat.$input.val(transcript).trigger("input");
+		};
+
+		this._recog.onerror = (e) => {
+			this._stop_state();
+			this._show_error(this._error_msg(e.error));
+		};
+
+		this._recog.onend = () => this._stop_state();
+
+		try {
+			this._recog.start();
+		} catch (e) {
+			this._show_error(this._error_msg(e.name === "NotAllowedError" ? "not-allowed" : "other"));
+			this._stop_state();
+		}
+	}
+
+	_stop() {
+		if (this._recog) { try { this._recog.stop(); } catch (_) {} }
+		this._stop_state();
+	}
+
+	_stop_state() {
+		this._recording = false;
+		$("#ai-mic-btn").removeClass("recording");
+		this._hide_status();
+	}
+
+	_show_status(text) {
+		clearTimeout(this._errTimer);
+		$("#ai-voice-status").text(text).removeClass("hidden ai-voice-error");
+	}
+
+	_show_error(text) {
+		clearTimeout(this._errTimer);
+		$("#ai-voice-status").text(text).removeClass("hidden").addClass("ai-voice-error");
+		this._errTimer = setTimeout(() => this._hide_status(), 3000);
+	}
+
+	_hide_status() {
+		$("#ai-voice-status").addClass("hidden");
 	}
 }
