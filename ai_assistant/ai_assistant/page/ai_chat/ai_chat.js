@@ -70,7 +70,7 @@ class AIChatPage {
 				items: [
 					{ icon: "🧠", label: __("Business Analysis"),    msg: "Analyze my business and give me recommendations" },
 					{ icon: "🌅", label: __("Daily Summary"),         msg: "Give me the management daily summary" },
-					{ icon: "📈", label: __("Sales Trend"),           msg: "Show me the monthly sales trend for 6 months" },
+					{ icon: "📈", label: __("Monthly Sales Trend"),   msg: "Show me the monthly sales trend for 6 months" },
 					{ icon: "🏆", label: __("Top Customers"),         msg: "Show top customers this month" },
 					{ icon: "🛍️", label: __("Top Selling Items"),    msg: "Show top selling items this month" },
 				],
@@ -107,9 +107,6 @@ class AIChatPage {
 					{ icon: "👤",  label: __("Customer 360"),         msg: "give me a full customer health check" },
 					{ icon: "🚚",  label: __("PO Receipt Gap"),       msg: "show purchase orders not yet received" },
 					{ icon: "📊",  label: __("P&L Bridge"),           msg: "show monthly profit and loss bridge" },
-					{ icon: "🕐",  label: __("Overdue Invoices"),     msg: "show overdue invoices analysis" },
-					{ icon: "📈",  label: __("Monthly Sales"),        msg: "show monthly sales trend" },
-					{ icon: "🏢",  label: __("Business Overview"),    msg: "analyze my business" },
 				],
 			},
 		];
