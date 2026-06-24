@@ -174,7 +174,7 @@ def get_top_customers(period_days: int = 30, limit: int = 10) -> dict:
             "total_sales":       frappe.utils.flt(r.total_sales, 2),
             "invoice_count":     int(r.invoice_count or 0),
             "last_invoice_date": str(r.last_invoice_date or ""),
-            "currency":          frappe.defaults.get_global_default("currency") or "QAR",
+            "currency":          frappe.db.get_single_value("Global Defaults", "default_currency") or "QAR",
         }
         for r in rows
     ]
@@ -219,7 +219,7 @@ def get_top_selling_items(period_days: int = 30, limit: int = 10) -> dict:
             "item_name":    r.item_name,
             "total_qty":    frappe.utils.flt(r.total_qty, 3),
             "total_amount": frappe.utils.flt(r.total_amount, 2),
-            "currency":     r.currency or frappe.defaults.get_global_default("currency") or "QAR",
+            "currency":     r.currency or frappe.db.get_single_value("Global Defaults", "default_currency") or "QAR",
         }
         for r in rows
     ]
@@ -236,8 +236,8 @@ def get_top_selling_items(period_days: int = 30, limit: int = 10) -> dict:
 def get_pending_quotations(days_old: int = 0) -> dict:
     """Open quotations not yet converted; optionally filter by age."""
     filters: dict = {
-        "docstatus": ["in", [0, 1]],
-        "status": ["in", ["Open", "Draft"]],
+        "docstatus": 1,
+        "status": ["not in", ["Ordered", "Lost", "Cancelled"]],
     }
     if days_old:
         filters["transaction_date"] = ["<=", add_days(today(), -days_old)]
@@ -442,13 +442,26 @@ def get_open_job_cards(status: str = "", limit: int = 20) -> dict:
             }
 
     # Fallback to Maintenance Visit
-    visits = frappe.get_all(
-        "Maintenance Visit",
-        filters={"completion_status": ["in", ["Partially Completed", "Not Started"]]},
-        fields=["name", "customer", "maint_date", "purpose"],
-        order_by="maint_date asc",
-        limit=limit,
-    )
+    try:
+        visits = frappe.get_all(
+            "Maintenance Visit",
+            filters={"completion_status": ["in",
+                ["Partially Completed", "Not Started"]]},
+            fields=["name", "customer", "maint_date", "purpose",
+                    "completion_status"],
+            order_by="maint_date asc",
+            limit=limit,
+        )
+    except Exception:
+        try:
+            visits = frappe.get_all(
+                "Maintenance Visit",
+                fields=["name", "customer", "maint_date", "purpose"],
+                order_by="maint_date asc",
+                limit=limit,
+            )
+        except Exception:
+            visits = []
     return {
         "status": "ok",
         "source": "Maintenance Visit",
@@ -456,7 +469,11 @@ def get_open_job_cards(status: str = "", limit: int = 20) -> dict:
         "delayed_count": 0,
         "job_cards": visits,
         "delayed_jobs": [],
-        "message": f"{len(visits)} open maintenance visits.",
+        "message": (
+            f"{len(visits)} open maintenance visits."
+            if visits else
+            "No open job cards or maintenance visits found."
+        ),
     }
 
 
@@ -1163,31 +1180,36 @@ def get_payables_analysis() -> dict:
 def get_inactive_customers(days_inactive: int = 60) -> dict:
     """Customers who have had no Sales Invoice in the last N days."""
     cutoff = add_days(today(), -days_inactive)
+    today_str = today()
 
-    # Active customers — had an invoice in the window
-    active = frappe.db.sql("""
-        SELECT DISTINCT customer
-        FROM `tabSales Invoice`
-        WHERE docstatus=1 AND posting_date >= %s
+    # Single query: fetch all customers with their last invoice date
+    last_inv_rows = frappe.db.sql("""
+        SELECT
+            c.name,
+            c.customer_name,
+            c.mobile_no,
+            c.customer_group,
+            MAX(si.posting_date) AS last_invoice_date
+        FROM `tabCustomer` c
+        LEFT JOIN `tabSales Invoice` si
+            ON si.customer = c.name AND si.docstatus = 1
+        GROUP BY c.name, c.customer_name, c.mobile_no, c.customer_group
+        HAVING last_invoice_date IS NULL OR last_invoice_date < %s
+        ORDER BY last_invoice_date ASC
+        LIMIT 300
     """, (cutoff,), as_dict=True)
-    active_set = {r["customer"] for r in active}
 
-    all_customers = frappe.get_all(
-        "Customer",
-        fields=["name", "customer_name", "mobile_no", "customer_group"],
-        limit=300,
-    )
     inactive = []
-    for c in all_customers:
-        if c["name"] in active_set:
-            continue
-        last = frappe.db.get_value(
-            "Sales Invoice", {"customer": c["name"], "docstatus": 1},
-            "posting_date", order_by="posting_date desc",
-        )
-        c["last_purchase_date"] = str(last) if last else "Never"
-        c["days_inactive"] = date_diff(today(), str(last)) if last else 9999
-        inactive.append(c)
+    for row in last_inv_rows:
+        last = row.get("last_invoice_date")
+        inactive.append({
+            "name": row["name"],
+            "customer_name": row["customer_name"],
+            "mobile_no": row["mobile_no"],
+            "customer_group": row["customer_group"],
+            "last_purchase_date": str(last) if last else "Never",
+            "days_inactive": date_diff(today_str, str(last)) if last else 9999,
+        })
 
     inactive.sort(key=lambda x: -(x.get("days_inactive") or 0))
     inactive = inactive[:30]
@@ -2051,12 +2073,22 @@ def get_sales_pipeline_status(days: int = 90) -> dict:
         pipeline_val_orders = 0.0
         days_q_so         = []
         for q in quotes:
-            sos = frappe.get_all(
-                "Sales Order",
-                filters=[["quotation_name", "=", q.name], ["docstatus", "=", 1]],
-                fields=["name", "transaction_date", "base_grand_total"],
+            so_items = frappe.get_all(
+                "Sales Order Item",
+                filters=[["prevdoc_docname", "=", q.name], ["docstatus", "=", 1]],
+                fields=["parent"],
                 limit=1,
             )
+            sos = []
+            if so_items:
+                so_data = frappe.db.get_value(
+                    "Sales Order",
+                    so_items[0].parent,
+                    ["name", "transaction_date", "base_grand_total"],
+                    as_dict=True,
+                )
+                if so_data:
+                    sos = [so_data]
             if sos:
                 converted_names.add(q.name)
                 pipeline_val_orders += flt(sos[0].base_grand_total)
@@ -2071,12 +2103,22 @@ def get_sales_pipeline_status(days: int = 90) -> dict:
         for q in quotes:
             if q.name not in converted_names:
                 continue
-            sos = frappe.get_all(
-                "Sales Order",
-                filters=[["quotation_name", "=", q.name], ["docstatus", "=", 1]],
-                fields=["name", "transaction_date"],
+            so_items = frappe.get_all(
+                "Sales Order Item",
+                filters=[["prevdoc_docname", "=", q.name], ["docstatus", "=", 1]],
+                fields=["parent"],
                 limit=1,
             )
+            sos = []
+            if so_items:
+                so_data = frappe.db.get_value(
+                    "Sales Order",
+                    so_items[0].parent,
+                    ["name", "transaction_date"],
+                    as_dict=True,
+                )
+                if so_data:
+                    sos = [so_data]
             if not sos:
                 continue
             so = sos[0]
@@ -2103,12 +2145,22 @@ def get_sales_pipeline_status(days: int = 90) -> dict:
         for q in quotes:
             if q.name not in invoiced_names:
                 continue
-            sos = frappe.get_all(
-                "Sales Order",
-                filters=[["quotation_name", "=", q.name], ["docstatus", "=", 1]],
-                fields=["name"],
+            so_items = frappe.get_all(
+                "Sales Order Item",
+                filters=[["prevdoc_docname", "=", q.name], ["docstatus", "=", 1]],
+                fields=["parent"],
                 limit=1,
             )
+            sos = []
+            if so_items:
+                so_data = frappe.db.get_value(
+                    "Sales Order",
+                    so_items[0].parent,
+                    ["name", "transaction_date"],
+                    as_dict=True,
+                )
+                if so_data:
+                    sos = [so_data]
             if not sos:
                 continue
             inv_items = frappe.get_all(
@@ -2260,7 +2312,7 @@ def get_customer_360(customer: str, days: int = 180) -> dict:
         open_quotes = frappe.get_all(
             "Quotation",
             filters=[["party_name", "=", customer], ["docstatus", "=", 1],
-                     ["status", "in", ["Open", "Draft"]]],
+                     ["status", "not in", ["Ordered", "Lost", "Cancelled"]]],
             fields=["name", "transaction_date", "base_grand_total", "currency"],
             limit=20,
         )
