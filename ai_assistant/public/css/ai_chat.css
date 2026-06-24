@@ -1292,8 +1292,8 @@
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 6px;
-	margin: 0 0 7px;
+	gap: 7px;
+	margin: 0 0 8px;
 }
 .ai-analysis-object-card .ai-card-meta-row {
 	margin-bottom: 0;
@@ -1330,7 +1330,8 @@
 }
 .ai-score-pill,
 .ai-severity-badge,
-.ai-priority-badge {
+.ai-priority-badge,
+.ai-analysis-pill {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -1340,13 +1341,34 @@
 	font-size: 0.68rem;
 	font-weight: 800;
 	line-height: 1.35;
-	text-transform: capitalize;
 	border: 1px solid transparent;
 }
 .ai-score-pill {
 	background: #f8fafc;
 	color: #334155;
 	border-color: #cbd5e1;
+}
+.ai-severity-badge,
+.ai-priority-badge {
+	text-transform: uppercase;
+	letter-spacing: 0.02em;
+}
+.ai-analysis-pill {
+	background: #f8fafc;
+	color: #475569;
+	border-color: #cbd5e1;
+	font-weight: 700;
+	text-transform: none;
+}
+.ai-analysis-pill.owner {
+	background: #eff6ff;
+	color: #1d4ed8;
+	border-color: #bfdbfe;
+}
+.ai-analysis-pill.related {
+	background: #f8fafc;
+	color: #64748b;
+	border-color: #e2e8f0;
 }
 .ai-severity-badge.low,
 .ai-priority-badge.low {

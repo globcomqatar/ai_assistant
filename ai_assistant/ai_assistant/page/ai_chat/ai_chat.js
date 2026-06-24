@@ -1426,6 +1426,28 @@ class AIChatPage {
 			return frappe.utils.escape_html(text);
 		}
 
+		_parse_analysis_object_string(value) {
+			if (typeof value !== "string") return value;
+			const trimmed = value.trim();
+			if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) return value;
+			try {
+				return JSON.parse(trimmed);
+			} catch (e) {
+				// Some providers return Python-style dict strings. Convert only simple
+				// quoted key/value structures used by report analysis payloads.
+				try {
+					const jsonish = trimmed
+						.replace(/\bNone\b/g, "null")
+						.replace(/\bTrue\b/g, "true")
+						.replace(/\bFalse\b/g, "false")
+						.replace(/'([^'\\]*(?:\\.[^'\\]*)*)'/g, (_, text) => `"${text.replace(/"/g, '\\"')}"`);
+					return JSON.parse(jsonish);
+				} catch (inner) {
+					return value;
+				}
+			}
+		}
+
 		_analysis_item_title(item, sectionType) {
 			const fallbackBySection = {
 				risk: __("Business Risk"),
@@ -1451,7 +1473,31 @@ class AIChatPage {
 			</div>`;
 		}
 
+		_analysis_pill(label, value, cls = "") {
+			const text = this._analysis_scalar(value);
+			if (!text) return "";
+			return `<span class="ai-analysis-pill ${cls}">
+				${frappe.utils.escape_html(label)}${label ? ": " : ""}${frappe.utils.escape_html(text)}
+			</span>`;
+		}
+
+		_analysis_related_pill(item) {
+			const doctype = this._analysis_scalar(item.related_doctype);
+			const doc = this._analysis_scalar(item.related_document);
+			if (!doctype && !doc) return "";
+			return `<span class="ai-analysis-pill related">
+				${frappe.utils.escape_html([doctype, doc].filter(Boolean).join(": "))}
+			</span>`;
+		}
+
+		_analysis_score_pill(score, label) {
+			if (score === null || score === undefined || score === "") return "";
+			const val = Math.max(0, Math.min(100, parseInt(score, 10) || 0));
+			return `<span class="ai-score-pill">${frappe.utils.escape_html(label)}: ${val}/100</span>`;
+		}
+
 		renderAnalysisItem(item, sectionType = "generic") {
+			item = this._parse_analysis_object_string(item);
 			if (item === null || item === undefined) return "";
 			if (typeof item !== "object") {
 				return `<div class="ai-advisory-item">
@@ -1473,20 +1519,53 @@ class AIChatPage {
 				action: "ti ti-player-play",
 				required_action: "ti ti-player-play",
 			}[sectionType] || "ti ti-list-details";
-			const bodyFields = [
-				this._analysis_field(__("Description"), item.description || item.text, "primary"),
-				this._analysis_field(__("Impact"), item.impact),
-				this._analysis_field(__("Business Impact"), item.business_impact),
-				this._analysis_field(__("Expected Impact"), item.expected_impact),
-				this._analysis_field(__("Owner"), item.owner_role),
-				this._analysis_field(__("Next Step"), item.suggested_next_step),
-			].join("");
-			const meta = [
-				item.severity ? this._severity_badge(item.severity) : "",
-				item.priority ? this._priority_badge(item.priority) : "",
-				item.risk_score !== undefined && item.risk_score !== null ? this._score_pill(item.risk_score, __("Risk")) : "",
-				item.opportunity_score !== undefined && item.opportunity_score !== null ? this._score_pill(item.opportunity_score, __("Score")) : "",
-			].filter(Boolean).join("");
+			let bodyFields = "";
+			let meta = "";
+
+			if (sectionType === "risk") {
+				meta = [
+					item.severity ? this._severity_badge(item.severity) : "",
+					this._analysis_score_pill(item.risk_score, __("Risk Score")),
+				].filter(Boolean).join("");
+				bodyFields = [
+					this._analysis_field(__("Business Impact"), item.business_impact, "primary"),
+					this._analysis_field(__("Impact"), item.impact),
+					this._analysis_field(__("Description"), item.description || item.text),
+				].join("");
+			} else if (sectionType === "opportunity") {
+				meta = [
+					this._analysis_score_pill(item.opportunity_score, __("Opportunity Score")),
+				].filter(Boolean).join("");
+				bodyFields = [
+					this._analysis_field(__("Expected Impact"), item.expected_impact, "primary"),
+					this._analysis_field(__("Impact"), item.impact),
+					this._analysis_field(__("Description"), item.description || item.text),
+				].join("");
+			} else if (sectionType === "required_action") {
+				meta = [
+					item.priority ? this._priority_badge(item.priority) : "",
+					this._analysis_pill(__("Owner"), item.owner_role, "owner"),
+					this._analysis_related_pill(item),
+				].filter(Boolean).join("");
+				bodyFields = [
+					this._analysis_field(__("Next Step"), item.suggested_next_step, "primary"),
+					this._analysis_field(__("Impact"), item.impact),
+					this._analysis_field(__("Description"), item.description),
+				].join("");
+			} else if (sectionType === "recommendation") {
+				meta = [
+					item.priority ? this._priority_badge(item.priority) : "",
+				].filter(Boolean).join("");
+				bodyFields = [
+					this._analysis_field(__("Recommendation"), item.text || item.description || item.title, "primary"),
+					this._analysis_field(__("Impact"), item.impact),
+				].join("");
+			} else {
+				bodyFields = [
+					this._analysis_field(__("Description"), item.description || item.text || item.title, "primary"),
+					this._analysis_field(__("Impact"), item.impact),
+				].join("");
+			}
 
 			return `<div class="ai-advisory-card ${cardType} ai-analysis-object-card">
 				<div class="ai-advisory-card-top">
@@ -1503,12 +1582,13 @@ class AIChatPage {
 			if (!arr.length) return "";
 			return `<div class="ai-advisory-list ${cls}">
 				${arr.map((item, idx) => {
-					if (item && typeof item === "object") {
-						return this.renderAnalysisItem(item, sectionType);
+					const normalized = this._parse_analysis_object_string(item);
+					if (normalized && typeof normalized === "object") {
+						return this.renderAnalysisItem(normalized, sectionType);
 					}
 					return `<div class="ai-advisory-item">
 						<span class="ai-advisory-item-marker">${idx + 1}</span>
-						<span>${this._analysis_text(item)}</span>
+						<span>${this._analysis_text(normalized)}</span>
 					</div>`;
 				}).join("")}
 			</div>`;
