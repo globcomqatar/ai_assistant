@@ -1237,6 +1237,22 @@
 	border-color: #fde68a;
 	border-left: 4px solid #f59e0b;
 }
+.ai-advisory-card.finding,
+.ai-advisory-card.root_cause,
+.ai-advisory-card.recommendation,
+.ai-advisory-card.generic {
+	border-left: 4px solid #2563eb;
+}
+.ai-advisory-card.root_cause {
+	border-left-color: #64748b;
+}
+.ai-advisory-card.recommendation {
+	border-left-color: #16a34a;
+}
+.ai-analysis-object-card {
+	display: grid;
+	gap: 7px;
+}
 .ai-advisory-card-top {
 	display: flex;
 	align-items: flex-start;
@@ -1268,12 +1284,43 @@
 	background: #fef3c7;
 	color: #b45309;
 }
+.ai-card-icon.neutral {
+	background: #e0f2fe;
+	color: #0369a1;
+}
 .ai-card-meta-row {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
 	gap: 6px;
 	margin: 0 0 7px;
+}
+.ai-analysis-object-card .ai-card-meta-row {
+	margin-bottom: 0;
+}
+.ai-analysis-field {
+	display: grid;
+	gap: 2px;
+	padding: 7px 8px;
+	background: rgba(255,255,255,0.68);
+	border: 1px solid rgba(15,23,42,0.06);
+	border-radius: 7px;
+}
+.ai-analysis-field.primary {
+	background: rgba(248,250,252,0.9);
+}
+.ai-analysis-field-label {
+	color: var(--text-muted);
+	font-size: 0.66rem;
+	font-weight: 800;
+	letter-spacing: 0.03em;
+	text-transform: uppercase;
+}
+.ai-analysis-field-value {
+	color: var(--text-color);
+	font-size: 0.78rem;
+	line-height: 1.45;
+	overflow-wrap: anywhere;
 }
 .ai-advisory-card p {
 	margin: 0;
