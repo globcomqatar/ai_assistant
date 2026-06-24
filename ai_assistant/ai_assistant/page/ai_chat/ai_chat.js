@@ -64,49 +64,77 @@ class AIChatPage {
 	}
 
 	_sidebar_groups() {
+		const svg = {
+			chart:    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`,
+			calendar: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
+			trending: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`,
+			star:     `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+			bag:      `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>`,
+			warning:  `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+			target:   `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`,
+			users:    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>`,
+			file:     `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>`,
+			box:      `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>`,
+			tool:     `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>`,
+			useroff:  `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="23" y1="1" x2="17" y2="7"/><line x1="17" y1="1" x2="23" y2="7"/></svg>`,
+			useradd:  `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg>`,
+			fileplus: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>`,
+			leak:     `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,
+			filter:   `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>`,
+			usercheck:`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>`,
+			truck:    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>`,
+			pulse:    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`,
+			bolt:     `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
+		};
+
 		return [
 			{
 				label: __("Business Intelligence"),
+				icon: svg.chart,
 				items: [
-					{ icon: "ti-brain",          label: __("Business Analysis"),   msg: "Analyze my business and give me recommendations" },
-					{ icon: "ti-calendar-stats", label: __("Daily Summary"),       msg: "Give me the management daily summary" },
-					{ icon: "ti-trending-up",    label: __("Monthly Sales Trend"), msg: "Show me the monthly sales trend for 6 months" },
-					{ icon: "ti-trophy",         label: __("Top Customers"),       msg: "Show top customers this month" },
-					{ icon: "ti-shopping-bag",   label: __("Top Selling Items"),   msg: "Show top selling items this month" },
+					{ icon: svg.chart,    label: __("Business Analysis"),   msg: "Analyze my business and give me recommendations" },
+					{ icon: svg.calendar, label: __("Daily Summary"),       msg: "Give me the management daily summary" },
+					{ icon: svg.trending, label: __("Monthly Sales Trend"), msg: "Show me the monthly sales trend for 6 months" },
+					{ icon: svg.star,     label: __("Top Customers"),       msg: "Show top customers this month" },
+					{ icon: svg.bag,      label: __("Top Selling Items"),   msg: "Show top selling items this month" },
 				],
 			},
 			{
 				label: __("Collections & AR"),
+				icon: svg.warning,
 				items: [
-					{ icon: "ti-alert-triangle", label: __("Overdue Invoices"),   msg: "Show overdue invoices" },
-					{ icon: "ti-target",         label: __("Follow-Up List"),     msg: "Who needs follow-up? Show me follow-up opportunities" },
-					{ icon: "ti-users",          label: __("Overdue Customers"),  msg: "Show customers with overdue balance" },
-					{ icon: "ti-file-invoice",   label: __("Pending Quotations"), msg: "Show pending quotations" },
+					{ icon: svg.warning, label: __("Overdue Invoices"),   msg: "Show overdue invoices" },
+					{ icon: svg.target,  label: __("Follow-Up List"),     msg: "Who needs follow-up? Show me follow-up opportunities" },
+					{ icon: svg.users,   label: __("Overdue Customers"),  msg: "Show customers with overdue balance" },
+					{ icon: svg.file,    label: __("Pending Quotations"), msg: "Show pending quotations" },
 				],
 			},
 			{
 				label: __("Composite Reports"),
+				icon: svg.pulse,
 				items: [
-					{ icon: "ti-alert-circle",   label: __("Revenue Leakage"),    msg: "show me sales orders that have not been invoiced" },
-					{ icon: "ti-filter",         label: __("Sales Pipeline"),     msg: "show full sales pipeline from quote to cash" },
-					{ icon: "ti-user-check",     label: __("Customer 360"),       msg: "give me a full customer health check" },
-					{ icon: "ti-truck",          label: __("PO Receipt Gap"),     msg: "show purchase orders not yet received" },
-					{ icon: "ti-chart-bar",      label: __("P&L Bridge"),         msg: "show monthly profit and loss bridge" },
+					{ icon: svg.leak,      label: __("Revenue Leakage"), msg: "show me sales orders that have not been invoiced" },
+					{ icon: svg.filter,    label: __("Sales Pipeline"),  msg: "show full sales pipeline from quote to cash" },
+					{ icon: svg.usercheck, label: __("Customer 360"),    msg: "give me a full customer health check" },
+					{ icon: svg.truck,     label: __("PO Receipt Gap"),  msg: "show purchase orders not yet received" },
+					{ icon: svg.pulse,     label: __("P&L Bridge"),      msg: "show monthly profit and loss bridge" },
 				],
 			},
 			{
 				label: __("Operations"),
+				icon: svg.box,
 				items: [
-					{ icon: "ti-package",        label: __("Stock Alerts"),       msg: "Show stock alerts and low stock items" },
-					{ icon: "ti-tool",           label: __("Open Job Cards"),     msg: "Show open workshop job cards" },
-					{ icon: "ti-user-off",       label: __("Inactive Customers"), msg: "Show inactive customers in the last 60 days" },
+					{ icon: svg.box,     label: __("Stock Alerts"),       msg: "Show stock alerts and low stock items" },
+					{ icon: svg.tool,    label: __("Open Job Cards"),     msg: "Show open workshop job cards" },
+					{ icon: svg.useroff, label: __("Inactive Customers"), msg: "Show inactive customers in the last 60 days" },
 				],
 			},
 			{
 				label: __("Quick Actions"),
+				icon: svg.bolt,
 				items: [
-					{ icon: "ti-user-plus",      label: __("New Customer"),       msg: "Create customer " },
-					{ icon: "ti-file-plus",      label: __("New Quotation"),      msg: "Create quotation for customer " },
+					{ icon: svg.useradd,  label: __("New Customer"),  msg: "Create customer " },
+					{ icon: svg.fileplus, label: __("New Quotation"), msg: "Create quotation for customer " },
 				],
 			},
 		];
@@ -114,24 +142,20 @@ class AIChatPage {
 
 	_render() {
 		const sidebarHtml = this._sidebar_groups()
-			.map((group, idx) => `
+			.map(group => `
 			<div class="ai-sn-section">
-				<button class="ai-sn-section-label ${idx === 0 ? "open" : ""}"
-						data-idx="${idx}" type="button">
+				<div class="ai-sn-section-label">
+					${group.icon}
 					${group.label}
-					<i class="ti ti-chevron-down ai-sn-section-chevron"
-					   aria-hidden="true"></i>
-				</button>
-				<div class="ai-sn-items ${idx === 0 ? "open" : ""}">
-					${group.items.map(item => `
-						<button class="ai-sn-item"
-								data-msg="${frappe.utils.escape_html(item.msg)}"
-								type="button">
-							<i class="ti ${item.icon} ai-sn-ico"
-							   aria-hidden="true"></i>
-							<span class="ai-sn-lbl">${item.label}</span>
-						</button>`).join("")}
 				</div>
+				${group.items.map(item => `
+					<button class="ai-sn-item"
+							data-msg="${frappe.utils.escape_html(item.msg)}"
+							type="button">
+						<span class="ai-sn-ico">${item.icon}</span>
+						<span class="ai-sn-lbl">${item.label}</span>
+					</button>`).join("")}
+				<div class="ai-sn-divider"></div>
 			</div>`).join("");
 
 		const html = `
@@ -142,17 +166,21 @@ class AIChatPage {
 
 			<!-- ── Left Navigation Sidebar ── -->
 			<div class="ai-sn" id="ai-sidebar">
-				<header class="ai-sn-hdr">
-					<div class="ai-sn-brand">
-						<div class="ai-sn-logo-mark"><i class="ti ti-sparkles" aria-hidden="true"></i></div>
-						<span class="ai-sn-brand-text">${__("Quick Actions")}</span>
+				<div class="ai-sn-brand">
+					<div class="ai-sn-logo-mark">
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M12 2L2 7l10 5 10-5-10-5z"/>
+							<path d="M2 17l10 5 10-5"/>
+							<path d="M2 12l10 5 10-5"/>
+						</svg>
 					</div>
+					<span class="ai-sn-brand-text">${__("Quick Actions")}</span>
 					<button class="ai-sn-close-btn" id="ai-sb-toggle" title="${__("Collapse sidebar")}">
 						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
 							<polyline points="15 18 9 12 15 6"></polyline>
 						</svg>
 					</button>
-				</header>
+				</div>
 				<div class="ai-sn-scroll" id="ai-sb-body">
 					${sidebarHtml}
 				</div>
@@ -353,22 +381,6 @@ class AIChatPage {
 			if (this._is_overlay()) this._collapse_sidebar();
 		});
 
-		// Accordion — click group label to expand/collapse
-		$(this.wrapper).on("click", ".ai-sn-section-label", function () {
-			const $label = $(this);
-			const $items = $label.next(".ai-sn-items");
-			const isOpen = $label.hasClass("open");
-
-			// Close all groups
-			$(".ai-sn-section-label").removeClass("open");
-			$(".ai-sn-items").removeClass("open");
-
-			// Open clicked group if it was closed
-			if (!isOpen) {
-				$label.addClass("open");
-				$items.addClass("open");
-			}
-		});
 	}
 
 	_collapse_sidebar() {
@@ -460,7 +472,7 @@ class AIChatPage {
 			const reason = routing.reason ? ` — ${frappe.utils.escape_html(routing.reason)}` : "";
 			this.$messages.append(
 				`<div class="ai-routing-note">
-					<span class="ai-routing-note-icon">⚡</span>
+					<span class="ai-routing-note-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
 					${__("Supervisor routed to")} <strong>${name}</strong>${reason}
 				</div>`
 			);
@@ -2082,24 +2094,23 @@ class AIChatPage {
 	}
 
 	_render_agent_bar(agents) {
-		const agentIconMap = {
-			"supervisor":                    "ti-robot",
-			"sales":                         "ti-currency-dollar",
-			"sales agent":                   "ti-currency-dollar",
-			"marketing":                     "ti-speakerphone",
-			"marketing agent":               "ti-speakerphone",
-			"accounts":                      "ti-report-money",
-			"accounts agent":                "ti-report-money",
-			"operations":                    "ti-package",
-			"operations agent":              "ti-package",
-			"business intelligence":         "ti-chart-line",
-			"business intelligence agent":   "ti-chart-line",
-			"bi":                            "ti-chart-line",
-			"bi agent":                      "ti-chart-line",
-			"hr":                            "ti-users",
-			"hr agent":                      "ti-users",
-			"general":                       "ti-message-circle",
+		const agentSvgMap = {
+			"supervisor":                  `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>`,
+			"sales":                       `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>`,
+			"sales agent":                 `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>`,
+			"marketing":                   `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`,
+			"marketing agent":             `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`,
+			"accounts":                    `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`,
+			"accounts agent":              `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`,
+			"operations":                  `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>`,
+			"operations agent":            `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>`,
+			"business intelligence":       `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`,
+			"business intelligence agent": `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`,
+			"hr":                          `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>`,
+			"hr agent":                    `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>`,
 		};
+		const defaultPillSvg = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>`;
+
 		const pills = agents.map(a => {
 			const isActive = a.agent_code === this.current_agent;
 			const agentKey = (
@@ -2108,12 +2119,12 @@ class AIChatPage {
 				a.name ||
 				""
 			).toLowerCase().trim();
-			const pillIcon = agentIconMap[agentKey] || "ti-robot";
+			const pillSvg = agentSvgMap[agentKey] || defaultPillSvg;
 			return `<button class="ai-agent-pill${isActive ? " active" : ""}"
 				data-agent="${frappe.utils.escape_html(a.agent_code)}"
 				style="--agent-color: ${frappe.utils.escape_html(a.color || "#2563eb")}"
 				title="${frappe.utils.escape_html(a.description || a.agent_name)}">
-				<i class="ti ${pillIcon} ai-agent-pill-icon" aria-hidden="true"></i>
+				<span class="ai-agent-pill-icon">${pillSvg}</span>
 				<span class="ai-agent-pill-name">${frappe.utils.escape_html(a.agent_name)}</span>
 			</button>`;
 		}).join("");

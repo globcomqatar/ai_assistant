@@ -38,224 +38,6 @@
 	box-shadow: 0 2px 16px rgba(0,0,0,0.06);
 }
 
-/* ═══════════════════════════════════════════════════════════
-   LEFT NAVIGATION SIDEBAR — absolutely pinned to left edge
-   ══════════════════════════════════════════════════════════ */
-.ai-sn {
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  bottom: 0 !important;
-  width: 230px !important;
-  background: var(--bg-color) !important;
-  border-right: 1px solid var(--border-color) !important;
-  display: flex !important;
-  flex-direction: column !important;
-  overflow: hidden !important;
-  border-radius: 10px 0 0 10px;
-  transition: left 0.22s ease, width 0.22s ease;
-  z-index: 1;
-}
-
-/* Collapsed: slide sidebar off-screen */
-.ai-layout--collapsed .ai-sn {
-	left: -230px !important;
-	width: 0 !important;
-}
-
-/* Sidebar header bar */
-.ai-sn-hdr {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	padding: 14px 12px 12px;
-	border-bottom: 1px solid var(--border-color);
-	flex-shrink: 0;
-}
-
-.ai-sn-brand {
-	display: flex;
-	align-items: center;
-	gap: 7px;
-	overflow: hidden;
-}
-
-.ai-sn-brand-icon {
-	font-size: 1rem;
-	flex-shrink: 0;
-}
-
-.ai-sn-brand-text {
-	font-size: 0.72rem;
-	font-weight: 700;
-	color: var(--text-color);
-	text-transform: uppercase;
-	letter-spacing: 0.07em;
-	white-space: nowrap;
-	overflow: hidden;
-}
-
-/* Collapse button */
-.ai-sn-close-btn {
-  background: var(--fg-hover, rgba(0,0,0,0.05));
-  border: 1px solid var(--border-color);
-  color: var(--text-muted);
-  border-radius: 6px;
-  cursor: pointer;
-  width: 26px;
-  height: 26px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: background 0.15s, color 0.15s;
-}
-.ai-sn-close-btn:hover { background: var(--control-bg); color: var(--text-color); }
-
-/* Expand button (shown in chat header when sidebar is collapsed) */
-.ai-sn-open-btn {
-  background: var(--fg-hover, rgba(0,0,0,0.05));
-  border: none;
-  color: var(--text-muted);
-  border-radius: 6px;
-  cursor: pointer;
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  margin-right: 4px;
-  transition: background 0.15s;
-}
-.ai-sn-open-btn:hover { background: var(--control-bg); }
-.ai-sn-open-btn.hidden { display: none !important; }
-
-/* Scrollable nav body */
-.ai-sn-scroll {
-	flex: 1;
-	overflow-y: auto;
-	overflow-x: hidden;
-	padding: 6px 0 16px;
-	scrollbar-width: thin;
-	scrollbar-color: var(--border-color) transparent;
-}
-.ai-sn-scroll::-webkit-scrollbar { width: 3px; }
-.ai-sn-scroll::-webkit-scrollbar-track { background: transparent; }
-.ai-sn-scroll::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 2px; }
-
-/* Section */
-.ai-sn-section {
-	margin-bottom: 0;
-}
-
-/* Accordion section header button */
-.ai-sn-section-label {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 8px 14px 7px;
-  cursor: pointer;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: none;
-  letter-spacing: 0;
-  color: var(--text-muted);
-  border: none;
-  border-top: 1px solid var(--border-color);
-  background: transparent;
-  text-align: left;
-  user-select: none;
-  transition: color 0.12s, background 0.12s;
-}
-.ai-sn-section:first-child .ai-sn-section-label {
-  border-top: none;
-}
-.ai-sn-section-label:hover {
-  color: var(--text-color);
-  background: var(--fg-hover, rgba(0,0,0,0.03));
-}
-.ai-sn-section-label.open {
-  color: #2563eb;
-}
-
-/* Chevron icon */
-.ai-sn-section-chevron {
-  font-size: 13px;
-  transition: transform 0.2s ease;
-  color: var(--text-muted);
-  flex-shrink: 0;
-}
-.ai-sn-section-label.open .ai-sn-section-chevron {
-  transform: rotate(180deg);
-  color: #2563eb;
-}
-
-/* Animated item group wrapper */
-.ai-sn-items {
-  overflow: hidden;
-  max-height: 0;
-  opacity: 0;
-  transition: max-height 0.22s ease, opacity 0.18s ease;
-  padding: 0 6px;
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 1px;
-}
-.ai-sn-items.open {
-  max-height: 400px;
-  opacity: 1;
-  padding: 2px 6px 6px;
-}
-
-/* Individual nav item */
-.ai-sn-item {
-	display: flex;
-	align-items: center;
-	gap: 9px;
-	width: 100%;
-	padding: 7px 10px;
-	border: none;
-	border-radius: 7px;
-	background: transparent;
-	color: var(--text-color);
-	font-size: 0.8rem;
-	font-weight: 400;
-	cursor: pointer;
-	text-align: left;
-	transition: background 0.12s, color 0.12s, transform 0.1s;
-	white-space: nowrap;
-	overflow: hidden;
-}
-.ai-sn-item:hover {
-  background: var(--fg-hover, rgba(0,0,0,0.04));
-  color: var(--ai-accent);
-  transform: translateX(2px);
-}
-.ai-sn-item:active {
-  background: var(--ai-accent-muted);
-	color: var(--text-color);
-	transform: translateX(2px);
-}
-
-.ai-sn-ico {
-	font-size: 0.88rem;
-	flex-shrink: 0;
-	width: 20px;
-	text-align: center;
-	line-height: 1;
-	opacity: 0.85;
-}
-
-.ai-sn-lbl {
-	flex: 1;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	line-height: 1.35;
-}
-
-
 /* ── Chat container — fills the space right of the sidebar ── */
 .ai-chat-container {
 	position: absolute !important;
@@ -389,8 +171,8 @@
 	word-break: break-word;
 }
 .ai-msg-user .ai-msg-bubble {
-	background: rgba(37,99,235,0.10);
-	color: #1e40af;
+	background: #2563eb;
+	color: #fff;
 	border: 0.5px solid rgba(37,99,235,0.25);
 	border-bottom-right-radius: 4px;
 }
@@ -424,8 +206,8 @@
 	flex-shrink: 0;
 }
 .ai-msg-avatar--user {
-	background: rgba(37,99,235,0.15);
-	color: #2563eb;
+	background-color: #2563eb;
+    color: #fff;
 	font-size: 0.65rem;
 }
 .ai-msg-avatar--bot {
@@ -609,6 +391,7 @@
 	overflow: hidden;
 	max-width: 100%;
 	align-self: flex-start;
+	margin: 10px 0;
 }
 .ai-result-card--error { border-color: #fecaca; }
 
@@ -961,8 +744,6 @@
    RESPONSIVE — MacBook / small laptop  (1024px – 1279px)
    ══════════════════════════════════════════════════════════ */
 @media (max-width: 1279px) and (min-width: 1024px) {
-	.ai-sn { width: 210px !important; }
-	.ai-layout--collapsed .ai-sn { left: -210px !important; }
 	.ai-chat-header { padding: 10px 14px; }
 	.ai-chat-title  { font-size: 0.92rem; }
 }
@@ -971,13 +752,6 @@
    RESPONSIVE — iPad / tablet  (768px – 1023px)
    ══════════════════════════════════════════════════════════ */
 @media (max-width: 1023px) {
-	/* Sidebar floats over chat as a drawer */
-	.ai-sn {
-		z-index: 20 !important;
-		border-radius: 10px 0 0 10px !important;
-		box-shadow: 4px 0 24px rgba(0,0,0,0.3);
-	}
-
 	/* Chat always fills full width */
 	.ai-chat-container {
 		left: 0 !important;
@@ -1012,13 +786,6 @@
 		border-radius: 8px !important;
 		border-left: none;
 		border-right: none;
-	}
-
-	/* Sidebar full-height drawer */
-	.ai-sn {
-		width: 82vw !important;
-		max-width: 300px !important;
-		border-radius: 0 !important;
 	}
 
 	/* Compact header */
@@ -1156,7 +923,7 @@
 	border-left: 3px solid #2563eb;
 	border-radius: 6px;
 	padding: 5px 12px;
-	margin: 6px 0 2px;
+	margin: 10px 0 10px;
 	font-style: italic;
 }
 .ai-routing-note-icon { font-style: normal; font-size: 0.85rem; }
@@ -1306,16 +1073,251 @@
 }
 .ai-analysis-section.required-actions .ai-analysis-section-header { color: #b45309; }
 
-/* ── Logo mark in sidebar brand ── */
+/* ══════════════════════════════════════════
+   SIDEBAR — Frappe ERPNext Standard Style
+   ══════════════════════════════════════════ */
+
+.ai-sn {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  bottom: 0 !important;
+  width: 232px !important;
+  background: var(--bg-color) !important;
+  border-right: 1px solid var(--border-color) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  border-radius: 8px 0 0 8px;
+  z-index: 1;
+  transition: left 0.22s ease;
+}
+
+/* Collapsed: slide sidebar off-screen */
+.ai-layout--collapsed .ai-sn {
+  left: -232px !important;
+  width: 0 !important;
+}
+
+/* Brand / header */
+.ai-sn-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
 .ai-sn-logo-mark {
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   border-radius: 6px;
-  background: var(--ai-accent);
+  background: #2563eb;
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.8rem;
   flex-shrink: 0;
+}
+.ai-sn-brand-text {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--heading-color);
+  line-height: 1.2;
+}
+.ai-sn-brand-sub {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  line-height: 1.2;
+}
+.ai-sn-close-btn {
+  margin-left: auto;
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.12s;
+}
+.ai-sn-close-btn:hover {
+  background: var(--control-bg);
+  color: var(--text-color);
+}
+
+/* Scroll container */
+.ai-sn-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+}
+.ai-sn-scroll::-webkit-scrollbar { width: 4px; }
+.ai-sn-scroll::-webkit-scrollbar-track { background: transparent; }
+.ai-sn-scroll::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 2px;
+}
+
+/* Section wrapper */
+.ai-sn-section {
+  margin-bottom: 2px;
+}
+
+/* Section label — Frappe standard small-caps style */
+.ai-sn-section-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px 4px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  user-select: none;
+  cursor: default;
+}
+.ai-sn-section-label svg {
+  width: 12px;
+  height: 12px;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+/* Divider between sections */
+.ai-sn-divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 6px 14px 4px;
+  opacity: 0.6;
+}
+
+/* Nav items — Frappe left-border active style */
+.ai-sn-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 6px 14px 6px 12px;
+  background: transparent;
+  border: none;
+  border-left: 3px solid transparent;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.800rem;
+  color: var(--text-color);
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  line-height: 1.4;
+}
+.ai-sn-item:hover {
+  background: var(--control-bg);
+  color: var(--text-color);
+  border-left-color: var(--border-color);
+}
+.ai-sn-item.active,
+.ai-sn-item:active {
+  background: #eff6ff;
+  color: #2563eb;
+  border-left-color: #2563eb;
+  font-weight: 500;
+}
+
+/* Item icon (SVG container) */
+.ai-sn-ico {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  opacity: 0.55;
+  transition: opacity 0.12s;
+}
+.ai-sn-item:hover .ai-sn-ico,
+.ai-sn-item.active .ai-sn-ico {
+  opacity: 1;
+}
+.ai-sn-item.active .ai-sn-ico svg {
+  stroke: #2563eb;
+}
+
+/* Item label */
+.ai-sn-lbl {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Open button (collapsed state) */
+.ai-sn-open-btn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  border-radius: 6px;
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-right: 6px;
+  transition: background 0.12s;
+}
+.ai-sn-open-btn:hover {
+  background: var(--control-bg);
+}
+.ai-sn-open-btn.hidden { display: none !important; }
+
+/* Agent pill icon sizing */
+.ai-agent-pill-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.ai-agent-pill-icon svg {
+  width: 13px;
+  height: 13px;
+}
+.ai-agent-pill.active .ai-agent-pill-icon svg {
+  stroke: #fff;
+}
+
+/* Routing note icon */
+.ai-routing-note-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: #2563eb;
+}
+
+/* Responsive — MacBook */
+@media (max-width: 1279px) and (min-width: 1024px) {
+  .ai-sn { width: 210px !important; }
+  .ai-layout--collapsed .ai-sn { left: -210px !important; }
+}
+
+/* Responsive — tablet */
+@media (max-width: 1023px) {
+  .ai-sn {
+    z-index: 20 !important;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.3);
+  }
+}
+
+/* Responsive — mobile */
+@media (max-width: 767px) {
+  .ai-sn {
+    width: 82vw !important;
+    max-width: 300px !important;
+    border-radius: 0 !important;
+  }
 }
