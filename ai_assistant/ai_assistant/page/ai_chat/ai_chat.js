@@ -1545,6 +1545,42 @@ class AIChatPage {
 			</div>`;
 		}
 
+		_action_center_error_message(method, response) {
+			const details = [];
+			const add = (value) => {
+				if (value === undefined || value === null || value === "") return;
+				const text = String(value);
+				if (!details.includes(text)) details.push(text);
+			};
+			add(response?.message);
+			add(response?.exception);
+			add(response?.exc);
+			if (response?._server_messages) {
+				try {
+					(JSON.parse(response._server_messages) || []).forEach((serverMessage) => {
+						try {
+							const parsed = JSON.parse(serverMessage);
+							add(parsed.message || parsed.title);
+						} catch {
+							add(serverMessage);
+						}
+					});
+				} catch {
+					add(response._server_messages);
+				}
+			}
+			add(`${__("Method")}: ${method}`);
+			return details.join("<br>") || `${__("Action Center request failed.")}<br>${__("Method")}: ${method}`;
+		}
+
+		_show_action_center_error(method, response) {
+			frappe.msgprint({
+				title: __("Action Center"),
+				message: this._action_center_error_message(method, response),
+				indicator: "red",
+			});
+		}
+
 		_action_center_call(method, payload, onSuccess) {
 			frappe.call({
 				method,
@@ -1552,11 +1588,18 @@ class AIChatPage {
 					action_payload: JSON.stringify(payload || {}),
 				},
 				callback: (r) => {
+					if (r.exc) {
+						this._show_action_center_error(method, r);
+						return;
+					}
+					if (r.message?.ok === false) {
+						this._show_action_center_error(method, r.message);
+						return;
+					}
 					if (r.message && onSuccess) onSuccess(r.message);
 				},
 				error: (r) => {
-					const msg = r?.message || __("Action Center request failed.");
-					frappe.msgprint({ title: __("Action Center"), message: msg, indicator: "red" });
+					this._show_action_center_error(method, r);
 				},
 			});
 		}
@@ -1592,11 +1635,11 @@ class AIChatPage {
 				});
 				setTimeout(done, 900);
 			} else if (action === "open_document") {
-				this._action_center_call("ai_assistant.api.action_center.get_action_center_options", payload, (data) => {
+				this._action_center_call("ai_assistant.api.action_center.validate_related_document", payload, (data) => {
 					if (data.can_open_document && data.route) {
 						frappe.set_route(...data.route);
 					} else {
-						frappe.msgprint(__("Related document not found or not available."));
+						frappe.msgprint(data.message || __("Related document is a report/reference, not an ERPNext document."));
 					}
 				});
 				setTimeout(done, 900);
