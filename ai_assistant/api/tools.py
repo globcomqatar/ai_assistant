@@ -39,6 +39,7 @@ from ai_assistant.api.bi_tools import (
     get_customer_360,
     get_po_receipt_gap,
     get_monthly_pl_bridge,
+    get_sales_order_dashboard,
 )
 
 
@@ -1509,6 +1510,7 @@ TOOL_REGISTRY: dict[str, callable] = {
 	"get_customer_360":             get_customer_360,
 	"get_po_receipt_gap":           get_po_receipt_gap,
 	"get_monthly_pl_bridge":        get_monthly_pl_bridge,
+	"get_sales_order_dashboard":    get_sales_order_dashboard,
 }
 
 TOOLS_SCHEMA: list[dict] = [
@@ -2060,4 +2062,63 @@ TOOLS_SCHEMA: list[dict] = [
 	 ),
 	 "parameters": {"months": {"type": "integer",
 							   "description": "Number of months to include (default 6)"}}},
+
+	{"name": "get_sales_order_dashboard",
+	 "description": (
+		 "Composite sales order dashboard — returns everything "
+		 "about current sales in one call: open orders with "
+		 "status breakdown, orders not yet invoiced (revenue "
+		 "gap), top 5 customers this month, 3-month revenue "
+		 "trend, and MTD KPIs. "
+		 "Use when asked: 'how are sales', 'sales overview', "
+		 "'show me sales orders', 'sales dashboard', "
+		 "'sales status', 'what orders do we have', "
+		 "'order status', 'sales summary', "
+		 "'sales order dashboard'."
+	 ),
+	 "parameters": {
+		 "days": {
+			 "type": "integer",
+			 "description": (
+				 "Look-back period in days for the invoice "
+				 "gap (default 30)"
+			 ),
+		 }
+	 }},
 ]
+
+
+@frappe.whitelist()
+def get_tool_names(txt: str = "", **kwargs) -> list:
+	"""
+	Search method for the AI Tool Permission tool_name
+	field autocomplete. Returns tool names matching the
+	search text with descriptions from TOOLS_SCHEMA.
+	"""
+	txt = (txt or "").strip().lower()
+	desc_map: dict[str, str] = {
+		t["name"]: t.get("description", "")
+		for t in TOOLS_SCHEMA
+	}
+	results = []
+	for name in sorted(TOOL_REGISTRY.keys()):
+		if not txt or txt in name.lower():
+			results.append({
+				"value":       name,
+				"description": desc_map.get(name, ""),
+			})
+	return results[:50]
+
+
+@frappe.whitelist()
+def get_tool_description(tool_name: str) -> str:
+	"""
+	Return the description for a specific tool from
+	TOOLS_SCHEMA. Called when a tool is selected in
+	the AI Tool Permission form to auto-fill the
+	Description field.
+	"""
+	for t in TOOLS_SCHEMA:
+		if t["name"] == tool_name:
+			return t.get("description", "")
+	return ""

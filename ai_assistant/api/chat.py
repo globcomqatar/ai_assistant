@@ -28,6 +28,7 @@ ANALYTICAL_TOOLS: frozenset[str] = frozenset({
     "get_customer_360",
     "get_po_receipt_gap",
     "get_monthly_pl_bridge",
+    "get_sales_order_dashboard",
 })
 
 

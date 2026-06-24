@@ -2212,5 +2212,116 @@
   "modified": "2026-06-23 14:07:44.943120",
   "name": "get_po_receipt_gap",
   "tool_name": "get_po_receipt_gap"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_sales_order_dashboard",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   },
+   {
+    "parent": "get_sales_order_dashboard",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   },
+   {
+    "parent": "get_sales_order_dashboard",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   },
+   {
+    "parent": "get_sales_order_dashboard",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts User"
+   },
+   {
+    "parent": "get_sales_order_dashboard",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "System Manager"
+   }
+  ],
+  "description": "Composite sales order dashboard — open orders, invoice gap, top customers, MTD revenue, 3-month trend.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-24 12:00:00",
+  "name": "get_sales_order_dashboard",
+  "tool_name": "get_sales_order_dashboard"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_sales_analysis",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales Manager"
+   },
+   {
+    "parent": "get_sales_analysis",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Sales User"
+   },
+   {
+    "parent": "get_sales_analysis",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   },
+   {
+    "parent": "get_sales_analysis",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "System Manager"
+   }
+  ],
+  "description": "Deep sales analysis: revenue by item group, conversion rate, top customers, new vs returning.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-24 12:00:00",
+  "name": "get_sales_analysis",
+  "tool_name": "get_sales_analysis"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_payables_analysis",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts Manager"
+   },
+   {
+    "parent": "get_payables_analysis",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts User"
+   },
+   {
+    "parent": "get_payables_analysis",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Purchase Manager"
+   },
+   {
+    "parent": "get_payables_analysis",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "System Manager"
+   }
+  ],
+  "description": "Outstanding purchase invoices with aging buckets, top suppliers, upcoming-due forecast.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "modified": "2026-06-24 12:00:00",
+  "name": "get_payables_analysis",
+  "tool_name": "get_payables_analysis"
  }
 ]

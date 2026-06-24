@@ -19,7 +19,9 @@
    "in_list_view": 1,
    "label": "Tool Name",
    "reqd": 1,
-   "unique": 1
+   "unique": 1,
+   "description": "Start typing to search available tools. Select a tool to auto-fill the description.",
+   "search_index": 1
   },
   {
    "default": "1",

@@ -2609,3 +2609,177 @@ def get_monthly_pl_bridge(months: int = 6) -> dict:
         frappe.log_error(title="get_monthly_pl_bridge failed", message=str(exc))
         return {"status": "error", "data": [],
                 "message": "Could not load P&L bridge report. Please try again."}
+
+
+def get_sales_order_dashboard(days: int = 30) -> dict:
+    """
+    Composite Sales Order Dashboard.
+    One command returns: open orders, invoice gap,
+    top customers, 3-month trend, and MTD KPIs.
+    Triggered by: "how are sales", "sales orders",
+    "sales dashboard", "sales overview", "order status".
+    """
+    try:
+        base_curr = get_base_currency()
+        cutoff    = add_days(today(), -days)
+        month_start = str(get_first_day(getdate(today())))
+
+        # ── 1. Open sales orders ──────────────────────
+        open_orders = frappe.get_all(
+            "Sales Order",
+            filters={
+                "docstatus": 1,
+                "status": ["in", [
+                    "To Deliver and Bill",
+                    "To Bill",
+                    "To Deliver",
+                    "Partly Billed",
+                ]],
+            },
+            fields=[
+                "name", "customer", "transaction_date",
+                "delivery_date", "grand_total",
+                "per_billed", "per_delivered", "status",
+            ],
+            order_by="transaction_date desc",
+            limit=50,
+        )
+        total_order_value = sum(
+            flt(o.get("grand_total", 0)) for o in open_orders
+        )
+        status_breakdown: dict = {}
+        for o in open_orders:
+            s = o.get("status", "Unknown")
+            status_breakdown[s] = status_breakdown.get(s, 0) + 1
+
+        # ── 2. Invoice gap ────────────────────────────
+        gap_rows = frappe.db.sql("""
+            SELECT so.name, so.customer,
+                   so.transaction_date, so.grand_total,
+                   so.per_billed, so.status
+            FROM `tabSales Order` so
+            WHERE so.docstatus = 1
+              AND so.status NOT IN
+                  ('Completed','Cancelled','Closed')
+              AND so.per_billed < 100
+              AND so.transaction_date >= %s
+            ORDER BY so.grand_total DESC
+            LIMIT 20
+        """, (cutoff,), as_dict=True)
+        gap_value = sum(
+            flt(r.get("grand_total", 0))
+            * (1 - flt(r.get("per_billed", 0)) / 100)
+            for r in gap_rows
+        )
+
+        # ── 3. Top customers MTD ──────────────────────
+        top_cx = frappe.db.sql("""
+            SELECT customer,
+                   SUM(base_grand_total) AS revenue,
+                   COUNT(*) AS orders
+            FROM `tabSales Invoice`
+            WHERE docstatus = 1
+              AND posting_date >= %s
+            GROUP BY customer
+            ORDER BY revenue DESC
+            LIMIT 5
+        """, (month_start,), as_dict=True)
+
+        # ── 4. Monthly revenue last 3 months ──────────
+        three_months_ago = add_days(today(), -90)
+        monthly = frappe.db.sql("""
+            SELECT DATE_FORMAT(posting_date,'%%Y-%%m')
+                     AS month,
+                   SUM(base_grand_total) AS revenue,
+                   COUNT(*) AS invoices
+            FROM `tabSales Invoice`
+            WHERE docstatus = 1
+              AND posting_date >= %s
+            GROUP BY DATE_FORMAT(posting_date,'%%Y-%%m')
+            ORDER BY month ASC
+        """, (three_months_ago,), as_dict=True)
+
+        # ── 5. MTD KPIs ───────────────────────────────
+        mtd = frappe.db.sql("""
+            SELECT COALESCE(SUM(base_grand_total), 0)
+                     AS revenue,
+                   COUNT(*) AS invoices
+            FROM `tabSales Invoice`
+            WHERE docstatus = 1
+              AND posting_date >= %s
+        """, (month_start,), as_dict=True)
+        mtd_row      = mtd[0] if mtd else {}
+        mtd_revenue  = flt(mtd_row.get("revenue", 0))
+        mtd_invoices = int(mtd_row.get("invoices", 0))
+
+        # ── 6. Overdue quick count ────────────────────
+        overdue_count = frappe.db.count(
+            "Sales Invoice",
+            {
+                "docstatus": 1,
+                "outstanding_amount": [">", 0],
+                "due_date": ["<", today()],
+            },
+        )
+
+        metrics = {
+            "base_currency":      base_curr,
+            "open_orders_count":  len(open_orders),
+            "open_orders_value":  round(total_order_value, 2),
+            "not_invoiced_count": len(gap_rows),
+            "gap_value":          round(gap_value, 2),
+            "mtd_revenue":        round(mtd_revenue, 2),
+            "mtd_invoices":       mtd_invoices,
+            "overdue_count":      overdue_count,
+            "period_days":        days,
+        }
+
+        return {
+            "status":         "ok",
+            "intent":         "get_sales_order_dashboard",
+            "multi_currency": False,
+            "metrics":        metrics,
+            "chart": {
+                "type":   "bar",
+                "title":  f"Monthly Revenue — Last 3 Months ({base_curr})",
+                "labels": [r.get("month", "") for r in monthly],
+                "datasets": [{
+                    "name":   f"Revenue ({base_curr})",
+                    "values": [
+                        round(flt(r.get("revenue", 0)), 2)
+                        for r in monthly
+                    ],
+                }],
+            },
+            "data": {
+                "open_orders":      open_orders,
+                "not_invoiced":     gap_rows,
+                "top_customers":    top_cx,
+                "monthly_trend":    monthly,
+                "status_breakdown": status_breakdown,
+            },
+            "message": (
+                f"{len(open_orders)} open orders worth "
+                f"{base_curr} {total_order_value:,.0f}. "
+                f"{len(gap_rows)} not yet invoiced "
+                f"({base_curr} {gap_value:,.0f} at risk). "
+                f"MTD revenue: {base_curr} "
+                f"{mtd_revenue:,.0f} across "
+                f"{mtd_invoices} invoices. "
+                f"{overdue_count} overdue invoices."
+            ),
+        }
+
+    except Exception as exc:
+        frappe.log_error(
+            title="get_sales_order_dashboard failed",
+            message=str(exc),
+        )
+        return {
+            "status":  "error",
+            "data":    [],
+            "message": (
+                "Could not load sales dashboard. "
+                "Please try again."
+            ),
+        }

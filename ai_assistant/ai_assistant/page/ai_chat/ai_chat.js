@@ -578,6 +578,7 @@ class AIChatPage {
 			get_overdue_invoices: "⚠️",
 			// Composite cross-module tools
 			get_so_invoice_gap: "⚠️",
+			get_sales_order_dashboard: "📊",
 			get_sales_pipeline_status: "🔽",
 			get_customer_360: "👤",
 			get_po_receipt_gap: "🚚",
@@ -790,6 +791,8 @@ class AIChatPage {
 			detail = this._render_diagnostic(result);
 
 		// ── Composite cross-module renderers ──────────────────────────
+		} else if (intent === "get_sales_order_dashboard") {
+			detail = this._render_sales_order_dashboard(result);
 		} else if (intent === "get_so_invoice_gap") {
 			detail = this._render_so_invoice_gap(result);
 		} else if (intent === "get_sales_pipeline_status") {
@@ -1442,6 +1445,219 @@ class AIChatPage {
 		}
 		if (!rendered) return "";
 		return html + `</div>`;
+	}
+
+	_render_sales_order_dashboard(r) {
+		const fmt  = v => this._fmt_currency(v);
+		const m    = r.metrics || {};
+		const data = r.data    || {};
+		let html   = "";
+
+		// ── KPI strip ─────────────────────────────────
+		html += this._render_kpi_cards([
+			{
+				label:  __("Open Orders"),
+				value:  m.open_orders_count || 0,
+				danger: false,
+			},
+			{
+				label:  __("Open Value"),
+				value:  fmt(m.open_orders_value),
+				danger: false,
+			},
+			{
+				label:  __("Not Invoiced"),
+				value:  m.not_invoiced_count || 0,
+				danger: (m.not_invoiced_count || 0) > 0,
+			},
+			{
+				label:  __("Revenue at Risk"),
+				value:  fmt(m.gap_value),
+				danger: (m.gap_value || 0) > 0,
+			},
+			{
+				label:  __("MTD Revenue"),
+				value:  fmt(m.mtd_revenue),
+				danger: false,
+			},
+			{
+				label:  __("MTD Invoices"),
+				value:  m.mtd_invoices || 0,
+				danger: false,
+			},
+			{
+				label:  __("Overdue Invoices"),
+				value:  m.overdue_count || 0,
+				danger: (m.overdue_count || 0) > 0,
+			},
+		]);
+
+		// ── Status breakdown pills ────────────────────
+		const breakdown = data.status_breakdown || {};
+		if (Object.keys(breakdown).length) {
+			const sColor = s =>
+				s === "To Deliver and Bill" ? "var(--orange-500)" :
+				s === "To Bill"             ? "var(--blue-500)"   :
+				s === "To Deliver"          ? "var(--yellow-500)" :
+				s === "Partly Billed"       ? "var(--purple-500)" :
+				                              "var(--text-muted)";
+			const pills = Object.entries(breakdown)
+				.map(([s, n]) =>
+					`<span style="display:inline-flex;align-items:center;
+					  gap:5px;background:var(--bg-color);
+					  border:1px solid var(--border-color);
+					  border-radius:20px;padding:3px 10px;
+					  font-size:0.75rem;margin:2px;">
+					  <span style="width:8px;height:8px;border-radius:50%;
+					    background:${sColor(s)};flex-shrink:0;"></span>
+					  <strong>${frappe.utils.escape_html(s)}</strong>
+					  &nbsp;${n}
+					</span>`
+				).join("");
+			html += `<div style="margin:8px 0 4px">
+				<p style="font-weight:600;font-size:0.8rem;
+				          margin-bottom:6px">
+				  📦 ${__("Order Status Breakdown")}
+				</p>
+				<div>${pills}</div>
+			</div>`;
+		}
+
+		// ── Revenue chart ─────────────────────────────
+		if (r.chart && r.chart.labels && r.chart.labels.length) {
+			const mid = "ai-chart-" + Date.now() +
+			            "-" + Math.floor(Math.random() * 9999);
+			html += this._render_chart(r.chart, mid);
+		}
+
+		// ── Top customers table ───────────────────────
+		const topCx = data.top_customers || [];
+		if (topCx.length) {
+			const rows = topCx.map((cx, i) =>
+				`<tr>
+					<td style="font-weight:600;
+					           color:var(--text-muted)">#${i + 1}</td>
+					<td><a href="/app/customer/${
+					    encodeURIComponent(cx.customer)}"
+					    target="_blank">
+					  ${frappe.utils.escape_html(cx.customer || "")}
+					</a></td>
+					<td class="text-right">${fmt(cx.revenue)}</td>
+					<td class="text-right">${cx.orders || 0}</td>
+				</tr>`
+			).join("");
+			html += `<p style="font-weight:600;margin:12px 0 4px">
+				🏆 ${__("Top Customers This Month")}
+			</p>
+			<table class="ai-table">
+				<thead><tr>
+					<th>#</th>
+					<th>${__("Customer")}</th>
+					<th class="text-right">${__("Revenue")}</th>
+					<th class="text-right">${__("Orders")}</th>
+				</tr></thead>
+				<tbody>${rows}</tbody>
+			</table>`;
+		}
+
+		// ── Open orders table ─────────────────────────
+		const openOrders = data.open_orders || [];
+		if (openOrders.length) {
+			const sColor = s =>
+				s === "To Deliver and Bill" ? "var(--orange-500)" :
+				s === "To Bill"             ? "var(--blue-500)"   :
+				s === "To Deliver"          ? "var(--yellow-500)" :
+				s === "Partly Billed"       ? "var(--purple-500)" :
+				                              "var(--text-muted)";
+			const capped = openOrders.slice(0, 15);
+			const rows   = capped.map(o =>
+				`<tr>
+					<td><a href="/app/sales-order/${
+					    encodeURIComponent(o.name)}"
+					    target="_blank">
+					  ${frappe.utils.escape_html(o.name || "")}
+					</a></td>
+					<td>${frappe.utils.escape_html(o.customer || "")}</td>
+					<td>${o.transaction_date || ""}</td>
+					<td>${o.delivery_date   || ""}</td>
+					<td class="text-right">${fmt(o.grand_total)}</td>
+					<td class="text-right">
+					  ${Math.round(o.per_billed || 0)}%
+					</td>
+					<td style="color:${sColor(o.status)};
+					           font-weight:600;font-size:0.75rem">
+					  ${frappe.utils.escape_html(o.status || "")}
+					</td>
+				</tr>`
+			).join("");
+			const note = openOrders.length > 15
+				? `<p style="font-size:0.75rem;
+				             color:var(--text-muted);margin-top:4px">
+				     ${__("Showing 15 of")} ${openOrders.length}
+				     ${__("orders")}
+				   </p>`
+				: "";
+			html += `<p style="font-weight:600;margin:12px 0 4px">
+				📋 ${__("Open Sales Orders")}
+			</p>
+			<table class="ai-table">
+				<thead><tr>
+					<th>${__("Order")}</th>
+					<th>${__("Customer")}</th>
+					<th>${__("Date")}</th>
+					<th>${__("Delivery")}</th>
+					<th class="text-right">${__("Value")}</th>
+					<th class="text-right">${__("Billed %")}</th>
+					<th>${__("Status")}</th>
+				</tr></thead>
+				<tbody>${rows}</tbody>
+			</table>${note}`;
+		}
+
+		// ── Not invoiced table ────────────────────────
+		const notInv = data.not_invoiced || [];
+		if (notInv.length) {
+			const capped = notInv.slice(0, 10);
+			const rows   = capped.map(o =>
+				`<tr>
+					<td><a href="/app/sales-order/${
+					    encodeURIComponent(o.name)}"
+					    target="_blank">
+					  ${frappe.utils.escape_html(o.name || "")}
+					</a></td>
+					<td>${frappe.utils.escape_html(o.customer || "")}</td>
+					<td>${o.transaction_date || ""}</td>
+					<td class="text-right"
+					    style="color:var(--red-500);font-weight:600">
+					  ${fmt(o.grand_total)}
+					</td>
+					<td class="text-right">
+					  ${Math.round(o.per_billed || 0)}%
+					</td>
+				</tr>`
+			).join("");
+			html += `<p style="font-weight:600;margin:12px 0 4px;
+			                   color:var(--red-500)">
+				⚠️ ${__("Orders Not Yet Invoiced — Revenue at Risk")}
+			</p>
+			<table class="ai-table">
+				<thead><tr>
+					<th>${__("Order")}</th>
+					<th>${__("Customer")}</th>
+					<th>${__("Date")}</th>
+					<th class="text-right">${__("Value")}</th>
+					<th class="text-right">${__("Billed %")}</th>
+				</tr></thead>
+				<tbody>${rows}</tbody>
+			</table>`;
+		}
+
+		// ── AI analysis sections ──────────────────────
+		if (r.analysis) {
+			html += this._render_analysis_sections(r.analysis);
+		}
+
+		return html;
 	}
 
 	_render_so_invoice_gap(r) {
