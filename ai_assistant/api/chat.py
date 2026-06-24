@@ -10,6 +10,7 @@ from frappe import _
 
 from ai_assistant.api.router import route
 from ai_assistant.api.executor import execute_actions
+from ai_assistant.api.security import is_system_manager, require_management_access
 
 
 # Intent names of tools that return a `metrics` key and receive AI interpretation.
@@ -32,8 +33,21 @@ ANALYTICAL_TOOLS: frozenset[str] = frozenset({
 })
 
 
-# All four keys the interpreter must return — strict subset check (Fix 4)
-_INTERP_KEYS: frozenset[str] = frozenset({"findings", "risks", "recommendations", "required_actions"})
+# Advisory schema returned by the analytics interpreter. The four legacy list
+# keys remain supported so older report payloads still render safely.
+_LEGACY_INTERP_KEYS: frozenset[str] = frozenset({"findings", "risks", "recommendations", "required_actions"})
+_ADVISORY_INTERP_KEYS: frozenset[str] = frozenset({
+    "executive_summary",
+    "findings",
+    "root_causes",
+    "risks",
+    "opportunities",
+    "recommendations",
+    "required_actions",
+    "expected_business_impact",
+})
+_SEVERITIES: frozenset[str] = frozenset({"low", "medium", "high", "critical"})
+_PRIORITIES: frozenset[str] = frozenset({"low", "medium", "high", "urgent"})
 
 
 def _log_interpret(
@@ -57,12 +71,212 @@ def _log_interpret(
         frappe.log_error(title="Interpreter log write failed", message=str(_exc))
 
 
+def _clamp_score(value) -> int:
+    try:
+        return max(0, min(100, int(float(value))))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _as_list(value) -> list:
+    if isinstance(value, list):
+        return value
+    if value in (None, ""):
+        return []
+    return [value]
+
+
+def _clean_text(value, fallback: str = "") -> str:
+    text = str(value or "").strip()
+    return text or fallback
+
+
+def _normalize_risks(value) -> list[dict]:
+    risks = []
+    for item in _as_list(value):
+        if isinstance(item, dict):
+            severity = str(item.get("severity") or "medium").lower().strip()
+            risks.append({
+                "title": _clean_text(item.get("title") or item.get("risk") or item.get("message"), "Business risk"),
+                "severity": severity if severity in _SEVERITIES else "medium",
+                "risk_score": _clamp_score(item.get("risk_score") or item.get("score")),
+                "business_impact": _clean_text(item.get("business_impact") or item.get("impact"), "insufficient data"),
+            })
+        else:
+            risks.append({
+                "title": _clean_text(item, "Business risk"),
+                "severity": "medium",
+                "risk_score": 50,
+                "business_impact": "insufficient data",
+            })
+    return risks
+
+
+def _normalize_opportunities(value) -> list[dict]:
+    opportunities = []
+    for item in _as_list(value):
+        if isinstance(item, dict):
+            opportunities.append({
+                "title": _clean_text(item.get("title") or item.get("opportunity") or item.get("message"), "Business opportunity"),
+                "opportunity_score": _clamp_score(item.get("opportunity_score") or item.get("score")),
+                "expected_impact": _clean_text(item.get("expected_impact") or item.get("impact"), "insufficient data"),
+            })
+        else:
+            opportunities.append({
+                "title": _clean_text(item, "Business opportunity"),
+                "opportunity_score": 50,
+                "expected_impact": "insufficient data",
+            })
+    return opportunities
+
+
+def _normalize_actions(value) -> list[dict]:
+    actions = []
+    for item in _as_list(value):
+        if isinstance(item, dict):
+            priority = str(item.get("priority") or "medium").lower().strip()
+            actions.append({
+                "action": _clean_text(item.get("action") or item.get("title") or item.get("message"), "Review report"),
+                "priority": priority if priority in _PRIORITIES else "medium",
+                "owner_role": _clean_text(item.get("owner_role"), "Management"),
+                "related_doctype": _clean_text(item.get("related_doctype")),
+                "related_document": _clean_text(item.get("related_document")),
+                "suggested_next_step": _clean_text(item.get("suggested_next_step") or item.get("next_step"), "insufficient data"),
+            })
+        else:
+            actions.append({
+                "action": _clean_text(item, "Review report"),
+                "priority": "medium",
+                "owner_role": "Management",
+                "related_doctype": "",
+                "related_document": "",
+                "suggested_next_step": "insufficient data",
+            })
+    return actions
+
+
+def _normalize_advisory(parsed: dict) -> dict:
+    """Normalize new advisory JSON and legacy four-list JSON into one safe shape."""
+    if not isinstance(parsed, dict):
+        parsed = {}
+    return {
+        "executive_summary": _clean_text(parsed.get("executive_summary")),
+        "findings": [_clean_text(i) for i in _as_list(parsed.get("findings")) if _clean_text(i)],
+        "root_causes": [_clean_text(i) for i in _as_list(parsed.get("root_causes")) if _clean_text(i)],
+        "risks": _normalize_risks(parsed.get("risks")),
+        "opportunities": _normalize_opportunities(parsed.get("opportunities")),
+        "recommendations": [_clean_text(i) for i in _as_list(parsed.get("recommendations")) if _clean_text(i)],
+        "required_actions": _normalize_actions(parsed.get("required_actions")),
+        "expected_business_impact": _clean_text(parsed.get("expected_business_impact")),
+    }
+
+
+def _deterministic_advisory(tool_result: dict) -> dict:
+    """Add deterministic advisory signals before the LLM interpretation."""
+    metrics = tool_result.get("metrics") or {}
+    intent = tool_result.get("intent", "unknown")
+    base_curr = metrics.get("base_currency", "QAR")
+    findings: list[str] = []
+    root_causes: list[str] = []
+    risks: list[dict] = []
+    opportunities: list[dict] = []
+    actions: list[dict] = []
+
+    def add_risk(title: str, severity: str, score: int, impact: str) -> None:
+        risks.append({"title": title, "severity": severity, "risk_score": score, "business_impact": impact})
+
+    def add_action(action: str, priority: str, owner: str, doctype: str = "", doc: str = "", next_step: str = "") -> None:
+        actions.append({
+            "action": action,
+            "priority": priority,
+            "owner_role": owner,
+            "related_doctype": doctype,
+            "related_document": doc,
+            "suggested_next_step": next_step or "Review the related report and assign an owner.",
+        })
+
+    revenue_change = metrics.get("revenue_mom_pct", metrics.get("mom_change_pct", metrics.get("revenue_vs_prev_pct")))
+    if isinstance(revenue_change, (int, float)) and revenue_change < 0:
+        findings.append(f"Revenue is down {abs(round(revenue_change, 1))}% versus the comparison period.")
+        root_causes.append("Revenue decline may be linked to lower conversion, reduced order volume, pricing pressure, or customer inactivity; confirm with customer/item detail.")
+        add_risk("Revenue decline", "high" if revenue_change <= -15 else "medium", 80 if revenue_change <= -15 else 60,
+                 "If not corrected, the current sales run rate may reduce cash inflow and margin coverage.")
+        add_action("Review declining customers/items and recover open opportunities", "urgent" if revenue_change <= -15 else "high", "Sales Manager",
+                   next_step="Compare top customers and items against the previous period and assign follow-up calls.")
+
+    overdue_amount = metrics.get("overdue_amount", metrics.get("total_overdue", 0)) or 0
+    overdue_count = metrics.get("overdue_invoice_count", metrics.get("invoice_count", 0)) or 0
+    over_90_pct = metrics.get("over_90_pct", 0) or 0
+    if overdue_amount or overdue_count:
+        add_risk("Collection risk", "critical" if over_90_pct >= 40 else "high", 90 if over_90_pct >= 40 else 75,
+                 f"{base_curr} {float(overdue_amount):,.0f} is overdue across {int(overdue_count)} invoice(s); delayed collection can pressure cash flow.")
+        add_action("Prioritize overdue collections", "urgent", "Accounts Manager", "Sales Invoice",
+                   next_step="Contact the largest overdue customers first and agree dated payment commitments.")
+
+    inactive_count = tool_result.get("inactive_count") or metrics.get("inactive_customers")
+    if inactive_count:
+        add_risk("Customer churn risk", "medium", 55,
+                 f"{inactive_count} customer(s) appear inactive; delayed follow-up can reduce repeat revenue.")
+        add_action("Launch customer reactivation follow-up", "high", "Sales Manager",
+                   next_step="Segment inactive customers by lifetime value and contact high-value accounts first.")
+
+    pending_q = metrics.get("pending_quotations", tool_result.get("total_pending", 0)) or 0
+    expiring_q = tool_result.get("expiring_quotations", metrics.get("expiring_quotations", 0)) or 0
+    if pending_q or expiring_q:
+        opportunities.append({
+            "title": "Quotation conversion opportunity",
+            "opportunity_score": 75 if expiring_q else 60,
+            "expected_impact": f"Converting pending quotations can improve near-term revenue; {pending_q} pending and {expiring_q} expiring soon.",
+        })
+        add_action("Follow up stale or expiring quotations", "high" if expiring_q else "medium", "Sales Manager", "Quotation",
+                   next_step="Call owners of quotations older than 14 days or expiring within 7 days.")
+
+    low_stock = metrics.get("critical_stock_items", metrics.get("low_stock_items", tool_result.get("low_stock_count", 0))) or 0
+    if low_stock:
+        add_risk("Inventory availability risk", "high" if low_stock > 3 else "medium", 70 if low_stock > 3 else 50,
+                 f"{low_stock} item(s) are below safety stock or reorder thresholds; stockouts can delay delivery and revenue recognition.")
+        add_action("Replenish critical stock items", "high", "Stock Manager", "Item",
+                   next_step="Review reorder levels and create material requests for critical items.")
+
+    gross_margin = metrics.get("gross_margin_pct")
+    previous_margin = metrics.get("previous_gross_margin_pct")
+    if isinstance(gross_margin, (int, float)) and isinstance(previous_margin, (int, float)) and gross_margin < previous_margin:
+        root_causes.append("Gross margin deterioration may indicate pricing leakage, higher item cost, discounting, or unfavorable sales mix.")
+        add_risk("Margin compression", "high", 70,
+                 "Lower gross margin reduces profit even when revenue is stable; pricing and cost drivers need review.")
+        add_action("Review pricing, discounts, and item costs", "high", "Accounts Manager",
+                   next_step="Compare margin by item group and customer segment against the previous period.")
+
+    return {
+        "executive_summary": "",
+        "findings": findings,
+        "root_causes": root_causes,
+        "risks": risks,
+        "opportunities": opportunities,
+        "recommendations": [],
+        "required_actions": actions,
+        "expected_business_impact": "",
+        "_intent": intent,
+    }
+
+
+def _merge_advisory(rule_based: dict, ai_based: dict) -> dict:
+    merged = _normalize_advisory(ai_based)
+    for key in ("findings", "root_causes", "risks", "opportunities", "recommendations", "required_actions"):
+        merged[key] = (rule_based.get(key) or []) + (merged.get(key) or [])
+    if not merged.get("executive_summary"):
+        merged["executive_summary"] = rule_based.get("executive_summary") or ""
+    if not merged.get("expected_business_impact"):
+        merged["expected_business_impact"] = rule_based.get("expected_business_impact") or ""
+    return merged
+
+
 def _interpret_analytics(tool_result: dict, user_message: str, user: str) -> dict | None:
     """
-    Send computed metrics to the AI and get back four structured sections.
+    Send computed metrics to the AI and get back business advisory sections.
 
-    Returns {"findings":[...], "risks":[...], "recommendations":[...],
-             "required_actions":[...]} or None on any failure.
+    Returns the advisory schema, while keeping legacy findings/risks/
+    recommendations/required_actions compatible for older renderers.
     Always safe to call — logs errors and returns None without raising.
     """
     if not tool_result.get("metrics"):
@@ -75,8 +289,9 @@ def _interpret_analytics(tool_result: dict, user_message: str, user: str) -> dic
         metrics = tool_result["metrics"]
         aging = tool_result.get("aging_buckets") or {}
         top_cx = tool_result.get("top_customers") or []
+        rule_based = _deterministic_advisory(tool_result)
 
-        # Build compact, number-rich context — raw invoice rows excluded
+        # Build compact, number-rich context. Keep source report data bounded.
         ctx = ["### Metrics"]
         for k, v in metrics.items():
             ctx.append(f"- {k}: {v}")
@@ -89,22 +304,41 @@ def _interpret_analytics(tool_result: dict, user_message: str, user: str) -> dic
         if top_cx:
             ctx.append("### Top Customers by Outstanding")
             for cx in top_cx[:5]:
-                ctx.append(f"- {cx['customer']}: {base_curr} {cx['outstanding']:,.0f} ({cx['pct_of_total']}%)")
+                customer = cx.get("customer", "Unknown") if isinstance(cx, dict) else "Unknown"
+                outstanding = frappe.utils.flt(cx.get("outstanding", cx.get("total", 0))) if isinstance(cx, dict) else 0
+                pct = cx.get("pct_of_total", "") if isinstance(cx, dict) else ""
+                ctx.append(f"- {customer}: {base_curr} {outstanding:,.0f}" + (f" ({pct}%)" if pct != "" else ""))
+        for label, key in [
+            ("Top Items", "top_items"),
+            ("Alerts", "alerts"),
+            ("Recommendations Already Computed", "recommendations"),
+            ("Department Scores", "department_scores"),
+            ("Priorities", "priorities"),
+        ]:
+            val = tool_result.get(key)
+            if val:
+                ctx.append(f"### {label}")
+                ctx.append(json.dumps(val[:8] if isinstance(val, list) else val, default=str)[:2500])
 
         multi_curr_note = (
             " Transactions may involve multiple currencies — all amounts shown are base-currency equivalents."
             if multi_curr else ""
         )
         system_prompt = (
-            "You are a financial analyst for a Qatar-based ERP system. "
-            "Interpret the supplied pre-computed metrics and respond with ONLY valid JSON — "
+            "You are a senior business advisor for a Qatar-based ERPNext system. "
+            "Interpret the supplied pre-computed report data and respond with ONLY valid JSON — "
             "no markdown, no explanation, no extra text.\n\n"
-            'Output: {"findings":["..."],"risks":["..."],'
-            '"recommendations":["..."],"required_actions":["..."]}\n\n'
-            f"Rules: 2-4 items per array. Every figure you quote must come from the "
-            f"supplied numbers — never invent values. Base currency is {base_curr}.{multi_curr_note} "
-            "findings=factual observations; risks=business risks; "
-            "recommendations=strategic improvements; required_actions=immediate operational steps."
+            'Output exactly this JSON shape: {"executive_summary":"","findings":[],"root_causes":[],'
+            '"risks":[{"title":"","severity":"low|medium|high|critical","risk_score":0,'
+            '"business_impact":""}],"opportunities":[{"title":"","opportunity_score":0,'
+            '"expected_impact":""}],"recommendations":[],"required_actions":[{"action":"",'
+            '"priority":"low|medium|high|urgent","owner_role":"","related_doctype":"",'
+            '"related_document":"","suggested_next_step":""}],"expected_business_impact":""}\n\n'
+            f"Rules: Every figure you quote must come from supplied numbers; never invent values. "
+            f"If the data is insufficient, say \"insufficient data\". Base currency is {base_curr}.{multi_curr_note} "
+            "Focus on root causes, risk scores, opportunity scores, business impact, and priority actions. "
+            "For each risk/opportunity/action explain what happened, why it matters, what action is required, "
+            "and expected impact if action is taken or ignored. Keep each array to 2-4 high-value items."
         )
         user_content = f"User question: {user_message}\n\nComputed data:\n" + "\n".join(ctx)
 
@@ -126,31 +360,19 @@ def _interpret_analytics(tool_result: dict, user_message: str, user: str) -> dic
             _log_interpret(user, _intent, user_content, resp.raw_text, _tokens, _cost, "Error")
             return None
 
-        # Fix 4: strict key presence check
-        missing = _INTERP_KEYS - parsed.keys()
-        if missing:
-            frappe.log_error(
-                title="Interpreter response missing keys",
-                message=f"Missing: {missing}. Raw (first 300): {resp.raw_text[:300]}",
-            )
+        # Accept both the new advisory shape and the legacy four-list shape.
+        if not (_ADVISORY_INTERP_KEYS & parsed.keys()) and not (_LEGACY_INTERP_KEYS & parsed.keys()):
+            frappe.log_error(title="Interpreter response invalid shape", message=resp.raw_text[:300])
             _log_interpret(user, _intent, user_content, resp.raw_text, _tokens, _cost, "Error")
-            return None
+            return _normalize_advisory(rule_based)
 
-        # Fix 4: strict type check — all four values must be lists
-        wrong_type = [k for k in _INTERP_KEYS if not isinstance(parsed.get(k), list)]
-        if wrong_type:
-            frappe.log_error(
-                title="Interpreter response wrong types",
-                message=f"Keys not lists: {wrong_type}. Raw (first 300): {resp.raw_text[:300]}",
-            )
-            _log_interpret(user, _intent, user_content, resp.raw_text, _tokens, _cost, "Error")
-            return None
-
-        # Strip empty / whitespace-only items from each list
-        result = {k: [str(i) for i in parsed[k] if str(i).strip()] for k in _INTERP_KEYS}
+        result = _merge_advisory(rule_based, parsed)
 
         # If every list is empty after stripping, skip the analysis section entirely
-        if not any(result.values()):
+        if not any(result.get(k) for k in (
+            "executive_summary", "findings", "root_causes", "risks", "opportunities",
+            "recommendations", "required_actions", "expected_business_impact",
+        )):
             _log_interpret(user, _intent, user_content, resp.raw_text, _tokens, _cost, "Success")
             return None
 
@@ -272,7 +494,7 @@ def send_message(message: str, history: str = "[]", current_agent: str = "genera
 def get_agents() -> list[dict]:
     """Return available agents for the current user."""
     from ai_assistant.api.agent_manager import get_available_agents
-    return get_available_agents(frappe.session.user)
+    return get_available_agents()
 
 
 @frappe.whitelist()
@@ -294,7 +516,8 @@ def test_connection() -> dict:
             "cost_usd": resp.estimated_cost_usd,
         }
     except Exception as exc:
-        return {"status": "error", "error": str(exc)}
+        frappe.log_error(title="AI Connection Test Failed", message=str(exc))
+        return {"status": "error", "error": _("Connection test failed. Please check provider settings and logs.")}
 
 
 @frappe.whitelist()
@@ -315,18 +538,28 @@ def get_usage_summary() -> dict:
         round(float(data["cost"]) / float(data["budget"]) * 100, 1)
         if data["budget"] else 0
     )
+    if not is_system_manager(user):
+        return {
+            "requests": int(data.get("requests") or 0),
+            "tokens": int(data.get("tokens") or 0),
+            "budget_used_pct": data["budget_used_pct"],
+        }
     return data
 
 
 @frappe.whitelist()
 def get_daily_briefing() -> dict:
-    frappe.only_for("All")
+    require_management_access()
     try:
+        from ai_assistant.api.permission_manager import validate_tool_permission
+        validate_tool_permission(frappe.session.user, "get_management_summary")
         from ai_assistant.api.bi_tools import get_management_summary
         return get_management_summary()
+    except frappe.PermissionError:
+        raise
     except Exception as exc:
         frappe.log_error(title="Daily Briefing Failed", message=str(exc))
-        return {"status": "error", "message": str(exc)}
+        return {"status": "error", "message": _("Daily briefing is currently unavailable. Please contact your administrator if this continues.")}
 
 
 @frappe.whitelist()
@@ -343,14 +576,18 @@ def get_settings_status() -> dict:
         has_voice_key = bool(settings.get_voice_api_key())
     except Exception:
         pass
-    return {
+    status = {
         "enabled": bool(settings.enabled),
-        "provider": settings.provider,
-        "model": settings.get_active_model(),
         "allow_tool_execution": bool(settings.allow_tool_execution),
-        "fallback_mode": settings.fallback_mode,
         "has_api_key": has_key,
         "enable_voice_input": bool(settings.enable_voice_input),
-        "voice_provider": voice_provider,
         "has_voice_key": has_voice_key,
     }
+    if is_system_manager(frappe.session.user):
+        status.update({
+            "provider": settings.provider,
+            "model": settings.get_active_model(),
+            "fallback_mode": settings.fallback_mode,
+            "voice_provider": voice_provider,
+        })
+    return status

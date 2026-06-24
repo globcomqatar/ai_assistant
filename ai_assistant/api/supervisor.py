@@ -34,7 +34,7 @@ def route_to_agent(message: str, user: str) -> dict:
     4. Validate the returned code against the candidate set.
     5. On any failure, fall back silently via frappe.log_error.
     """
-    from ai_assistant.api.agent_manager import get_available_agents, get_default_agent_code
+    from ai_assistant.api.agent_manager import _get_available_agents_for_user, get_default_agent_code
     from ai_assistant.providers import get_provider
     from ai_assistant.api.router import _extract_json
 
@@ -50,7 +50,7 @@ def route_to_agent(message: str, user: str) -> dict:
     }
 
     try:
-        all_agents = get_available_agents(user)
+        all_agents = _get_available_agents_for_user(user)
         candidates = [
             a for a in all_agents
             if a["agent_code"] not in ("supervisor", "general")

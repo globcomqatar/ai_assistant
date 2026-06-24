@@ -166,12 +166,8 @@ def get_session_agent(user: str, session_agent: str) -> str:
     return session_agent
 
 
-@frappe.whitelist()
-def get_available_agents(user: str | None = None) -> list[dict]:
-    """
-    Return agents available to the current (or given) user, ordered by display_order.
-    Non-System Manager users receive only the general agent — agent switching is locked.
-    """
+def _get_available_agents_for_user(user: str | None = None) -> list[dict]:
+    """Return agents available to a resolved internal user."""
     user = user or frappe.session.user
     # PATCH 2 enforcement: non-SM only sees general agent
     if not _is_system_manager(user):
@@ -207,6 +203,17 @@ def get_available_agents(user: str | None = None) -> list[dict]:
                 "default_agent": bool(r.default_agent),
             })
     return result
+
+
+@frappe.whitelist()
+def get_available_agents(user: str | None = None) -> list[dict]:
+    """
+    Return sanitized agents for the current session user.
+
+    The user argument is accepted only for backward-compatible clients and is
+    intentionally ignored to prevent user impersonation through whitelisted calls.
+    """
+    return _get_available_agents_for_user(frappe.session.user)
 
 
 def get_default_agent_code() -> str:

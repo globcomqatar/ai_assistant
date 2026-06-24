@@ -1402,50 +1402,193 @@ class AIChatPage {
 		return html;
 	}
 
-	// Generic renderer for the four analysis arrays — used by all analytical tools.
-	_render_analysis_sections(analysis) {
-		if (!analysis) return "";
-		let html = `<div class="ai-analysis-sections">`;
-		let rendered = 0;
-		if (analysis.findings?.length) {
-			html += `<div class="ai-analysis-section findings">
-				<div class="ai-analysis-section-header">
-					<i class="ti ti-search" aria-hidden="true"></i> ${__("Findings")}
-				</div>
-				<ul>${analysis.findings.map(f => `<li>${frappe.utils.escape_html(String(f))}</li>`).join("")}</ul>
-			</div>`;
-			rendered++;
+		_analysis_text(value) {
+			if (value === null || value === undefined) return "";
+			if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+				return frappe.utils.escape_html(String(value));
+			}
+			if (typeof value === "object") {
+				const parts = [];
+				for (const key of ["title", "action", "business_impact", "expected_impact", "suggested_next_step"]) {
+					if (value[key]) parts.push(String(value[key]));
+				}
+				return frappe.utils.escape_html(parts.join(" — ") || JSON.stringify(value));
+			}
+			return frappe.utils.escape_html(String(value));
 		}
-		if (analysis.risks?.length) {
-			html += `<div class="ai-analysis-section risks">
-				<div class="ai-analysis-section-header">
-					<i class="ti ti-alert-triangle" aria-hidden="true"></i> ${__("Risks")}
-				</div>
-				<ul>${analysis.risks.map(r => `<li>${frappe.utils.escape_html(String(r))}</li>`).join("")}</ul>
+
+		_analysis_list(items, cls = "") {
+			const arr = Array.isArray(items) ? items : (items ? [items] : []);
+			if (!arr.length) return "";
+			return `<div class="ai-advisory-list ${cls}">
+				${arr.map(item => `<div class="ai-advisory-item">${this._analysis_text(item)}</div>`).join("")}
 			</div>`;
-			rendered++;
 		}
-		if (analysis.recommendations?.length) {
-			html += `<div class="ai-analysis-section recommendations">
-				<div class="ai-analysis-section-header">
-					<i class="ti ti-bulb" aria-hidden="true"></i> ${__("Recommendations")}
-				</div>
-				<ul>${analysis.recommendations.map(r => `<li>${frappe.utils.escape_html(String(r))}</li>`).join("")}</ul>
+
+		_score_pill(score, label) {
+			const val = Math.max(0, Math.min(100, parseInt(score || 0, 10) || 0));
+			return `<span class="ai-score-pill">${frappe.utils.escape_html(label)} ${val}</span>`;
+		}
+
+		_severity_badge(severity) {
+			const val = ["low", "medium", "high", "critical"].includes(String(severity).toLowerCase())
+				? String(severity).toLowerCase()
+				: "medium";
+			return `<span class="ai-severity-badge ${val}">${frappe.utils.escape_html(__(val))}</span>`;
+		}
+
+		_priority_badge(priority) {
+			const val = ["low", "medium", "high", "urgent"].includes(String(priority).toLowerCase())
+				? String(priority).toLowerCase()
+				: "medium";
+			return `<span class="ai-priority-badge ${val}">${frappe.utils.escape_html(__(val))}</span>`;
+		}
+
+		_render_risk_cards(risks) {
+			const arr = Array.isArray(risks) ? risks : (risks ? [risks] : []);
+			if (!arr.length) return "";
+			return `<div class="ai-advisory-card-grid">
+				${arr.map(risk => {
+					if (!risk || typeof risk !== "object") {
+						return `<div class="ai-advisory-card risk">${this._analysis_text(risk)}</div>`;
+					}
+					return `<div class="ai-advisory-card risk">
+						<div class="ai-advisory-card-top">
+							<strong>${frappe.utils.escape_html(String(risk.title || __("Business Risk")))}</strong>
+							<div>${this._severity_badge(risk.severity)} ${this._score_pill(risk.risk_score, __("Risk"))}</div>
+						</div>
+						${risk.business_impact ? `<p>${frappe.utils.escape_html(String(risk.business_impact))}</p>` : ""}
+					</div>`;
+				}).join("")}
 			</div>`;
-			rendered++;
 		}
-		if (analysis.required_actions?.length) {
-			html += `<div class="ai-analysis-section required-actions">
-				<div class="ai-analysis-section-header">
-					<i class="ti ti-player-play" aria-hidden="true"></i> ${__("Required Actions")}
-				</div>
-				<ul>${analysis.required_actions.map(a => `<li>${frappe.utils.escape_html(String(a))}</li>`).join("")}</ul>
+
+		_render_opportunity_cards(opportunities) {
+			const arr = Array.isArray(opportunities) ? opportunities : (opportunities ? [opportunities] : []);
+			if (!arr.length) return "";
+			return `<div class="ai-advisory-card-grid">
+				${arr.map(opp => {
+					if (!opp || typeof opp !== "object") {
+						return `<div class="ai-advisory-card opportunity">${this._analysis_text(opp)}</div>`;
+					}
+					return `<div class="ai-advisory-card opportunity">
+						<div class="ai-advisory-card-top">
+							<strong>${frappe.utils.escape_html(String(opp.title || __("Business Opportunity")))}</strong>
+							${this._score_pill(opp.opportunity_score, __("Score"))}
+						</div>
+						${opp.expected_impact ? `<p>${frappe.utils.escape_html(String(opp.expected_impact))}</p>` : ""}
+					</div>`;
+				}).join("")}
 			</div>`;
-			rendered++;
 		}
-		if (!rendered) return "";
-		return html + `</div>`;
-	}
+
+		_render_action_cards(actions) {
+			const arr = Array.isArray(actions) ? actions : (actions ? [actions] : []);
+			if (!arr.length) return "";
+			return `<div class="ai-advisory-card-grid">
+				${arr.map(action => {
+					if (!action || typeof action !== "object") {
+						return `<div class="ai-advisory-card action">${this._analysis_text(action)}</div>`;
+					}
+					const doctype = action.related_doctype ? frappe.utils.escape_html(String(action.related_doctype)) : "";
+					const doc = action.related_document ? frappe.utils.escape_html(String(action.related_document)) : "";
+					const related = doctype || doc ? `<span class="ai-related-doc">${doctype}${doc ? `: ${doc}` : ""}</span>` : "";
+					return `<div class="ai-advisory-card action">
+						<div class="ai-advisory-card-top">
+							<strong>${frappe.utils.escape_html(String(action.action || __("Required Action")))}</strong>
+							${this._priority_badge(action.priority)}
+						</div>
+						<div class="ai-action-meta">
+							${action.owner_role ? `<span>${__("Owner")}: ${frappe.utils.escape_html(String(action.owner_role))}</span>` : ""}
+							${related}
+						</div>
+						${action.suggested_next_step ? `<p>${frappe.utils.escape_html(String(action.suggested_next_step))}</p>` : ""}
+					</div>`;
+				}).join("")}
+			</div>`;
+		}
+
+		// Generic renderer for advisory analysis. Supports the new structured
+		// object schema and the legacy four string-array format.
+		_render_analysis_sections(analysis) {
+			if (!analysis) return "";
+			let html = `<div class="ai-analysis-sections ai-advisory-sections">`;
+			let rendered = 0;
+			if (analysis.executive_summary) {
+				html += `<div class="ai-analysis-section executive-summary">
+					<div class="ai-analysis-section-header">
+						<i class="ti ti-briefcase" aria-hidden="true"></i> ${__("Executive Summary")}
+					</div>
+					<p class="ai-advisory-summary">${frappe.utils.escape_html(String(analysis.executive_summary))}</p>
+				</div>`;
+				rendered++;
+			}
+			if (analysis.findings?.length) {
+				html += `<div class="ai-analysis-section findings">
+					<div class="ai-analysis-section-header">
+						<i class="ti ti-search" aria-hidden="true"></i> ${__("Findings")}
+					</div>
+					${this._analysis_list(analysis.findings, "finding-list")}
+				</div>`;
+				rendered++;
+			}
+			if (analysis.root_causes?.length) {
+				html += `<div class="ai-analysis-section root-causes">
+					<div class="ai-analysis-section-header">
+						<i class="ti ti-git-branch" aria-hidden="true"></i> ${__("Root Causes")}
+					</div>
+					${this._analysis_list(analysis.root_causes, "root-cause-list")}
+				</div>`;
+				rendered++;
+			}
+			if (analysis.risks?.length) {
+				html += `<div class="ai-analysis-section risks">
+					<div class="ai-analysis-section-header">
+						<i class="ti ti-alert-triangle" aria-hidden="true"></i> ${__("Risks")}
+					</div>
+					${this._render_risk_cards(analysis.risks)}
+				</div>`;
+				rendered++;
+			}
+			if (analysis.opportunities?.length) {
+				html += `<div class="ai-analysis-section opportunities">
+					<div class="ai-analysis-section-header">
+						<i class="ti ti-trending-up" aria-hidden="true"></i> ${__("Opportunities")}
+					</div>
+					${this._render_opportunity_cards(analysis.opportunities)}
+				</div>`;
+				rendered++;
+			}
+			if (analysis.recommendations?.length) {
+				html += `<div class="ai-analysis-section recommendations">
+					<div class="ai-analysis-section-header">
+						<i class="ti ti-bulb" aria-hidden="true"></i> ${__("Recommendations")}
+					</div>
+					${this._analysis_list(analysis.recommendations, "recommendation-list")}
+				</div>`;
+				rendered++;
+			}
+			if (analysis.required_actions?.length) {
+				html += `<div class="ai-analysis-section required-actions">
+					<div class="ai-analysis-section-header">
+						<i class="ti ti-player-play" aria-hidden="true"></i> ${__("Required Actions")}
+					</div>
+					${this._render_action_cards(analysis.required_actions)}
+				</div>`;
+				rendered++;
+			}
+			if (analysis.expected_business_impact) {
+				html += `<div class="ai-analysis-section expected-impact">
+					<div class="ai-analysis-section-header">
+						<i class="ti ti-target-arrow" aria-hidden="true"></i> ${__("Expected Business Impact")}
+					</div>
+					<p class="ai-advisory-summary">${frappe.utils.escape_html(String(analysis.expected_business_impact))}</p>
+				</div>`;
+				rendered++;
+			}
+			if (!rendered) return "";
+			return html + `</div>`;
+		}
 
 	_render_sales_order_dashboard(r) {
 		const fmt  = v => this._fmt_currency(v);
