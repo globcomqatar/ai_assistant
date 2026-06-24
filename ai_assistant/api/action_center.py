@@ -65,6 +65,16 @@ def _priority(value: str | None) -> str:
 	return "Medium"
 
 
+def _related_document(payload: dict) -> tuple[str, str]:
+	doctype = _text(payload.get("related_doctype") or payload.get("doctype"), 140)
+	name = _text(payload.get("related_document") or payload.get("document_name") or payload.get("name"), 140)
+	return doctype, name
+
+
+def _insight_reference_message() -> str:
+	return _("This action is based on an AI insight and is not linked to a specific ERPNext document.")
+
+
 def _task_description(payload: dict, follow_up: bool = False) -> str:
 	lines = [
 		_text(payload.get("suggested_next_step"), 1000),
@@ -74,8 +84,7 @@ def _task_description(payload: dict, follow_up: bool = False) -> str:
 		f"- {_('Priority')}: {_text(payload.get('priority'), 80)}",
 		f"- {_('Owner Role')}: {_text(payload.get('owner_role'), 140)}",
 	]
-	doctype = _text(payload.get("related_doctype"), 140)
-	docname = _text(payload.get("related_document"), 140)
+	doctype, docname = _related_document(payload)
 	if doctype or docname:
 		lines.append(f"- {_('Related Document')}: {' / '.join(x for x in [doctype, docname] if x)}")
 	if follow_up:
@@ -113,13 +122,12 @@ def _new_task(payload: dict, follow_up: bool = False) -> dict:
 
 def _document_route(payload: dict) -> dict:
 	_require_authenticated()
-	doctype = _text(payload.get("related_doctype"), 140)
-	name = _text(payload.get("related_document"), 140)
+	doctype, name = _related_document(payload)
 	if not doctype or not name:
 		return {
 			"ok": True,
 			"can_open_document": False,
-			"message": _("Related document is a report/reference, not an ERPNext document."),
+			"message": _insight_reference_message(),
 		}
 	if not frappe.db.exists("DocType", doctype) or not frappe.db.exists(doctype, name):
 		return {
@@ -127,7 +135,7 @@ def _document_route(payload: dict) -> dict:
 			"can_open_document": False,
 			"related_doctype": doctype,
 			"related_document": name,
-			"message": _("Related document is a report/reference, not an ERPNext document."),
+			"message": _insight_reference_message(),
 		}
 	doc = frappe.get_doc(doctype, name)
 	if not frappe.has_permission(doctype, ptype="read", doc=doc):
@@ -139,6 +147,56 @@ def _document_route(payload: dict) -> dict:
 		"related_doctype": doctype,
 		"related_document": name,
 		"route": ["Form", doctype, name],
+	}
+
+
+def _todo_description(payload: dict) -> str:
+	lines = [
+		_text(payload.get("suggested_next_step"), 1000) or _text(payload.get("action") or payload.get("title") or payload.get("text"), 500),
+		"",
+		_("AI Action Center Assignment"),
+		f"- {_('Action')}: {_text(payload.get('action') or payload.get('title') or payload.get('text'), 500)}",
+		f"- {_('Priority')}: {_text(payload.get('priority'), 80)}",
+		f"- {_('Owner Role')}: {_text(payload.get('owner_role'), 140)}",
+	]
+	doctype, docname = _related_document(payload)
+	if doctype or docname:
+		lines.append(f"- {_('Reference')}: {' / '.join(x for x in [doctype, docname] if x)}")
+	return "\n".join(line for line in lines if line is not None).strip()
+
+
+def _new_assignment(payload: dict, user: str | None = None) -> dict:
+	_require_authenticated()
+	allocated_to = _text(user or payload.get("user") or payload.get("allocated_to") or payload.get("assigned_to"), 140)
+	if not allocated_to:
+		frappe.throw(_("Please select a user to assign this action."), frappe.ValidationError)
+	if not frappe.db.exists("User", allocated_to):
+		frappe.throw(_("Selected user does not exist."), frappe.ValidationError)
+	if frappe.db.get_value("User", allocated_to, "enabled") == 0:
+		frappe.throw(_("Selected user is disabled."), frappe.ValidationError)
+	if not frappe.has_permission("ToDo", "create"):
+		frappe.throw(_("You do not have permission to create assignments."), frappe.PermissionError)
+
+	doctype, name = _related_document(payload)
+	has_valid_reference = bool(doctype and name and frappe.db.exists("DocType", doctype) and frappe.db.exists(doctype, name))
+	doc = frappe.get_doc({
+		"doctype": "ToDo",
+		"allocated_to": allocated_to,
+		"description": _todo_description(payload),
+		"priority": _priority(payload.get("priority")),
+		"status": "Open",
+	})
+	if has_valid_reference:
+		doc.reference_type = doctype
+		doc.reference_name = name
+	doc.insert()
+	frappe.db.commit()
+	_audit("assign_owner", payload, doc.name)
+	return {
+		"ok": True,
+		"status": "assigned",
+		"todo": doc.name,
+		"message": _("Action assigned to {0}.").format(allocated_to),
 	}
 
 
@@ -160,20 +218,9 @@ def create_follow_up(action_payload=None):
 
 
 @frappe.whitelist()
-def assign_action_owner(action_payload=None):
-	"""Phase 2 placeholder: never auto-assign based on owner_role."""
-	def _assign():
-		_require_authenticated()
-		payload = _payload(action_payload)
-		_audit("assign_owner", payload)
-		return {
-			"ok": True,
-			"requires_user_selection": True,
-			"message": _("Please select a user to assign this action."),
-			"users": [],
-		}
-
-	return _run_safe(_assign)
+def assign_action_owner(action_payload=None, user=None):
+	"""Create a safe ToDo assignment for a selected user."""
+	return _run_safe(lambda: _new_assignment(_payload(action_payload), user=user))
 
 
 @frappe.whitelist()
@@ -185,8 +232,7 @@ def draft_action_email(action_payload=None):
 		action = _text(payload.get("action") or payload.get("title") or payload.get("text"), 140) or _("Action Follow-up")
 		next_step = _text(payload.get("suggested_next_step"), 1000)
 		impact = _text(payload.get("impact") or payload.get("business_impact") or payload.get("expected_impact"), 1000)
-		doctype = _text(payload.get("related_doctype"), 140)
-		docname = _text(payload.get("related_document"), 140)
+		doctype, docname = _related_document(payload)
 		body_lines = [
 			_("Hello,"),
 			"",

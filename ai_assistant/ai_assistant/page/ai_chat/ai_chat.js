@@ -1520,6 +1520,7 @@ class AIChatPage {
 				owner_role: this._analysis_scalar(item.owner_role),
 				related_doctype: this._analysis_scalar(item.related_doctype),
 				related_document: this._analysis_scalar(item.related_document),
+				document_name: this._analysis_scalar(item.document_name),
 				suggested_next_step: this._analysis_scalar(item.suggested_next_step),
 				impact: this._analysis_scalar(item.impact || item.business_impact || item.expected_impact),
 			};
@@ -1581,11 +1582,12 @@ class AIChatPage {
 			});
 		}
 
-		_action_center_call(method, payload, onSuccess) {
+		_action_center_call(method, payload, onSuccess, extraArgs = {}) {
 			frappe.call({
 				method,
 				args: {
 					action_payload: JSON.stringify(payload || {}),
+					...extraArgs,
 				},
 				callback: (r) => {
 					if (r.exc) {
@@ -1602,6 +1604,37 @@ class AIChatPage {
 					this._show_action_center_error(method, r);
 				},
 			});
+		}
+
+		_show_assign_action_dialog(payload) {
+			const dialog = new frappe.ui.Dialog({
+				title: __("Assign Action"),
+				fields: [
+					{
+						fieldtype: "Link",
+						fieldname: "user",
+						label: __("User"),
+						options: "User",
+						reqd: 1,
+					},
+				],
+				primary_action_label: __("Assign"),
+				primary_action: (values) => {
+					if (!values.user) {
+						frappe.msgprint({
+							title: __("Assign Action"),
+							message: __("Please select a user before assigning this action."),
+							indicator: "orange",
+						});
+						return;
+					}
+					this._action_center_call("ai_assistant.api.action_center.assign_action_owner", payload, (data) => {
+						dialog.hide();
+						frappe.show_alert({ message: data.message || __("Action assigned."), indicator: "green" });
+					}, { user: values.user });
+				},
+			});
+			dialog.show();
 		}
 
 		_handle_action_center_click(e) {
@@ -1630,16 +1663,14 @@ class AIChatPage {
 				});
 				setTimeout(done, 900);
 			} else if (action === "assign") {
-				this._action_center_call("ai_assistant.api.action_center.assign_action_owner", payload, (data) => {
-					frappe.msgprint({ title: __("Assign Action"), message: data.message || __("Please select a user to assign this action."), indicator: "blue" });
-				});
-				setTimeout(done, 900);
+				this._show_assign_action_dialog(payload);
+				done();
 			} else if (action === "open_document") {
 				this._action_center_call("ai_assistant.api.action_center.validate_related_document", payload, (data) => {
 					if (data.can_open_document && data.route) {
 						frappe.set_route(...data.route);
 					} else {
-						frappe.msgprint(data.message || __("Related document is a report/reference, not an ERPNext document."));
+						frappe.msgprint(data.message || __("This action is based on an AI insight and is not linked to a specific ERPNext document."));
 					}
 				});
 				setTimeout(done, 900);
