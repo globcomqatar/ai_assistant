@@ -145,7 +145,6 @@ class AIChatPage {
 			.map(group => `
 			<div class="ai-sn-section">
 				<div class="ai-sn-section-label">
-					${group.icon}
 					${group.label}
 				</div>
 				${group.items.map(item => `
@@ -869,7 +868,7 @@ class AIChatPage {
 						|| result.job_cards?.length
 						|| result.employees?.length
 						|| null;
-					const label = count != null ? `${count} records` : "Done";
+					const label = count != null ? `${count} records` : `<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Completed`;
 					return `<span class="ai-result-badge ai-result-badge--ok">${label}</span>`;
 				})()}
 				</div>

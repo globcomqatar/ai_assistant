@@ -65,15 +65,15 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: rgba(37,99,235,0.06);
+  background:#f3f3f3;
   border-bottom: 1px solid rgba(37,99,235,0.15);
   color: var(--text-color);
   flex-shrink: 0;
 }
 .ai-chat-header-left { display: flex; align-items: center; gap: 12px; }
 .ai-avatar { font-size: 1.8rem; line-height: 1; }
-.ai-chat-title { font-size: 1rem; font-weight: 600; color: #1e40af; }
-.ai-chat-subtitle { font-size: 0.72rem; color: #3b82f6; opacity: 1; }
+.ai-chat-title { font-size: 1rem; font-weight: 600; color: #2463eb; }
+.ai-chat-subtitle { font-size: 0.72rem; color: #050505; opacity: 1; }
 .ai-chat-header-right { display: flex; align-items: center; gap: 8px; }
 .ai-chat-header-right .btn {
   color: var(--text-muted);
@@ -404,7 +404,14 @@
 	border-bottom: 1px solid var(--border-color);
 }
 .ai-result-icon { font-size: 1.1rem; }
-.ai-result-title { font-weight: 600; font-size: 0.85rem; flex: 1; color: var(--heading-color); }
+.ai-result-title {
+  font-weight: 600;
+  font-size: 0.82rem;
+  flex: 1;
+  color: var(--heading-color);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
 
 .ai-result-badge {
 	font-size: 0.65rem;
@@ -413,7 +420,14 @@
 	padding: 2px 6px;
 	text-transform: uppercase;
 }
-.ai-result-badge--ok { background: #dbeafe; color: #1e40af; }
+.ai-result-badge--ok {
+  background: #dbeafe;
+  color: #1e40af;
+  border: 0.5px solid #bfdbfe;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
 .ai-result-badge--error { background: #fee2e2; color: #b91c1c; }
 
 .ai-result-body { padding: 12px 14px; font-size: 0.82rem; }
@@ -1172,9 +1186,6 @@
 
 /* Section label — Frappe standard small-caps style */
 .ai-sn-section-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
   padding: 8px 14px 4px;
   font-size: 0.68rem;
   font-weight: 600;
@@ -1183,12 +1194,6 @@
   letter-spacing: 0.07em;
   user-select: none;
   cursor: default;
-}
-.ai-sn-section-label svg {
-  width: 12px;
-  height: 12px;
-  opacity: 0.6;
-  flex-shrink: 0;
 }
 
 /* Divider between sections */
