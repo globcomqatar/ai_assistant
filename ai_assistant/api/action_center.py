@@ -10,6 +10,12 @@ from frappe import _
 
 from ai_assistant.api.action_handlers import HANDLERS, parse_payload, related_document, response
 from ai_assistant.api.action_registry import get_action, get_action_registry as registry_entries
+from ai_assistant.api.approval_service import (
+	create_execution_plan,
+	execute_approved_action,
+	modify_action,
+	reject_action,
+)
 
 
 def _text(value: Any, limit: int = 500) -> str:
@@ -105,8 +111,17 @@ def _safe_error(action_id: str, payload: dict, exc: Exception, execution_time: f
 	return result
 
 
-def _execute(action_id: str, action_payload=None, **kwargs) -> dict:
+def _execute(action_id: str, action_payload=None, approved: bool = False, **kwargs) -> dict:
 	_require_authenticated()
+	if not approved:
+		plan = create_execution_plan(action_id, action_payload, user=kwargs.get("user"))
+		plan.update({
+			"success": False,
+			"ok": False,
+			"message": _("Approval is required before executing this AI action."),
+			"approval_required": True,
+		})
+		return plan
 	payload = parse_payload(action_payload)
 	start = perf_counter()
 	try:
@@ -141,6 +156,30 @@ def get_action_registry():
 def execute_action(action_id=None, action_payload=None, user=None):
 	"""Execute a registered safe AI action through the central executor."""
 	return _execute(_text(action_id, 80), action_payload, user=user)
+
+
+@frappe.whitelist()
+def get_execution_plan(action_id=None, action_payload=None, modifications=None, user=None):
+	"""Build an execution plan for review before approval."""
+	return create_execution_plan(_text(action_id, 80), action_payload, modifications=modifications, user=user)
+
+
+@frappe.whitelist()
+def approve_action(action_id=None, action_payload=None, modifications=None, user=None):
+	"""Approve and execute a safe AI action."""
+	return execute_approved_action(_text(action_id, 80), action_payload, modifications=modifications, user=user)
+
+
+@frappe.whitelist()
+def reject_action_request(action_id=None, action_payload=None, reason=None):
+	"""Reject an AI action recommendation."""
+	return reject_action(_text(action_id, 80), action_payload, reason=reason)
+
+
+@frappe.whitelist()
+def modify_action_request(action_id=None, action_payload=None, modifications=None, user=None):
+	"""Return a modified execution plan for review."""
+	return modify_action(_text(action_id, 80), action_payload, modifications=modifications, user=user)
 
 
 @frappe.whitelist()

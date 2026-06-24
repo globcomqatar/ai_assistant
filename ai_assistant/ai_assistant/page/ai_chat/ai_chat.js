@@ -29,6 +29,7 @@ class AIChatPage {
 		this.actionCenterPayloads = {};
 		this.actionCenterSeq = 0;
 		this.actionRegistry = this._default_action_registry();
+		this.actionApprovalStates = {};
 
 		this._check_settings_then_render();
 	}
@@ -399,6 +400,11 @@ class AIChatPage {
 			.off("click.ai_action_center", ".ai-action-center-btn")
 			.on("click.ai_action_center", ".ai-action-center-btn", (e) => {
 				this._handle_action_center_click(e);
+			});
+		$(document)
+			.off("click.ai_approval_center", ".ai-approval-btn")
+			.on("click.ai_approval_center", ".ai-approval-btn", (e) => {
+				this._handle_approval_click(e);
 			});
 	}
 
@@ -1570,23 +1576,33 @@ class AIChatPage {
 		_register_action_payload(item) {
 			const id = `ac-${++this.actionCenterSeq}`;
 			this.actionCenterPayloads[id] = this._action_payload(item);
+			this.actionApprovalStates[id] = "Pending Approval";
 			return id;
 		}
 
 		_render_action_center_buttons(item) {
 			const id = this._register_action_payload(item);
 			const actions = (this.actionRegistry || []).filter(action => action.safe_action !== false);
-			return `<div class="ai-action-center" data-action-id="${frappe.utils.escape_html(id)}">
-				${actions.map(action => {
-					const cls = action.primary ? "btn-primary" : "btn-default";
-					const label = __(action.label || action.action_id);
-					return `<button class="btn btn-xs ${cls} ai-action-center-btn"
-						data-action="${frappe.utils.escape_html(action.action_id)}"
-						data-action-id="${frappe.utils.escape_html(id)}"
-						title="${frappe.utils.escape_html(__(action.description || label))}">
-						${frappe.utils.escape_html(label)}
-					</button>`;
-				}).join("")}
+			const defaultAction = actions[0]?.action_id || "create_task";
+			return `<div class="ai-action-center-wrap" data-action-id="${frappe.utils.escape_html(id)}">
+				<div class="ai-approval-status" data-approval-status="${frappe.utils.escape_html(id)}">${__("Pending Approval")}</div>
+				<div class="ai-action-center" data-action-id="${frappe.utils.escape_html(id)}">
+					${actions.map(action => {
+						const cls = action.primary ? "btn-primary" : "btn-default";
+						const label = __(action.label || action.action_id);
+						return `<button class="btn btn-xs ${cls} ai-action-center-btn"
+							data-action="${frappe.utils.escape_html(action.action_id)}"
+							data-action-id="${frappe.utils.escape_html(id)}"
+							title="${frappe.utils.escape_html(__(action.description || label))}">
+							${frappe.utils.escape_html(label)}
+						</button>`;
+					}).join("")}
+				</div>
+				<div class="ai-approval-panel">
+					<button class="btn btn-xs btn-primary ai-approval-btn" data-decision="approve" data-action="${frappe.utils.escape_html(defaultAction)}" data-action-id="${frappe.utils.escape_html(id)}">${__("Approve")}</button>
+					<button class="btn btn-xs btn-default ai-approval-btn" data-decision="modify" data-action="${frappe.utils.escape_html(defaultAction)}" data-action-id="${frappe.utils.escape_html(id)}">${__("Modify")}</button>
+					<button class="btn btn-xs btn-default ai-approval-btn" data-decision="reject" data-action="${frappe.utils.escape_html(defaultAction)}" data-action-id="${frappe.utils.escape_html(id)}">${__("Reject")}</button>
+				</div>
 			</div>`;
 		}
 
@@ -1651,12 +1667,7 @@ class AIChatPage {
 		}
 
 		_execute_registered_action(action, payload, extraArgs = {}) {
-			this._action_center_call("ai_assistant.api.action_center.execute_action", payload, (data) => {
-				this._handle_action_result(action, data);
-			}, {
-				action_id: action.action_id,
-				...extraArgs,
-			});
+			this._show_approval_dialog(action, payload, {}, extraArgs.user);
 		}
 
 		_handle_action_result(action, data) {
@@ -1688,38 +1699,151 @@ class AIChatPage {
 			frappe.show_alert({ message: data.message || __("Action completed."), indicator: "green" });
 		}
 
-		_show_user_action_dialog(action, payload) {
-			const dialog = new frappe.ui.Dialog({
-				title: __(action.label || "Assign Action"),
-				fields: [
-					{
-						fieldtype: "Link",
-						fieldname: "user",
-						label: __("User"),
-						options: "User",
-						reqd: 1,
+		_set_approval_status(actionId, status) {
+			if (!actionId || !status) return;
+			this.actionApprovalStates[actionId] = status;
+			$(`[data-approval-status="${frappe.utils.escape_html(actionId)}"]`).text(__(status));
+		}
+
+		_plan_rows(plan) {
+			const rows = [
+				[__("Action"), plan.action],
+				[__("Description"), plan.description],
+				[__("Owner"), plan.owner],
+				[__("Priority"), plan.priority],
+				[__("Related Document"), plan.related_document],
+				[__("Estimated Time"), plan.estimated_time],
+				[__("Business Impact"), plan.business_impact],
+				[__("Confidence"), plan.confidence],
+				[__("Expected Outcome"), plan.expected_outcome],
+				[__("Why AI recommended this"), plan.ai_explanation],
+				[__("Business Reasoning"), plan.business_reasoning],
+				[__("Estimated Impact"), plan.estimated_impact],
+			].filter(([, value]) => value !== undefined && value !== null && value !== "");
+			return `<div class="ai-execution-plan">
+				${rows.map(([label, value]) => `<div class="ai-execution-plan-row">
+					<span>${frappe.utils.escape_html(label)}</span>
+					<strong>${frappe.utils.escape_html(String(value))}</strong>
+				</div>`).join("")}
+			</div>`;
+		}
+
+		_show_approval_dialog(action, payload, modifications = {}, user = null, actionPayloadId = null) {
+			const hasModifications = Object.values(modifications || {}).some(value => value !== undefined && value !== null && value !== "");
+			const method = hasModifications
+				? "ai_assistant.api.action_center.modify_action_request"
+				: "ai_assistant.api.action_center.get_execution_plan";
+			this._action_center_call(method, payload, (plan) => {
+				this._set_approval_status(actionPayloadId, plan.approval_status || "Pending Approval");
+				const dialog = new frappe.ui.Dialog({
+					title: __("Approval Required"),
+					fields: [
+						{ fieldtype: "HTML", fieldname: "plan", options: this._plan_rows(plan) },
+					],
+					primary_action_label: __("Approve and Execute"),
+					primary_action: () => {
+						this._approve_action(action, payload, modifications, user, actionPayloadId, dialog);
 					},
-				],
-				primary_action_label: __(action.label || "Assign"),
-				primary_action: (values) => {
-					if (!values.user) {
-						frappe.msgprint({
-							title: __(action.label || "Action Center"),
-							message: __("Please select a user before continuing."),
-							indicator: "orange",
-						});
-						return;
-					}
-					this._action_center_call("ai_assistant.api.action_center.execute_action", payload, (data) => {
+					secondary_action_label: __("Reject"),
+					secondary_action: () => {
 						dialog.hide();
-						this._handle_action_result(action, data);
-					}, {
-						action_id: action.action_id,
-						user: values.user,
-					});
+						this._reject_action(action, payload, actionPayloadId);
+					},
+				});
+				dialog.show();
+				const $modify = $(`<button class="btn btn-sm btn-default">${__("Modify")}</button>`);
+				$modify.on("click", () => {
+					dialog.hide();
+					this._show_modify_dialog(action, payload, modifications, user, actionPayloadId);
+				});
+				dialog.$wrapper.find(".modal-footer").prepend($modify);
+			}, {
+				action_id: action.action_id,
+				modifications: JSON.stringify(modifications || {}),
+				user,
+			});
+		}
+
+		_approve_action(action, payload, modifications = {}, user = null, actionPayloadId = null, dialog = null) {
+			this._set_approval_status(actionPayloadId, "Approved");
+			this._action_center_call("ai_assistant.api.action_center.approve_action", payload, (data) => {
+				if (dialog) dialog.hide();
+				this._set_approval_status(actionPayloadId, data.approval_status || "Executed");
+				this._show_execution_summary(action, data);
+			}, {
+				action_id: action.action_id,
+				modifications: JSON.stringify(modifications || {}),
+				user,
+			});
+		}
+
+		_reject_action(action, payload, actionPayloadId = null) {
+			this._action_center_call("ai_assistant.api.action_center.reject_action_request", payload, (data) => {
+				this._set_approval_status(actionPayloadId, data.approval_status || "Rejected");
+				frappe.show_alert({ message: data.message || __("AI action rejected."), indicator: "orange" });
+			}, {
+				action_id: action.action_id,
+				reason: __("Rejected by user."),
+			});
+		}
+
+		_show_modify_dialog(action, payload, modifications = {}, user = null, actionPayloadId = null) {
+			const dialog = new frappe.ui.Dialog({
+				title: __("Modify Action"),
+				fields: [
+					{ fieldtype: "Link", fieldname: "user", label: __("Assigned User"), options: "User", default: user || payload.user || "" },
+					{ fieldtype: "Select", fieldname: "priority", label: __("Priority"), options: "\nLow\nMedium\nHigh", default: modifications.priority || payload.priority || "" },
+					{ fieldtype: "Date", fieldname: "due_date", label: __("Due Date"), default: modifications.due_date || payload.due_date || "" },
+					{ fieldtype: "Data", fieldname: "subject", label: __("Subject"), default: modifications.subject || payload.title || payload.action || "" },
+					{ fieldtype: "Small Text", fieldname: "description", label: __("Description"), default: modifications.description || payload.description || payload.suggested_next_step || "" },
+				],
+				primary_action_label: __("Review Plan"),
+				primary_action: (values) => {
+					const nextModifications = {
+						...modifications,
+						assigned_user: values.user,
+						priority: values.priority,
+						due_date: values.due_date,
+						subject: values.subject,
+						description: values.description,
+					};
+					dialog.hide();
+					this._set_approval_status(actionPayloadId, "Modified");
+					this._show_approval_dialog(action, payload, nextModifications, values.user, actionPayloadId);
 				},
 			});
 			dialog.show();
+		}
+
+		_show_execution_summary(action, data) {
+			if (action.action_id === "draft_email") {
+				this._show_email_draft_dialog(data);
+				return;
+			}
+			const summary = data.execution_summary || {};
+			const created = data.created_document || summary.created_document;
+			const route = summary.open_document_route || data.document_route || data.route;
+			const rows = [
+				[__("Success"), data.success ? __("Yes") : __("No")],
+				[__("Created Document"), created ? `${created.doctype}: ${created.name}` : ""],
+				[__("Assigned User"), summary.assigned_user],
+				[__("Execution Time"), data.execution_time ? `${data.execution_time}s` : ""],
+			].filter(([, value]) => value);
+			const dialog = new frappe.ui.Dialog({
+				title: __("Execution Summary"),
+				fields: [
+					{ fieldtype: "HTML", fieldname: "summary", options: `<div class="ai-execution-plan">
+						${rows.map(([label, value]) => `<div class="ai-execution-plan-row"><span>${frappe.utils.escape_html(label)}</span><strong>${frappe.utils.escape_html(String(value))}</strong></div>`).join("")}
+					</div>` },
+				],
+				primary_action_label: route ? __("Open Document") : __("Close"),
+				primary_action: () => {
+					dialog.hide();
+					if (route) frappe.set_route(...route);
+				},
+			});
+			dialog.show();
+			frappe.show_alert({ message: data.message || __("Action executed."), indicator: data.success ? "green" : "red" });
 		}
 
 		_handle_action_center_click(e) {
@@ -1736,12 +1860,28 @@ class AIChatPage {
 			$btn.prop("disabled", true);
 			const done = () => $btn.prop("disabled", false);
 
-			if (action.requires_user) {
-				this._show_user_action_dialog(action, payload);
-				done();
+			this._show_approval_dialog(action, payload, {}, null, id);
+			setTimeout(done, 900);
+		}
+
+		_handle_approval_click(e) {
+			e.preventDefault();
+			const $btn = $(e.currentTarget);
+			const id = $btn.data("action-id");
+			const decision = $btn.data("decision");
+			const actionId = $btn.data("action");
+			const action = (this.actionRegistry || []).find(item => item.action_id === actionId) || { action_id: actionId, label: actionId, safe_action: true };
+			const payload = this.actionCenterPayloads[id];
+			if (!payload) {
+				frappe.msgprint(__("Action context is no longer available. Please rerun the report."));
+				return;
+			}
+			if (decision === "reject") {
+				this._reject_action(action, payload, id);
+			} else if (decision === "modify") {
+				this._show_modify_dialog(action, payload, {}, null, id);
 			} else {
-				this._execute_registered_action(action, payload);
-				setTimeout(done, 900);
+				this._show_approval_dialog(action, payload, {}, null, id);
 			}
 		}
 
@@ -1824,6 +1964,10 @@ class AIChatPage {
 				bodyFields = [
 					this._analysis_field(__("Next Step"), item.suggested_next_step, "primary"),
 					this._analysis_field(__("Business Impact"), item.business_impact || item.impact || item.expected_impact),
+					this._analysis_field(__("Why AI Recommended This"), item.ai_explanation || item.why || item.reasoning),
+					this._analysis_field(__("Business Reasoning"), item.business_reasoning),
+					this._analysis_field(__("Estimated Impact"), item.estimated_impact),
+					this._analysis_field(__("Expected Outcome"), item.expected_outcome || item.outcome),
 					this._analysis_field(__("Description"), item.description),
 				].join("");
 			} else if (sectionType === "recommendation") {

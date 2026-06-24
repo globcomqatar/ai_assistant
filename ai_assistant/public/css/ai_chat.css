@@ -1286,6 +1286,51 @@
 	opacity: 0.65;
 	pointer-events: none;
 }
+.ai-action-center-wrap {
+	display: grid;
+	gap: 7px;
+}
+.ai-approval-status {
+	justify-self: flex-start;
+	border: 1px solid rgba(37,99,235,0.18);
+	border-radius: 999px;
+	background: #eff6ff;
+	color: #1d4ed8;
+	font-size: 0.66rem;
+	font-weight: 800;
+	line-height: 1.35;
+	padding: 3px 8px;
+}
+.ai-approval-panel {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+.ai-execution-plan {
+	display: grid;
+	gap: 7px;
+}
+.ai-execution-plan-row {
+	display: grid;
+	gap: 2px;
+	padding: 7px 8px;
+	border: 1px solid rgba(15,23,42,0.08);
+	border-radius: 7px;
+	background: rgba(248,250,252,0.9);
+}
+.ai-execution-plan-row span {
+	color: var(--text-muted);
+	font-size: 0.66rem;
+	font-weight: 800;
+	letter-spacing: 0.03em;
+	text-transform: uppercase;
+}
+.ai-execution-plan-row strong {
+	color: var(--text-color);
+	font-size: 0.78rem;
+	line-height: 1.45;
+	overflow-wrap: anywhere;
+}
 .ai-analysis-main-text {
 	margin: 0;
 	color: var(--text-color);
