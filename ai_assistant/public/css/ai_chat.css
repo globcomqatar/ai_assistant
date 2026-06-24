@@ -1331,6 +1331,104 @@
 	line-height: 1.45;
 	overflow-wrap: anywhere;
 }
+.ai-workflow-card {
+	display: grid;
+	gap: 8px;
+	padding: 10px;
+	border: 1px solid rgba(15,23,42,0.08);
+	border-radius: 8px;
+	background: rgba(255,255,255,0.72);
+}
+.ai-workflow-card-head {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 10px;
+}
+.ai-workflow-card-head strong {
+	color: var(--text-color);
+	font-size: 0.82rem;
+	line-height: 1.35;
+}
+.ai-workflow-status {
+	border: 1px solid rgba(37,99,235,0.18);
+	border-radius: 999px;
+	background: #eff6ff;
+	color: #1d4ed8;
+	font-size: 0.66rem;
+	font-weight: 800;
+	padding: 3px 8px;
+	white-space: nowrap;
+}
+.ai-workflow-progress {
+	width: 100%;
+	height: 6px;
+	overflow: hidden;
+	border-radius: 999px;
+	background: #e2e8f0;
+}
+.ai-workflow-progress span {
+	display: block;
+	height: 100%;
+	border-radius: inherit;
+	background: #2563eb;
+	transition: width 0.2s ease;
+}
+.ai-workflow-steps {
+	display: grid;
+	gap: 5px;
+}
+.ai-workflow-step {
+	display: grid;
+	grid-template-columns: 22px minmax(0, 1fr) auto;
+	align-items: center;
+	gap: 7px;
+	padding: 6px 7px;
+	border: 1px solid rgba(15,23,42,0.07);
+	border-radius: 7px;
+	background: #f8fafc;
+}
+.ai-workflow-step span {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+	border-radius: 999px;
+	background: #e2e8f0;
+	color: #334155;
+	font-size: 0.66rem;
+	font-weight: 800;
+}
+.ai-workflow-step strong {
+	color: var(--text-color);
+	font-size: 0.76rem;
+	line-height: 1.35;
+	overflow-wrap: anywhere;
+}
+.ai-workflow-step em {
+	color: var(--text-muted);
+	font-size: 0.66rem;
+	font-style: normal;
+	font-weight: 800;
+}
+.ai-workflow-step.completed span {
+	background: #dcfce7;
+	color: #166534;
+}
+.ai-workflow-step.failed span {
+	background: #fee2e2;
+	color: #991b1b;
+}
+.ai-workflow-step.running span {
+	background: #dbeafe;
+	color: #1d4ed8;
+}
+.ai-workflow-step.skipped span,
+.ai-workflow-step.cancelled span {
+	background: #f1f5f9;
+	color: #64748b;
+}
 .ai-analysis-main-text {
 	margin: 0;
 	color: var(--text-color);

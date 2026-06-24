@@ -16,6 +16,8 @@ from ai_assistant.api.approval_service import (
 	modify_action,
 	reject_action,
 )
+from ai_assistant.api.workflow_engine import build_workflow_plan, execute_workflow as run_workflow
+from ai_assistant.api.workflow_registry import get_workflow_registry as registry_workflows
 
 
 def _text(value: Any, limit: int = 500) -> str:
@@ -153,6 +155,13 @@ def get_action_registry():
 
 
 @frappe.whitelist()
+def get_workflow_registry():
+	"""Return safe frontend metadata for supported AI workflows."""
+	_require_authenticated()
+	return registry_workflows()
+
+
+@frappe.whitelist()
 def execute_action(action_id=None, action_payload=None, user=None):
 	"""Execute a registered safe AI action through the central executor."""
 	return _execute(_text(action_id, 80), action_payload, user=user)
@@ -180,6 +189,33 @@ def reject_action_request(action_id=None, action_payload=None, reason=None):
 def modify_action_request(action_id=None, action_payload=None, modifications=None, user=None):
 	"""Return a modified execution plan for review."""
 	return modify_action(_text(action_id, 80), action_payload, modifications=modifications, user=user)
+
+
+@frappe.whitelist()
+def get_workflow_plan(workflow_id=None, recommendation_payload=None):
+	"""Build a workflow execution plan from an AI recommendation."""
+	return build_workflow_plan(_text(workflow_id, 120) or None, recommendation_payload)
+
+
+@frappe.whitelist()
+def approve_workflow(workflow_id=None, recommendation_payload=None, user=None, skip_steps=None, retry_from_step=None):
+	"""Approve and execute a safe AI workflow sequentially."""
+	if isinstance(skip_steps, str):
+		skip_steps = frappe.parse_json(skip_steps) or []
+	return run_workflow(
+		_text(workflow_id, 120) or None,
+		recommendation_payload,
+		approved=True,
+		user=user,
+		skip_steps=skip_steps,
+		retry_from_step=_text(retry_from_step, 120) or None,
+	)
+
+
+@frappe.whitelist()
+def execute_workflow(workflow_id=None, recommendation_payload=None, user=None):
+	"""Return approval-required workflow plan for backward compatible callers."""
+	return run_workflow(_text(workflow_id, 120) or None, recommendation_payload, approved=False, user=user)
 
 
 @frappe.whitelist()

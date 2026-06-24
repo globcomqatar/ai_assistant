@@ -30,6 +30,9 @@ class AIChatPage {
 		this.actionCenterSeq = 0;
 		this.actionRegistry = this._default_action_registry();
 		this.actionApprovalStates = {};
+		this.workflowRegistry = [];
+		this.workflowPayloads = {};
+		this.workflowSeq = 0;
 
 		this._check_settings_then_render();
 	}
@@ -49,6 +52,7 @@ class AIChatPage {
 					this._load_usage();
 					this._load_agents();
 					this._load_action_registry();
+					this._load_workflow_registry();
 				} else {
 					this._render_disabled();
 				}
@@ -349,6 +353,17 @@ class AIChatPage {
 		});
 	}
 
+	_load_workflow_registry() {
+		frappe.call({
+			method: "ai_assistant.api.action_center.get_workflow_registry",
+			callback: (r) => {
+				if (Array.isArray(r.message) && r.message.length) {
+					this.workflowRegistry = r.message;
+				}
+			},
+		});
+	}
+
 	// ── Events ─────────────────────────────────────────────────────────────────
 
 	_bind_events() {
@@ -405,6 +420,11 @@ class AIChatPage {
 			.off("click.ai_approval_center", ".ai-approval-btn")
 			.on("click.ai_approval_center", ".ai-approval-btn", (e) => {
 				this._handle_approval_click(e);
+			});
+		$(document)
+			.off("click.ai_workflow_center", ".ai-workflow-btn")
+			.on("click.ai_workflow_center", ".ai-workflow-btn", (e) => {
+				this._handle_workflow_click(e);
 			});
 	}
 
@@ -1547,6 +1567,64 @@ class AIChatPage {
 			];
 		}
 
+		_is_workflow_recommendation(item) {
+			return Array.isArray(item.steps) || Array.isArray(item.actions) || !!item.workflow_id;
+		}
+
+		_workflow_payload(item) {
+			const payload = this._action_payload(item);
+			return {
+				...payload,
+				workflow_id: this._analysis_scalar(item.workflow_id),
+				workflow_name: this._analysis_scalar(item.workflow_name || item.name),
+				estimated_duration: this._analysis_scalar(item.estimated_duration || item.estimated_time),
+				steps: Array.isArray(item.steps) ? item.steps : (Array.isArray(item.actions) ? item.actions : []),
+			};
+		}
+
+		_register_workflow_payload(item) {
+			const id = `wf-${++this.workflowSeq}`;
+			this.workflowPayloads[id] = this._workflow_payload(item);
+			return id;
+		}
+
+		_workflow_template_name(workflowId) {
+			const workflow = (this.workflowRegistry || []).find(item => item.workflow_id === workflowId);
+			return workflow?.name || workflowId || __("AI Workflow");
+		}
+
+		_render_workflow_card(item) {
+			const id = this._register_workflow_payload(item);
+			const payload = this.workflowPayloads[id];
+			const workflowName = this._analysis_scalar(item.workflow_name || item.name) || this._workflow_template_name(payload.workflow_id);
+			const steps = payload.steps || [];
+			const progress = Math.max(0, Math.min(100, parseInt(item.progress || 0, 10) || 0));
+			return `<div class="ai-workflow-card" data-workflow-id="${frappe.utils.escape_html(id)}">
+				<div class="ai-workflow-card-head">
+					<strong>${frappe.utils.escape_html(workflowName)}</strong>
+					<span class="ai-workflow-status">${frappe.utils.escape_html(item.status || __("Pending Approval"))}</span>
+				</div>
+				<div class="ai-card-meta-row">
+					${this._analysis_pill(__("Confidence"), item.confidence || item.confidence_score)}
+					${this._analysis_pill(__("Duration"), item.estimated_duration || item.estimated_time)}
+					${this._analysis_pill(__("Impact"), item.business_impact || item.impact || item.expected_impact)}
+				</div>
+				<div class="ai-workflow-progress"><span style="width:${progress}%"></span></div>
+				<div class="ai-workflow-steps">
+					${steps.length ? steps.map((step, idx) => `<div class="ai-workflow-step ${frappe.utils.escape_html((step.status || "pending").toLowerCase())}">
+						<span>${idx + 1}</span>
+						<strong>${frappe.utils.escape_html(this._analysis_scalar(step.label || step.title || step.action_id || step.action || step))}</strong>
+						<em>${frappe.utils.escape_html(step.status || __("Pending"))}</em>
+					</div>`).join("") : `<div class="ai-workflow-step pending"><span>1</span><strong>${__("Workflow steps will be populated from the template.")}</strong><em>${__("Pending")}</em></div>`}
+				</div>
+				<div class="ai-approval-panel">
+					<button class="btn btn-xs btn-primary ai-workflow-btn" data-decision="approve" data-workflow-id="${frappe.utils.escape_html(id)}">${__("Approve Workflow")}</button>
+					<button class="btn btn-xs btn-default ai-workflow-btn" data-decision="plan" data-workflow-id="${frappe.utils.escape_html(id)}">${__("Review Plan")}</button>
+					<button class="btn btn-xs btn-default ai-workflow-btn" data-decision="reject" data-workflow-id="${frappe.utils.escape_html(id)}">${__("Reject")}</button>
+				</div>
+			</div>`;
+		}
+
 		_action_payload(item) {
 			const title = this._analysis_scalar(item.title || item.action || item.text);
 			const description = this._analysis_scalar(item.description || item.suggested_next_step);
@@ -1846,6 +1924,137 @@ class AIChatPage {
 			frappe.show_alert({ message: data.message || __("Action executed."), indicator: data.success ? "green" : "red" });
 		}
 
+		_workflow_plan_rows(plan) {
+			const rows = [
+				[__("Workflow"), plan.workflow_name],
+				[__("Business Impact"), plan.business_impact],
+				[__("Confidence"), plan.confidence],
+				[__("Estimated Duration"), plan.estimated_duration],
+				[__("Status"), plan.status],
+			].filter(([, value]) => value !== undefined && value !== null && value !== "");
+			const steps = plan.steps || [];
+			return `<div class="ai-execution-plan">
+				${rows.map(([label, value]) => `<div class="ai-execution-plan-row"><span>${frappe.utils.escape_html(label)}</span><strong>${frappe.utils.escape_html(String(value))}</strong></div>`).join("")}
+				<div class="ai-workflow-steps">
+					${steps.map(step => `<div class="ai-workflow-step ${frappe.utils.escape_html((step.status || "pending").toLowerCase())}">
+						<span>${frappe.utils.escape_html(step.order || "")}</span>
+						<strong>${frappe.utils.escape_html(step.label || step.action_id)}</strong>
+						<em>${frappe.utils.escape_html(step.status || __("Pending"))}</em>
+					</div>`).join("")}
+				</div>
+			</div>`;
+		}
+
+		_show_workflow_plan_dialog(workflowPayload, workflowPayloadId, executeNow = false) {
+			frappe.call({
+				method: "ai_assistant.api.action_center.get_workflow_plan",
+				args: {
+					workflow_id: workflowPayload.workflow_id || "",
+					recommendation_payload: JSON.stringify(workflowPayload || {}),
+				},
+				callback: (r) => {
+					const plan = r.message;
+					if (!plan?.success) {
+						this._show_action_center_error("ai_assistant.api.action_center.get_workflow_plan", plan || r);
+						return;
+					}
+					const dialog = new frappe.ui.Dialog({
+						title: __("Workflow Approval"),
+						fields: [
+							{ fieldtype: "HTML", fieldname: "plan", options: this._workflow_plan_rows(plan) },
+						],
+						primary_action_label: __("Approve and Execute"),
+						primary_action: () => {
+							dialog.hide();
+							this._execute_workflow(workflowPayload, workflowPayloadId);
+						},
+						secondary_action_label: __("Close"),
+						secondary_action: () => dialog.hide(),
+					});
+					dialog.show();
+					if (executeNow) {
+						dialog.hide();
+						this._execute_workflow(workflowPayload, workflowPayloadId);
+					}
+				},
+				error: (r) => this._show_action_center_error("ai_assistant.api.action_center.get_workflow_plan", r),
+			});
+		}
+
+		_execute_workflow(workflowPayload, workflowPayloadId) {
+			frappe.call({
+				method: "ai_assistant.api.action_center.approve_workflow",
+				args: {
+					workflow_id: workflowPayload.workflow_id || "",
+					recommendation_payload: JSON.stringify(workflowPayload || {}),
+				},
+				callback: (r) => {
+					const data = r.message;
+					if (!data?.success && data?.ok === false) {
+						this._show_action_center_error("ai_assistant.api.action_center.approve_workflow", data);
+						return;
+					}
+					this._show_workflow_summary(data);
+					this._update_workflow_card(workflowPayloadId, data);
+				},
+				error: (r) => this._show_action_center_error("ai_assistant.api.action_center.approve_workflow", r),
+			});
+		}
+
+		_show_workflow_summary(data) {
+			const rows = [
+				[__("Status"), data.status],
+				[__("Completed Steps"), data.completed_steps],
+				[__("Failed Steps"), data.failed_steps],
+				[__("Execution Time"), data.execution_time ? `${data.execution_time}s` : ""],
+				[__("Business Impact"), data.business_impact],
+				[__("Created Documents"), (data.created_documents || []).map(doc => `${doc.doctype}: ${doc.name}`).join(", ")],
+			].filter(([, value]) => value !== undefined && value !== null && value !== "");
+			const dialog = new frappe.ui.Dialog({
+				title: __("Workflow Summary"),
+				fields: [
+					{ fieldtype: "HTML", fieldname: "summary", options: `<div class="ai-execution-plan">
+						${rows.map(([label, value]) => `<div class="ai-execution-plan-row"><span>${frappe.utils.escape_html(label)}</span><strong>${frappe.utils.escape_html(String(value))}</strong></div>`).join("")}
+						<div class="ai-workflow-steps">
+							${(data.steps || []).map(step => `<div class="ai-workflow-step ${frappe.utils.escape_html((step.status || "pending").toLowerCase())}">
+								<span>${frappe.utils.escape_html(step.order || "")}</span>
+								<strong>${frappe.utils.escape_html(step.label || step.action_id)}</strong>
+								<em>${frappe.utils.escape_html(step.status || "")}</em>
+							</div>`).join("")}
+						</div>
+					</div>` },
+				],
+				primary_action_label: __("Close"),
+				primary_action: () => dialog.hide(),
+			});
+			dialog.show();
+			frappe.show_alert({ message: data.message || __("Workflow finished."), indicator: data.success ? "green" : "red" });
+		}
+
+		_update_workflow_card(workflowPayloadId, data) {
+			const $card = $(`[data-workflow-id="${frappe.utils.escape_html(workflowPayloadId)}"]`);
+			$card.find(".ai-workflow-status").text(__(data.status || "Completed"));
+			$card.find(".ai-workflow-progress span").css("width", `${data.progress || 0}%`);
+		}
+
+		_handle_workflow_click(e) {
+			e.preventDefault();
+			const $btn = $(e.currentTarget);
+			const workflowPayloadId = $btn.data("workflow-id");
+			const decision = $btn.data("decision");
+			const workflowPayload = this.workflowPayloads[workflowPayloadId];
+			if (!workflowPayload) {
+				frappe.msgprint(__("Workflow context is no longer available. Please rerun the report."));
+				return;
+			}
+			if (decision === "reject") {
+				$(`[data-workflow-id="${frappe.utils.escape_html(workflowPayloadId)}"] .ai-workflow-status`).text(__("Cancelled"));
+				frappe.show_alert({ message: __("Workflow rejected."), indicator: "orange" });
+				return;
+			}
+			this._show_workflow_plan_dialog(workflowPayload, workflowPayloadId, false);
+		}
+
 		_handle_action_center_click(e) {
 			e.preventDefault();
 			const $btn = $(e.currentTarget);
@@ -1921,6 +2130,10 @@ class AIChatPage {
 			const cardType = sectionType === "required_action" ? "action" : sectionType;
 			let bodyFields = "";
 			let meta = "";
+
+			if (sectionType === "required_action" && this._is_workflow_recommendation(item)) {
+				return this._render_workflow_card(item);
+			}
 
 			if (sectionType === "finding" || sectionType === "root_cause") {
 				const text = item.description || item.text || item.title;
