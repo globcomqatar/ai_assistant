@@ -1040,129 +1040,246 @@
 .ai-alert-warning  { background: #fffbeb; border-color: #eab308; color: #92400e; }
 .ai-alert-info     { background: #eff6ff; border-color: #60a5fa; color: #1e40af; }
 
-/* ── Structured analysis sections (Findings / Risks / Recs / Actions) ── */
+/* ── Management Intelligence advisory report ─────────────────────────────── */
 .ai-analysis-section {
-  border-radius: 6px;
-  padding: 8px 12px;
-  margin-bottom: 6px;
-  border: 1px solid var(--border-color);
-  border-radius: 0 6px 6px 0;
+	background: var(--card-bg);
+	border: 1px solid var(--border-color);
+	border-radius: 8px;
+	padding: 12px;
+	min-width: 0;
 }
 .ai-analysis-section-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  margin-bottom: 5px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 0.82rem;
+	font-weight: 700;
+	line-height: 1.25;
+	margin-bottom: 9px;
+	color: var(--text-color);
 }
 .ai-analysis-section ul {
-  margin: 0;
-  padding-left: 16px;
+	margin: 0;
+	padding-left: 16px;
 }
 .ai-analysis-section ul li {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  margin-bottom: 3px;
-  line-height: 1.45;
+	font-size: 0.78rem;
+	color: var(--text-muted);
+	margin-bottom: 3px;
+	line-height: 1.45;
+}
+.ai-section-icon-wrap,
+.ai-card-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 auto;
+}
+.ai-section-icon-wrap {
+	width: 24px;
+	height: 24px;
+	border-radius: 7px;
+	background: rgba(37,99,235,0.1);
+	color: #1d4ed8;
+}
+.ai-mi-report {
+	border-top: 1px solid var(--border-color);
+	margin-top: 12px;
+	padding-top: 12px;
+	display: grid;
+	gap: 12px;
+}
+.ai-mi-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	gap: 12px;
+	align-items: start;
+}
+.ai-mi-column {
+	display: grid;
+	gap: 12px;
+	min-width: 0;
+}
+.ai-analysis-section.executive-summary {
+	background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
+	border-color: #bfdbfe;
+	border-left: 4px solid #2563eb;
+}
+.ai-analysis-section.executive-summary .ai-analysis-section-header {
+	color: #1d4ed8;
 }
 .ai-analysis-section.findings {
-  border-left: 3px solid #2563eb;
-  background: rgba(37,99,235,0.05);
+	background: #f8fbff;
+	border-color: #dbeafe;
+	border-left: 4px solid #2563eb;
 }
 .ai-analysis-section.findings .ai-analysis-section-header { color: #1e40af; }
+.ai-analysis-section.root-causes {
+	background: #f8fafc;
+	border-color: #e2e8f0;
+	border-left: 4px solid #64748b;
+}
+.ai-analysis-section.root-causes .ai-section-icon-wrap {
+	background: #e2e8f0;
+	color: #475569;
+}
+.ai-analysis-section.root-causes .ai-analysis-section-header { color: #475569; }
 .ai-analysis-section.risks {
-  border-left: 3px solid var(--red-500, #ef4444);
-  background: #fef2f2;
+	background: #fff7f7;
+	border-color: #fecaca;
+	border-left: 4px solid #ef4444;
+}
+.ai-analysis-section.risks .ai-section-icon-wrap {
+	background: #fee2e2;
+	color: #b91c1c;
 }
 .ai-analysis-section.risks .ai-analysis-section-header { color: #b91c1c; }
+.ai-analysis-section.opportunities {
+	background: #f0fdfa;
+	border-color: #99f6e4;
+	border-left: 4px solid #0d9488;
+}
+.ai-analysis-section.opportunities .ai-section-icon-wrap {
+	background: #ccfbf1;
+	color: #0f766e;
+}
+.ai-analysis-section.opportunities .ai-analysis-section-header { color: #0f766e; }
 .ai-analysis-section.recommendations {
-  border-left: 3px solid var(--green-600, #16a34a);
-  background: #f0fdf4;
+	background: #f7fdf9;
+	border-color: #bbf7d0;
+	border-left: 4px solid #16a34a;
+}
+.ai-analysis-section.recommendations .ai-section-icon-wrap {
+	background: #dcfce7;
+	color: #15803d;
 }
 .ai-analysis-section.recommendations .ai-analysis-section-header { color: #15803d; }
 .ai-analysis-section.required-actions {
-  border-left: 3px solid var(--orange-500, #f59e0b);
-  background: #fffbeb;
+	background: #fffbeb;
+	border-color: #fde68a;
+	border-left: 4px solid #f59e0b;
+}
+.ai-analysis-section.required-actions .ai-section-icon-wrap {
+	background: #fef3c7;
+	color: #b45309;
 }
 .ai-analysis-section.required-actions .ai-analysis-section-header { color: #b45309; }
-
-/* ── Advisory intelligence cards ─────────────────────────────────────────── */
-.ai-advisory-sections {
-	gap: 10px;
-}
-.ai-analysis-section.executive-summary {
-	border-left: 3px solid #2563eb;
-	background: #eff6ff;
-}
-.ai-analysis-section.root-causes {
-	border-left: 3px solid #64748b;
-	background: #f8fafc;
-}
-.ai-analysis-section.opportunities {
-	border-left: 3px solid #0d9488;
-	background: #f0fdfa;
-}
 .ai-analysis-section.expected-impact {
-	border-left: 3px solid #7c3aed;
-	background: #f5f3ff;
+	background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
+	border-color: #bfdbfe;
+	border-left: 4px solid #1d4ed8;
 }
-.ai-analysis-section.executive-summary .ai-analysis-section-header { color: #1d4ed8; }
-.ai-analysis-section.root-causes .ai-analysis-section-header { color: #475569; }
-.ai-analysis-section.opportunities .ai-analysis-section-header { color: #0f766e; }
-.ai-analysis-section.expected-impact .ai-analysis-section-header { color: #6d28d9; }
+.ai-analysis-section.expected-impact .ai-analysis-section-header { color: #1e40af; }
 .ai-advisory-summary {
 	margin: 0;
 	color: var(--text-color);
-	font-size: 0.82rem;
-	line-height: 1.48;
+	font-size: 0.84rem;
+	line-height: 1.58;
+}
+.ai-analysis-section.executive-summary .ai-advisory-summary,
+.ai-analysis-section.expected-impact .ai-advisory-summary {
+	font-size: 0.88rem;
 }
 .ai-advisory-list {
 	display: grid;
-	gap: 6px;
+	gap: 7px;
 }
 .ai-advisory-item {
-	background: rgba(255,255,255,0.65);
-	border: 1px solid rgba(0,0,0,0.06);
-	border-radius: 6px;
-	padding: 7px 9px;
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	gap: 8px;
+	align-items: flex-start;
+	background: rgba(255,255,255,0.74);
+	border: 1px solid rgba(15,23,42,0.07);
+	border-radius: 8px;
+	padding: 8px 10px;
 	color: var(--text-muted);
-	font-size: 0.79rem;
-	line-height: 1.45;
+	font-size: 0.8rem;
+	line-height: 1.48;
+	box-shadow: 0 1px 2px rgba(15,23,42,0.03);
+}
+.ai-advisory-item-marker {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 19px;
+	height: 19px;
+	border-radius: 999px;
+	background: #e0f2fe;
+	color: #0369a1;
+	font-size: 0.68rem;
+	font-weight: 700;
+	line-height: 1;
 }
 .ai-advisory-card-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-	gap: 8px;
+	grid-template-columns: 1fr;
+	gap: 9px;
 }
 .ai-advisory-card {
-	background: rgba(255,255,255,0.72);
-	border: 1px solid rgba(0,0,0,0.08);
+	position: relative;
+	background: rgba(255,255,255,0.82);
+	border: 1px solid rgba(15,23,42,0.08);
 	border-radius: 8px;
-	padding: 9px 10px;
+	padding: 10px 11px;
 	min-width: 0;
+	box-shadow: 0 1px 3px rgba(15,23,42,0.05);
 }
-.ai-advisory-card.risk { border-left: 3px solid #ef4444; }
-.ai-advisory-card.opportunity { border-left: 3px solid #0d9488; }
-.ai-advisory-card.action { border-left: 3px solid #f59e0b; }
+.ai-advisory-card.risk {
+	border-color: #fecaca;
+	border-left: 4px solid #ef4444;
+}
+.ai-advisory-card.opportunity {
+	border-color: #99f6e4;
+	border-left: 4px solid #0d9488;
+}
+.ai-advisory-card.action {
+	border-color: #fde68a;
+	border-left: 4px solid #f59e0b;
+}
 .ai-advisory-card-top {
 	display: flex;
 	align-items: flex-start;
 	justify-content: space-between;
-	gap: 8px;
-	margin-bottom: 5px;
+	gap: 10px;
+	margin-bottom: 7px;
 }
 .ai-advisory-card-top strong {
-	font-size: 0.81rem;
-	line-height: 1.3;
+	font-size: 0.82rem;
+	line-height: 1.35;
 	color: var(--text-color);
 	overflow-wrap: anywhere;
+}
+.ai-card-icon {
+	width: 25px;
+	height: 25px;
+	border-radius: 8px;
+	font-size: 0.9rem;
+}
+.ai-card-icon.danger {
+	background: #fee2e2;
+	color: #b91c1c;
+}
+.ai-card-icon.success {
+	background: #ccfbf1;
+	color: #0f766e;
+}
+.ai-card-icon.action {
+	background: #fef3c7;
+	color: #b45309;
+}
+.ai-card-meta-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+	margin: 0 0 7px;
 }
 .ai-advisory-card p {
 	margin: 0;
 	color: var(--text-muted);
-	font-size: 0.77rem;
-	line-height: 1.45;
+	font-size: 0.78rem;
+	line-height: 1.5;
 }
 .ai-score-pill,
 .ai-severity-badge,
@@ -1172,60 +1289,79 @@
 	justify-content: center;
 	white-space: nowrap;
 	border-radius: 999px;
-	padding: 2px 8px;
+	padding: 3px 9px;
 	font-size: 0.68rem;
-	font-weight: 700;
-	line-height: 1.4;
+	font-weight: 800;
+	line-height: 1.35;
 	text-transform: capitalize;
+	border: 1px solid transparent;
 }
 .ai-score-pill {
-	background: #f1f5f9;
+	background: #f8fafc;
 	color: #334155;
-	border: 1px solid #cbd5e1;
+	border-color: #cbd5e1;
 }
 .ai-severity-badge.low,
 .ai-priority-badge.low {
 	background: #dcfce7;
 	color: #166534;
+	border-color: #86efac;
 }
 .ai-severity-badge.medium,
 .ai-priority-badge.medium {
 	background: #fef9c3;
 	color: #854d0e;
+	border-color: #fde047;
 }
 .ai-severity-badge.high,
 .ai-priority-badge.high {
 	background: #ffedd5;
 	color: #9a3412;
+	border-color: #fdba74;
 }
 .ai-severity-badge.critical,
 .ai-priority-badge.urgent {
 	background: #fee2e2;
 	color: #991b1b;
+	border-color: #fca5a5;
 }
 .ai-action-meta {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 5px;
-	margin-bottom: 5px;
+	gap: 6px;
+	margin-bottom: 7px;
 }
 .ai-action-meta span,
 .ai-related-doc {
-	background: var(--subtle-fg);
-	border: 1px solid var(--border-color);
+	background: rgba(255,255,255,0.8);
+	border: 1px solid rgba(15,23,42,0.09);
 	border-radius: 999px;
-	padding: 2px 7px;
+	padding: 3px 8px;
 	color: var(--text-muted);
 	font-size: 0.68rem;
+	font-weight: 600;
 }
-@media (max-width: 767px) {
-	.ai-advisory-card-grid {
+@media (max-width: 900px) {
+	.ai-mi-grid {
 		grid-template-columns: 1fr;
 	}
+}
+@media (max-width: 767px) {
+	.ai-mi-report {
+		gap: 10px;
+		padding-top: 10px;
+	}
+	.ai-mi-column {
+		gap: 10px;
+	}
+	.ai-analysis-section {
+		padding: 10px;
+	}
+	.ai-analysis-section-header {
+		font-size: 0.8rem;
+	}
 	.ai-advisory-card-top {
-		flex-direction: column;
-		align-items: flex-start;
-		gap: 5px;
+		gap: 8px;
 	}
 	.ai-score-pill,
 	.ai-severity-badge,
