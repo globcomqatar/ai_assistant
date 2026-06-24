@@ -28,6 +28,7 @@ class AIChatPage {
 		this.agents = [];
 		this.actionCenterPayloads = {};
 		this.actionCenterSeq = 0;
+		this.actionRegistry = this._default_action_registry();
 
 		this._check_settings_then_render();
 	}
@@ -46,6 +47,7 @@ class AIChatPage {
 					this._render();
 					this._load_usage();
 					this._load_agents();
+					this._load_action_registry();
 				} else {
 					this._render_disabled();
 				}
@@ -333,6 +335,17 @@ class AIChatPage {
 			$("#ai-sb-expand-btn").addClass("hidden");
 			$("#ai-sb-backdrop").addClass("hidden");
 		}
+	}
+
+	_load_action_registry() {
+		frappe.call({
+			method: "ai_assistant.api.action_center.get_action_registry",
+			callback: (r) => {
+				if (Array.isArray(r.message) && r.message.length) {
+					this.actionRegistry = r.message;
+				}
+			},
+		});
 	}
 
 	// ── Events ─────────────────────────────────────────────────────────────────
@@ -1493,8 +1506,8 @@ class AIChatPage {
 		}
 
 		_analysis_related_pill(item) {
-			const doctype = this._analysis_scalar(item.related_doctype);
-			const doc = this._analysis_scalar(item.related_document);
+			const doctype = this._analysis_scalar(item.related_doctype || item.doctype);
+			const doc = this._analysis_scalar(item.related_document || item.document_name);
 			if (!doctype && !doc) return "";
 			return `<span class="ai-analysis-pill related">
 				${frappe.utils.escape_html([doctype, doc].filter(Boolean).join(": "))}
@@ -1513,16 +1526,44 @@ class AIChatPage {
 			return `<p class="ai-analysis-main-text ${cls}">${frappe.utils.escape_html(text)}</p>`;
 		}
 
+		_default_action_registry() {
+			return [
+				{ action_id: "create_task", label: __("Create Task"), primary: true, safe_action: true },
+				{ action_id: "follow_up", label: __("Follow-up"), safe_action: true },
+				{ action_id: "assign_user", label: __("Assign"), safe_action: true, requires_user: true },
+				{ action_id: "open_document", label: __("Open Document"), safe_action: true, requires_document: true },
+				{ action_id: "draft_email", label: __("Draft Email"), safe_action: true },
+				{ action_id: "calendar_event", label: __("Calendar Event"), safe_action: true },
+				{ action_id: "notify_user", label: __("Notify User"), safe_action: true, requires_user: true },
+				{ action_id: "add_comment", label: __("Add Comment"), safe_action: true, requires_document: true },
+				{ action_id: "reminder", label: __("Reminder"), safe_action: true },
+				{ action_id: "activity_timeline", label: __("Activity Timeline Entry"), safe_action: true, requires_document: true },
+			];
+		}
+
 		_action_payload(item) {
+			const title = this._analysis_scalar(item.title || item.action || item.text);
+			const description = this._analysis_scalar(item.description || item.suggested_next_step);
+			const businessImpact = this._analysis_scalar(item.business_impact || item.impact || item.expected_impact);
 			return {
-				action: this._analysis_scalar(item.action || item.title || item.text),
+				title,
+				action: title,
+				description,
 				priority: this._analysis_scalar(item.priority),
+				severity: this._analysis_scalar(item.severity),
+				confidence: this._analysis_scalar(item.confidence || item.confidence_score),
 				owner_role: this._analysis_scalar(item.owner_role),
-				related_doctype: this._analysis_scalar(item.related_doctype),
-				related_document: this._analysis_scalar(item.related_document),
-				document_name: this._analysis_scalar(item.document_name),
+				doctype: this._analysis_scalar(item.doctype || item.related_doctype),
+				document_name: this._analysis_scalar(item.document_name || item.related_document),
+				related_doctype: this._analysis_scalar(item.related_doctype || item.doctype),
+				related_document: this._analysis_scalar(item.related_document || item.document_name),
 				suggested_next_step: this._analysis_scalar(item.suggested_next_step),
-				impact: this._analysis_scalar(item.impact || item.business_impact || item.expected_impact),
+				business_impact: businessImpact,
+				impact: businessImpact,
+				estimated_time: this._analysis_scalar(item.estimated_time || item.eta),
+				context: item.context || {},
+				safe_action: item.safe_action !== false,
+				requires_approval: !!item.requires_approval,
 			};
 		}
 
@@ -1533,16 +1574,19 @@ class AIChatPage {
 		}
 
 		_render_action_center_buttons(item) {
-			const payload = this._action_payload(item);
 			const id = this._register_action_payload(item);
-			const canOpen = !!payload.related_doctype;
-			const canDraft = !!(payload.action || payload.suggested_next_step || payload.impact);
+			const actions = (this.actionRegistry || []).filter(action => action.safe_action !== false);
 			return `<div class="ai-action-center" data-action-id="${frappe.utils.escape_html(id)}">
-				<button class="btn btn-xs btn-primary ai-action-center-btn" data-action="create_task" data-action-id="${frappe.utils.escape_html(id)}">${__("Create Task")}</button>
-				<button class="btn btn-xs btn-default ai-action-center-btn" data-action="follow_up" data-action-id="${frappe.utils.escape_html(id)}">${__("Follow-up")}</button>
-				<button class="btn btn-xs btn-default ai-action-center-btn" data-action="assign" data-action-id="${frappe.utils.escape_html(id)}">${__("Assign")}</button>
-				${canOpen ? `<button class="btn btn-xs btn-default ai-action-center-btn" data-action="open_document" data-action-id="${frappe.utils.escape_html(id)}">${__("Open Document")}</button>` : ""}
-				${canDraft ? `<button class="btn btn-xs btn-default ai-action-center-btn" data-action="draft_email" data-action-id="${frappe.utils.escape_html(id)}">${__("Draft Email")}</button>` : ""}
+				${actions.map(action => {
+					const cls = action.primary ? "btn-primary" : "btn-default";
+					const label = __(action.label || action.action_id);
+					return `<button class="btn btn-xs ${cls} ai-action-center-btn"
+						data-action="${frappe.utils.escape_html(action.action_id)}"
+						data-action-id="${frappe.utils.escape_html(id)}"
+						title="${frappe.utils.escape_html(__(action.description || label))}">
+						${frappe.utils.escape_html(label)}
+					</button>`;
+				}).join("")}
 			</div>`;
 		}
 
@@ -1606,9 +1650,47 @@ class AIChatPage {
 			});
 		}
 
-		_show_assign_action_dialog(payload) {
+		_execute_registered_action(action, payload, extraArgs = {}) {
+			this._action_center_call("ai_assistant.api.action_center.execute_action", payload, (data) => {
+				this._handle_action_result(action, data);
+			}, {
+				action_id: action.action_id,
+				...extraArgs,
+			});
+		}
+
+		_handle_action_result(action, data) {
+			if (action.action_id === "draft_email") {
+				this._show_email_draft_dialog(data);
+				return;
+			}
+			if (action.action_id === "open_document") {
+				if (data.can_open_document && (data.document_route || data.route)) {
+					frappe.set_route(...(data.document_route || data.route));
+				} else {
+					frappe.msgprint(data.message || __("This recommendation is based on AI analysis and is not linked to a specific ERPNext document."));
+				}
+				return;
+			}
+			if (data.document_route || data.route) {
+				frappe.show_alert({ message: data.message || __("Action completed."), indicator: "green" });
+				frappe.set_route(...(data.document_route || data.route));
+				return;
+			}
+			if (data.warnings?.length) {
+				frappe.msgprint({
+					title: __("Action Center"),
+					message: data.message || data.warnings.join("<br>"),
+					indicator: data.success === false ? "red" : "blue",
+				});
+				return;
+			}
+			frappe.show_alert({ message: data.message || __("Action completed."), indicator: "green" });
+		}
+
+		_show_user_action_dialog(action, payload) {
 			const dialog = new frappe.ui.Dialog({
-				title: __("Assign Action"),
+				title: __(action.label || "Assign Action"),
 				fields: [
 					{
 						fieldtype: "Link",
@@ -1618,20 +1700,23 @@ class AIChatPage {
 						reqd: 1,
 					},
 				],
-				primary_action_label: __("Assign"),
+				primary_action_label: __(action.label || "Assign"),
 				primary_action: (values) => {
 					if (!values.user) {
 						frappe.msgprint({
-							title: __("Assign Action"),
-							message: __("Please select a user before assigning this action."),
+							title: __(action.label || "Action Center"),
+							message: __("Please select a user before continuing."),
 							indicator: "orange",
 						});
 						return;
 					}
-					this._action_center_call("ai_assistant.api.action_center.assign_action_owner", payload, (data) => {
+					this._action_center_call("ai_assistant.api.action_center.execute_action", payload, (data) => {
 						dialog.hide();
-						frappe.show_alert({ message: data.message || __("Action assigned."), indicator: "green" });
-					}, { user: values.user });
+						this._handle_action_result(action, data);
+					}, {
+						action_id: action.action_id,
+						user: values.user,
+					});
 				},
 			});
 			dialog.show();
@@ -1641,7 +1726,8 @@ class AIChatPage {
 			e.preventDefault();
 			const $btn = $(e.currentTarget);
 			const id = $btn.data("action-id");
-			const action = $btn.data("action");
+			const actionId = $btn.data("action");
+			const action = (this.actionRegistry || []).find(item => item.action_id === actionId) || { action_id: actionId, label: actionId, safe_action: true };
 			const payload = this.actionCenterPayloads[id];
 			if (!payload) {
 				frappe.msgprint(__("Action context is no longer available. Please rerun the report."));
@@ -1650,34 +1736,11 @@ class AIChatPage {
 			$btn.prop("disabled", true);
 			const done = () => $btn.prop("disabled", false);
 
-			if (action === "create_task") {
-				this._action_center_call("ai_assistant.api.action_center.create_action_task", payload, (data) => {
-					frappe.show_alert({ message: data.message || __("Task created successfully."), indicator: "green" });
-					if (data.route) frappe.set_route(...data.route);
-				});
-				setTimeout(done, 900);
-			} else if (action === "follow_up") {
-				this._action_center_call("ai_assistant.api.action_center.create_follow_up", payload, (data) => {
-					frappe.show_alert({ message: data.message || __("Follow-up task created successfully."), indicator: "green" });
-					if (data.route) frappe.set_route(...data.route);
-				});
-				setTimeout(done, 900);
-			} else if (action === "assign") {
-				this._show_assign_action_dialog(payload);
+			if (action.requires_user) {
+				this._show_user_action_dialog(action, payload);
 				done();
-			} else if (action === "open_document") {
-				this._action_center_call("ai_assistant.api.action_center.validate_related_document", payload, (data) => {
-					if (data.can_open_document && data.route) {
-						frappe.set_route(...data.route);
-					} else {
-						frappe.msgprint(data.message || __("This action is based on an AI insight and is not linked to a specific ERPNext document."));
-					}
-				});
-				setTimeout(done, 900);
-			} else if (action === "draft_email") {
-				this._action_center_call("ai_assistant.api.action_center.draft_action_email", payload, (data) => {
-					this._show_email_draft_dialog(data);
-				});
+			} else {
+				this._execute_registered_action(action, payload);
 				setTimeout(done, 900);
 			}
 		}
@@ -1753,12 +1816,14 @@ class AIChatPage {
 			} else if (sectionType === "required_action") {
 				meta = [
 					item.priority ? this._priority_badge(item.priority) : "",
+					this._analysis_pill(__("Confidence"), item.confidence || item.confidence_score),
+					this._analysis_pill(__("Time"), item.estimated_time || item.eta),
 					this._analysis_pill(__("Owner"), item.owner_role, "owner"),
 					this._analysis_related_pill(item),
 				].filter(Boolean).join("");
 				bodyFields = [
 					this._analysis_field(__("Next Step"), item.suggested_next_step, "primary"),
-					this._analysis_field(__("Impact"), item.impact),
+					this._analysis_field(__("Business Impact"), item.business_impact || item.impact || item.expected_impact),
 					this._analysis_field(__("Description"), item.description),
 				].join("");
 			} else if (sectionType === "recommendation") {
