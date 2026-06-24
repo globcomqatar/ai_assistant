@@ -26,6 +26,8 @@ class AIChatPage {
 		this.is_loading = false;
 		this.current_agent = "general";
 		this.agents = [];
+		this.actionCenterPayloads = {};
+		this.actionCenterSeq = 0;
 
 		this._check_settings_then_render();
 	}
@@ -380,6 +382,11 @@ class AIChatPage {
 			if (this._is_overlay()) this._collapse_sidebar();
 		});
 
+		$(document)
+			.off("click.ai_action_center", ".ai-action-center-btn")
+			.on("click.ai_action_center", ".ai-action-center-btn", (e) => {
+				this._handle_action_center_click(e);
+			});
 	}
 
 	_collapse_sidebar() {
@@ -1506,6 +1513,124 @@ class AIChatPage {
 			return `<p class="ai-analysis-main-text ${cls}">${frappe.utils.escape_html(text)}</p>`;
 		}
 
+		_action_payload(item) {
+			return {
+				action: this._analysis_scalar(item.action || item.title || item.text),
+				priority: this._analysis_scalar(item.priority),
+				owner_role: this._analysis_scalar(item.owner_role),
+				related_doctype: this._analysis_scalar(item.related_doctype),
+				related_document: this._analysis_scalar(item.related_document),
+				suggested_next_step: this._analysis_scalar(item.suggested_next_step),
+				impact: this._analysis_scalar(item.impact || item.business_impact || item.expected_impact),
+			};
+		}
+
+		_register_action_payload(item) {
+			const id = `ac-${++this.actionCenterSeq}`;
+			this.actionCenterPayloads[id] = this._action_payload(item);
+			return id;
+		}
+
+		_render_action_center_buttons(item) {
+			const payload = this._action_payload(item);
+			const id = this._register_action_payload(item);
+			const canOpen = !!payload.related_doctype;
+			const canDraft = !!(payload.action || payload.suggested_next_step || payload.impact);
+			return `<div class="ai-action-center" data-action-id="${frappe.utils.escape_html(id)}">
+				<button class="btn btn-xs btn-primary ai-action-center-btn" data-action="create_task" data-action-id="${frappe.utils.escape_html(id)}">${__("Create Task")}</button>
+				<button class="btn btn-xs btn-default ai-action-center-btn" data-action="follow_up" data-action-id="${frappe.utils.escape_html(id)}">${__("Follow-up")}</button>
+				<button class="btn btn-xs btn-default ai-action-center-btn" data-action="assign" data-action-id="${frappe.utils.escape_html(id)}">${__("Assign")}</button>
+				${canOpen ? `<button class="btn btn-xs btn-default ai-action-center-btn" data-action="open_document" data-action-id="${frappe.utils.escape_html(id)}">${__("Open Document")}</button>` : ""}
+				${canDraft ? `<button class="btn btn-xs btn-default ai-action-center-btn" data-action="draft_email" data-action-id="${frappe.utils.escape_html(id)}">${__("Draft Email")}</button>` : ""}
+			</div>`;
+		}
+
+		_action_center_call(method, payload, onSuccess) {
+			frappe.call({
+				method,
+				args: {
+					action_payload: JSON.stringify(payload || {}),
+				},
+				callback: (r) => {
+					if (r.message && onSuccess) onSuccess(r.message);
+				},
+				error: (r) => {
+					const msg = r?.message || __("Action Center request failed.");
+					frappe.msgprint({ title: __("Action Center"), message: msg, indicator: "red" });
+				},
+			});
+		}
+
+		_handle_action_center_click(e) {
+			e.preventDefault();
+			const $btn = $(e.currentTarget);
+			const id = $btn.data("action-id");
+			const action = $btn.data("action");
+			const payload = this.actionCenterPayloads[id];
+			if (!payload) {
+				frappe.msgprint(__("Action context is no longer available. Please rerun the report."));
+				return;
+			}
+			$btn.prop("disabled", true);
+			const done = () => $btn.prop("disabled", false);
+
+			if (action === "create_task") {
+				this._action_center_call("ai_assistant.api.action_center.create_action_task", payload, (data) => {
+					frappe.show_alert({ message: data.message || __("Task created successfully."), indicator: "green" });
+					if (data.route) frappe.set_route(...data.route);
+				});
+				setTimeout(done, 900);
+			} else if (action === "follow_up") {
+				this._action_center_call("ai_assistant.api.action_center.create_follow_up", payload, (data) => {
+					frappe.show_alert({ message: data.message || __("Follow-up task created successfully."), indicator: "green" });
+					if (data.route) frappe.set_route(...data.route);
+				});
+				setTimeout(done, 900);
+			} else if (action === "assign") {
+				this._action_center_call("ai_assistant.api.action_center.assign_action_owner", payload, (data) => {
+					frappe.msgprint({ title: __("Assign Action"), message: data.message || __("Please select a user to assign this action."), indicator: "blue" });
+				});
+				setTimeout(done, 900);
+			} else if (action === "open_document") {
+				this._action_center_call("ai_assistant.api.action_center.get_action_center_options", payload, (data) => {
+					if (data.can_open_document && data.route) {
+						frappe.set_route(...data.route);
+					} else {
+						frappe.msgprint(__("Related document not found or not available."));
+					}
+				});
+				setTimeout(done, 900);
+			} else if (action === "draft_email") {
+				this._action_center_call("ai_assistant.api.action_center.draft_action_email", payload, (data) => {
+					this._show_email_draft_dialog(data);
+				});
+				setTimeout(done, 900);
+			}
+		}
+
+		_show_email_draft_dialog(draft) {
+			const dialog = new frappe.ui.Dialog({
+				title: __("Draft Email"),
+				fields: [
+					{ fieldtype: "Data", fieldname: "to", label: __("To"), default: draft.to || "" },
+					{ fieldtype: "Data", fieldname: "subject", label: __("Subject"), default: draft.subject || "" },
+					{ fieldtype: "Small Text", fieldname: "body", label: __("Body"), default: draft.body || "" },
+				],
+				primary_action_label: __("Copy Draft"),
+				primary_action: (values) => {
+					const text = `${__("To")}: ${values.to || ""}\n${__("Subject")}: ${values.subject || ""}\n\n${values.body || ""}`;
+					if (navigator.clipboard?.writeText) {
+						navigator.clipboard.writeText(text);
+						frappe.show_alert({ message: __("Draft email copied."), indicator: "green" });
+					} else {
+						frappe.msgprint(`<pre>${frappe.utils.escape_html(text)}</pre>`);
+					}
+				},
+			});
+			dialog.show();
+			frappe.show_alert({ message: __("Draft email generated."), indicator: "green" });
+		}
+
 		renderAnalysisItem(item, sectionType = "generic", index = null) {
 			item = this._parse_analysis_object_string(item);
 			if (item === null || item === undefined) return "";
@@ -1582,6 +1707,7 @@ class AIChatPage {
 				</div>
 				${meta ? `<div class="ai-card-meta-row">${meta}</div>` : ""}
 				${bodyFields || `<p>${this._analysis_text(item)}</p>`}
+				${sectionType === "required_action" ? this._render_action_center_buttons(item) : ""}
 			</div>`;
 		}
 
