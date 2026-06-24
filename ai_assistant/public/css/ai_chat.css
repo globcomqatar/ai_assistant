@@ -893,7 +893,7 @@
 	padding: 4px 10px; border-radius: 999px;
 	border: 1.5px solid var(--border-color);
 	background: var(--card-bg); color: var(--text-color);
-	font-size: 0.75rem; font-weight: 500; cursor: pointer;
+	font-size: 0.800rem; font-weight: 600; cursor: pointer;
 	white-space: nowrap; transition: all 0.15s;
 }
 .ai-agent-pill:hover { border-color: var(--agent-color, var(--ai-accent)); color: var(--agent-color, var(--ai-accent)); }
