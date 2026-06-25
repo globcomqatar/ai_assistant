@@ -71,11 +71,17 @@ def _log_interpret(
         frappe.log_error(title="Interpreter log write failed", message=str(_exc))
 
 
-def _clamp_score(value) -> int:
+def normalize_score(value) -> int:
+    """Normalize model scores from 0-1, 1-10, or 0-100 into a 0-100 integer."""
     try:
-        return max(0, min(100, int(float(value))))
+        score = float(value)
     except (TypeError, ValueError):
         return 0
+    if 0 < score <= 1:
+        score *= 100
+    elif 1 <= score <= 10:
+        score *= 10
+    return max(0, min(100, int(round(score))))
 
 
 def _as_list(value) -> list:
@@ -99,7 +105,7 @@ def _normalize_risks(value) -> list[dict]:
             risks.append({
                 "title": _clean_text(item.get("title") or item.get("risk") or item.get("message"), "Business risk"),
                 "severity": severity if severity in _SEVERITIES else "medium",
-                "risk_score": _clamp_score(item.get("risk_score") or item.get("score")),
+                "risk_score": normalize_score(item.get("risk_score") or item.get("score")),
                 "business_impact": _clean_text(item.get("business_impact") or item.get("impact"), "insufficient data"),
             })
         else:
@@ -118,7 +124,7 @@ def _normalize_opportunities(value) -> list[dict]:
         if isinstance(item, dict):
             opportunities.append({
                 "title": _clean_text(item.get("title") or item.get("opportunity") or item.get("message"), "Business opportunity"),
-                "opportunity_score": _clamp_score(item.get("opportunity_score") or item.get("score")),
+                "opportunity_score": normalize_score(item.get("opportunity_score") or item.get("score")),
                 "expected_impact": _clean_text(item.get("expected_impact") or item.get("impact"), "insufficient data"),
             })
         else:
@@ -402,6 +408,12 @@ def send_message(message: str, history: str = "[]", current_agent: str = "genera
         frappe.throw(_("Message too long. Please keep it under 4 000 characters."))
 
     user = frappe.session.user
+
+    # Per-user rate limiting — prevent rapid-fire requests that exhaust workers or provider quotas.
+    _cooldown_key = f"ai_cooldown:{user}"
+    if frappe.cache().get_value(_cooldown_key):
+        frappe.throw(_("Please wait a moment before sending another message."))
+    frappe.cache().set_value(_cooldown_key, 1, expires_in_sec=2)
 
     # PATCH 5: Strict governance pipeline
     # Step 1 + 2: Resolve agent — non-SM is always forced to "general"

@@ -121,7 +121,7 @@ def route_to_agent(message: str, user: str) -> dict:
                 "ai_supervisor_slow",
                 {"latency_ms": _latency_ms, "user": frappe.session.user},
             )
-        frappe.log_error(title="[Supervisor] route_to_agent", message=json.dumps(_log))
+        frappe.logger("ai_assistant").info(json.dumps(_log))
 
         return {
             "agent_code": agent_code,

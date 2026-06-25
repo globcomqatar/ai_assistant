@@ -85,8 +85,8 @@ class OpenAICompatibleProvider(AIProvider):
 				"AI request timed out — please try again. "
 				"If this persists the AI provider may be slow."
 			)
-		except Exception:
-			# Retry without json_mode if the provider rejected it
+		except _openai_lib.BadRequestError:
+			# Retry without json_mode if the provider rejected the response_format param
 			call_kwargs.pop("response_format", None)
 			try:
 				response = self._client.chat.completions.create(**call_kwargs, timeout=self._timeout)

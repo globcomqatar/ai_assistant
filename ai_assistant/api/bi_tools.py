@@ -44,14 +44,8 @@ def _sql_count(table: str, where: str, params: tuple) -> int:
     return int((rows[0] or {}).get("c", 0))
 
 
-_BASE_CURRENCY: str | None = None
-
-
 def get_base_currency() -> str:
-    global _BASE_CURRENCY
-    if _BASE_CURRENCY is None:
-        _BASE_CURRENCY = frappe.db.get_single_value("Global Defaults", "default_currency") or "QAR"
-    return _BASE_CURRENCY
+    return frappe.db.get_single_value("Global Defaults", "default_currency") or "QAR"
 
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗

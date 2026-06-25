@@ -135,6 +135,7 @@ def create_lead(lead_name: str, email: str = "", phone: str = "",
 
 
 def get_open_leads(limit: int = 10) -> dict:
+	limit = max(1, min(int(limit or 10), 50))
 	leads = frappe.get_all("Lead",
 		filters={"status": ["in", ["New", "Open", "Replied", "Contacted"]]},
 		fields=["name", "lead_name", "email_id", "mobile_no", "status", "source", "creation"],
@@ -167,6 +168,8 @@ def create_opportunity(customer: str = "", lead: str = "",
 def create_quotation(customer: str, items: list[dict], discount: float = 0.0) -> dict:
 	_require(customer, "customer")
 	_require(items, "items")
+	if not (0 <= flt(discount) <= 100):
+		frappe.throw(_("Discount must be between 0 and 100 percent."))
 	_exists("Customer", customer)
 	doc = frappe.new_doc("Quotation")
 	doc.quotation_to = "Customer"
@@ -402,6 +405,8 @@ def record_payment(customer: str, amount: float, invoice: str = "",
 				   mode_of_payment: str = "Cash") -> dict:
 	_require(customer, "customer")
 	_require(amount, "amount")
+	if flt(amount) <= 0:
+		frappe.throw(_("Payment amount must be greater than zero."))
 	_exists("Customer", customer)
 	doc = frappe.new_doc("Payment Entry")
 	doc.payment_type = "Receive"
@@ -469,8 +474,7 @@ def get_account_balance(account: str, date: str = "") -> dict:
 	_require(account, "account")
 	from erpnext.accounts.utils import get_balance_on
 	balance = get_balance_on(account=account,
-							 date=date or today(),
-							 ignore_account_permission=True)
+							 date=date or today())
 	return {"status": "ok", "account": account,
 			"date": date or today(),
 			"balance": flt(balance),
@@ -990,7 +994,7 @@ def get_active_rental_contracts(customer: str = "") -> dict:
 
 def create_employee(first_name: str, last_name: str = "", company: str = "",
 					department: str = "", designation: str = "",
-					date_of_joining: str = "") -> dict:
+					date_of_joining: str = "", gender: str = "") -> dict:
 	_require(first_name, "first_name")
 	if not company:
 		company = frappe.defaults.get_global_default("company") or ""
@@ -1002,7 +1006,8 @@ def create_employee(first_name: str, last_name: str = "", company: str = "",
 	doc.department = department
 	doc.designation = designation
 	doc.date_of_joining = date_of_joining or today()
-	doc.gender = "Male"
+	if gender:
+		doc.gender = gender
 	_save_and_commit(doc)
 	return {"status": "created", "employee": doc.name,
 			"message": f"Employee {doc.employee_name} created as {doc.name}."}

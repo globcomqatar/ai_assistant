@@ -86,7 +86,6 @@ def _write_log(
         # Internal audit logs must be written even when the acting user cannot create/read AI Usage Log.
         log.flags.ignore_permissions = True
         log.insert()
-        frappe.db.commit()
     except Exception as exc:
         frappe.log_error(title="AI Usage Log Write Failed", message=str(exc))
 

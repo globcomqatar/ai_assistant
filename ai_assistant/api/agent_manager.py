@@ -226,7 +226,10 @@ def invalidate_agent_cache(agent_code: str | None = None) -> None:
     if agent_code:
         frappe.cache().delete_value(f"{_CACHE_PREFIX}{agent_code}")
     else:
-        frappe.cache().delete_keys(f"{_CACHE_PREFIX}*")
+        # Delete individual keys to avoid a Redis KEYS pattern scan (O(N) on large keyspaces).
+        codes = frappe.db.get_all("AI Agent", pluck="agent_code")
+        for code in codes:
+            frappe.cache().delete_value(f"{_CACHE_PREFIX}{code}")
 
 
 def build_agent_system_prompt(agent_code: str, user: str, base_prompt: str) -> str:
