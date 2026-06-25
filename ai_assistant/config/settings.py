@@ -51,6 +51,9 @@ HIGH_RISK_WRITE_TOOLS: frozenset[str] = frozenset({
     "create_expense_claim",
 })
 
+# ── Performance monitoring ─────────────────────────────────────────────────────
+SLOW_QUERY_THRESHOLD_MS: int = 500           # Log a warning for any timed block exceeding this
+
 # ── Security: management roles ─────────────────────────────────────────────────
 MANAGEMENT_ROLES: frozenset[str] = frozenset({
     "System Manager",
