@@ -139,5 +139,127 @@ class TestServicesPackage(unittest.TestCase):
         self.assertIsInstance(workflow_service, WorkflowService)
 
 
+class TestKernelPackage(unittest.TestCase):
+    """Wave 3 — AI Kernel single entry point."""
+
+    def test_kernel_init_importable(self):
+        from ai_assistant.kernel import (
+            AIContext, AIContextManager, context_manager,
+            PromptManager, PromptTemplate, prompt_manager,
+            KernelProviderManager, ProviderCapability, ProviderConfig,
+            EngineRegistry, EngineRegistration, engine_registry,
+            FeatureFlagManager, FeatureFlag, feature_flags,
+        )
+
+    def test_context_manager_builds_context(self):
+        from ai_assistant.kernel import context_manager, AIContext
+        ctx = context_manager.build(user="test@example.com", company="ACME")
+        self.assertIsInstance(ctx, AIContext)
+        self.assertEqual(ctx.user, "test@example.com")
+
+    def test_engine_registry_has_phase2_engines(self):
+        from ai_assistant.kernel import engine_registry
+        available = {r.engine_id for r in engine_registry.list_available()}
+        for eid in ("report_engine", "action_engine", "workflow_engine"):
+            self.assertIn(eid, available)
+
+    def test_engine_registry_has_phase3_placeholders(self):
+        from ai_assistant.kernel import engine_registry
+        placeholders = {r.engine_id for r in engine_registry.list_placeholders()}
+        for eid in ("prediction_engine", "risk_engine", "opportunity_engine"):
+            self.assertIn(eid, placeholders)
+
+    def test_feature_flags_all_off_by_default(self):
+        from ai_assistant.kernel.feature_flags import FeatureFlagManager
+        mgr = FeatureFlagManager()
+        for value in mgr.get_all().values():
+            self.assertFalse(value)
+
+    def test_prompt_manager_has_default_prompts(self):
+        from ai_assistant.kernel import prompt_manager
+        self.assertIn("sales_agent", prompt_manager.list_engines())
+        self.assertIn("prediction_engine", prompt_manager.list_engines())
+
+
+class TestEnginesPackage(unittest.TestCase):
+    """Wave 3 — engines/ package structure and placeholder behaviour."""
+
+    def test_phase2_engines_importable(self):
+        from ai_assistant.engines import (
+            BaseEngine, ReportEngine, RecommendationEngine,
+            ActionEngine, ApprovalEngine, WorkflowEngine,
+        )
+
+    def test_phase3_engines_importable(self):
+        from ai_assistant.engines import (
+            PredictionEngine, RiskEngine, OpportunityEngine,
+            LearningEngine, MorningBriefEngine, InsightEngine,
+        )
+
+    def test_phase2_engines_not_placeholder(self):
+        from ai_assistant.engines import (
+            ReportEngine, ActionEngine, WorkflowEngine,
+        )
+        for cls in (ReportEngine, ActionEngine, WorkflowEngine):
+            self.assertFalse(cls.is_placeholder, f"{cls.__name__} should not be a placeholder")
+
+    def test_phase3_engines_are_placeholder(self):
+        from ai_assistant.engines import (
+            PredictionEngine, RiskEngine, OpportunityEngine, InsightEngine,
+        )
+        for cls in (PredictionEngine, RiskEngine, OpportunityEngine, InsightEngine):
+            self.assertTrue(cls.is_placeholder, f"{cls.__name__} should be a placeholder")
+
+    def test_phase3_execute_raises_not_implemented(self):
+        from ai_assistant.engines import PredictionEngine
+        engine = PredictionEngine()
+        with self.assertRaises(NotImplementedError):
+            engine.execute(None, {})
+
+    def test_base_engine_describe(self):
+        from ai_assistant.engines import ReportEngine
+        engine = ReportEngine()
+        info = engine.describe()
+        self.assertIn("engine_id", info)
+        self.assertIn("is_placeholder", info)
+        self.assertTrue(info["available"])
+
+
+class TestRegistriesExtended(unittest.TestCase):
+    """Wave 3 — populated playbook and KPI registries."""
+
+    def test_playbook_registry_has_named_entries(self):
+        from ai_assistant.registries.playbook_registry import (
+            PLAYBOOK_REGISTRY, get_playbook, get_playbook_registry,
+        )
+        self.assertGreater(len(PLAYBOOK_REGISTRY), 0)
+        self.assertIsNotNone(get_playbook("collection_recovery"))
+        self.assertIsNotNone(get_playbook("quotation_follow_up"))
+
+    def test_kpi_registry_has_named_entries(self):
+        from ai_assistant.registries.kpi_registry import (
+            KPI_REGISTRY, get_kpi, get_kpi_registry,
+        )
+        self.assertGreater(len(KPI_REGISTRY), 0)
+        self.assertIsNotNone(get_kpi("monthly_revenue"))
+        self.assertIsNotNone(get_kpi("overdue_collections"))
+
+    def test_playbook_entries_have_required_fields(self):
+        from ai_assistant.registries.playbook_registry import PLAYBOOK_REGISTRY
+        for pb in PLAYBOOK_REGISTRY:
+            self.assertIn("playbook_id", pb)
+            self.assertIn("name", pb)
+            self.assertIn("trigger", pb)
+            self.assertIn("confidence_threshold", pb)
+
+    def test_kpi_entries_have_required_fields(self):
+        from ai_assistant.registries.kpi_registry import KPI_REGISTRY
+        for kpi in KPI_REGISTRY:
+            self.assertIn("kpi_id", kpi)
+            self.assertIn("name", kpi)
+            self.assertIn("unit", kpi)
+            self.assertIn("source_doctype", kpi)
+
+
 if __name__ == "__main__":
     unittest.main()

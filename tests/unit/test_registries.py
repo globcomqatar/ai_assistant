@@ -82,15 +82,17 @@ class TestWorkflowRegistry(unittest.TestCase):
 
 class TestPlaceholderRegistries(unittest.TestCase):
 
-    def test_playbook_registry_is_empty_placeholder(self):
+    def test_playbook_registry_has_named_entries(self):
         from ai_assistant.registries.playbook_registry import PLAYBOOK_REGISTRY, get_playbook
-        self.assertEqual(PLAYBOOK_REGISTRY, [])
-        self.assertIsNone(get_playbook("anything"))
+        self.assertGreater(len(PLAYBOOK_REGISTRY), 0)
+        self.assertIsNotNone(get_playbook("collection_recovery"))
+        self.assertIsNone(get_playbook("does_not_exist"))
 
-    def test_kpi_registry_is_empty_placeholder(self):
+    def test_kpi_registry_has_named_entries(self):
         from ai_assistant.registries.kpi_registry import KPI_REGISTRY, get_kpi
-        self.assertEqual(KPI_REGISTRY, [])
-        self.assertIsNone(get_kpi("anything"))
+        self.assertGreater(len(KPI_REGISTRY), 0)
+        self.assertIsNotNone(get_kpi("monthly_revenue"))
+        self.assertIsNone(get_kpi("does_not_exist"))
 
     def test_prediction_registry_is_empty_placeholder(self):
         from ai_assistant.registries.prediction_registry import PREDICTION_REGISTRY, get_predictor
