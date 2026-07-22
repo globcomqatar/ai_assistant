@@ -9,7 +9,7 @@
   "display_order": 1,
   "docstatus": 0,
   "doctype": "AI Agent",
-  "enabled": 0,
+  "enabled": 1,
   "icon": "🤖",
   "kpis": [],
   "max_tokens": 0,

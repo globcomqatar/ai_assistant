@@ -16,6 +16,7 @@ def create_dashboard():
     create_default_tool_permissions()
     _ensure_tool_registry()
     _ensure_agents()
+    _ensure_general_agent_enabled()
     _ensure_single_default_agent()
 
 
@@ -729,3 +730,48 @@ def _ensure_single_default_agent() -> None:
         frappe.db.commit()
     except Exception as exc:
         frappe.log_error(title="ensure_single_default_agent failed", message=str(exc))
+
+
+def _ensure_general_agent_enabled() -> None:
+    """
+    Idempotent repair: the 'general' AI Agent must always be enabled — it is the
+    mandatory fallback for every non-System-Manager user (see agent_manager.
+    resolve_active_agent). Older fixture exports shipped it disabled; sites that
+    already have a 'general' record are never touched by _ensure_agents() since
+    that function only creates missing agents.
+
+    This repair only flips the 'enabled' flag via a targeted db_set — it never
+    re-inserts the doc or touches child tables (tools/kpis/allowed_roles), so it
+    cannot create duplicate agent or child-table records and it preserves any
+    administrator customization of the record's other fields.
+    """
+    if not frappe.db.table_exists("AI Agent"):
+        return
+    try:
+        current = frappe.db.get_value("AI Agent", "general", "enabled")
+        if current is None:
+            # No 'general' record at all (should not happen — fixture ships one —
+            # but _ensure_agents() only fills gaps in _DEFAULT_AGENTS, which does
+            # not include 'general'). Create the minimal safe fallback record.
+            doc = frappe.new_doc("AI Agent")
+            doc.agent_code = "general"
+            doc.agent_name = "General ERP Assistant"
+            doc.description = "General ERP support for all modules"
+            doc.icon = "🤖"
+            doc.color = "#6366F1"
+            doc.display_order = 1
+            doc.enabled = 1
+            doc.flags.ignore_permissions = True
+            doc.flags.ignore_mandatory = True
+            doc.insert()
+            frappe.db.commit()
+        elif not current:
+            frappe.db.set_value("AI Agent", "general", "enabled", 1, update_modified=False)
+            frappe.db.commit()
+        else:
+            return  # already enabled — nothing to do
+
+        from ai_assistant.api.agent_manager import invalidate_agent_cache
+        invalidate_agent_cache("general")
+    except Exception as exc:
+        frappe.log_error(title="ensure_general_agent_enabled failed", message=str(exc))
