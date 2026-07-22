@@ -107,12 +107,17 @@ def _is_system_manager(user: str) -> bool:
 
 def _safe_general_code() -> str:
     """Return the correct agent_code for the 'general' fallback.
-    Tries the default_agent flag first, then the literal name 'general',
-    then falls back to the hardcoded string so the system never breaks
-    even if the AI Agent table is empty or misconfigured."""
-    code = frappe.db.get_value("AI Agent", {"enabled": 1, "default_agent": 1}, "agent_code")
-    if code:
-        return code
+
+    This must ALWAYS resolve to the literal 'general' agent — never to
+    whichever agent happens to have default_agent=1. That flag selects the
+    System Manager's preferred specialist default (e.g. 'supervisor', per
+    _ensure_single_default_agent()'s preference order) and is unrelated to
+    the non-System-Manager safety net. Conflating the two previously made
+    every non-SM chat request resolve to 'supervisor' and then get rejected
+    by validate_agent_switch, breaking the assistant for every regular user.
+
+    Falls back to the hardcoded string so the system never breaks even if
+    the AI Agent table is empty or misconfigured."""
     code = frappe.db.get_value("AI Agent", {"name": "general", "enabled": 1}, "agent_code")
     if code:
         return code
