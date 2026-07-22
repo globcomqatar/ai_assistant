@@ -15,11 +15,6 @@ from ai_assistant.api.permission_manager import (
     get_user_roles,
     validate_tool_permission,
 )
-from ai_assistant.api.security import (
-    HIGH_RISK_WRITE_TOOLS,
-    confirmation_required_response,
-    is_confirmed_action,
-)
 
 
 def _check_budget(user: str, settings) -> tuple[bool, str]:
@@ -83,9 +78,9 @@ def _write_log(
         log.user_roles = user_roles
         log.agent_code = agent_code
         log.agent_name = agent_name
-        # Internal audit logs must be written even when the acting user cannot create/read AI Usage Log.
         log.flags.ignore_permissions = True
         log.insert()
+        frappe.db.commit()
     except Exception as exc:
         frappe.log_error(title="AI Usage Log Write Failed", message=str(exc))
 
@@ -179,16 +174,6 @@ def execute_actions(
             continue
         # ─────────────────────────────────────────────────────────────────────
 
-        if intent in HIGH_RISK_WRITE_TOOLS and not is_confirmed_action(action):
-            results.append(confirmation_required_response(intent, parameters))
-            continue
-
-        if isinstance(parameters, dict):
-            parameters = {
-                k: v for k, v in parameters.items()
-                if k not in {"confirmed", "confirm", "_confirmed"}
-            }
-
         fn = TOOL_REGISTRY.get(intent)
         if not fn:
             results.append({
@@ -203,17 +188,11 @@ def execute_actions(
             result["intent"] = intent
             results.append(result)
             tools_used.append(intent)
-        except frappe.PermissionError:
-            results.append({
-                "intent": intent,
-                "status": "denied",
-                "message": _("You do not have permission to perform this action."),
-            })
         except frappe.ValidationError as exc:
             results.append({"intent": intent, "status": "validation_error", "message": str(exc)})
         except Exception as exc:
             frappe.log_error(title=f"AI Tool Failed: {intent}"[:140], message=str(exc))
-            results.append({"intent": intent, "status": "error", "message": _("The requested AI tool could not be completed. Please contact your administrator if this continues.")})
+            results.append({"intent": intent, "status": "error", "message": f"Tool '{intent}' encountered an error."})
 
     # Log a summary entry for successful/failed tool calls (denied ones are already logged individually)
     if tools_used or any(r.get("intent") == "reply" for r in results):

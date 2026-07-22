@@ -9,13 +9,11 @@ from __future__ import annotations
 
 import frappe
 from frappe.utils import today, get_first_day, flt
-from ai_assistant.api.security import require_management_access
 
 
 @frappe.whitelist()
 def get_kpi_sales_month() -> float:
     """Total sales (grand_total) for the current calendar month."""
-    require_management_access()
     m_start = str(get_first_day(today()))
     rows = frappe.db.sql(
         "SELECT COALESCE(SUM(grand_total), 0) FROM `tabSales Invoice` "
@@ -28,7 +26,6 @@ def get_kpi_sales_month() -> float:
 @frappe.whitelist()
 def get_kpi_overdue_count() -> int:
     """Number of sales invoices past due date with outstanding balance."""
-    require_management_access()
     return frappe.db.count("Sales Invoice", {
         "docstatus": 1,
         "outstanding_amount": [">", 0],
@@ -39,7 +36,6 @@ def get_kpi_overdue_count() -> int:
 @frappe.whitelist()
 def get_kpi_low_stock() -> int:
     """Number of items at or below their safety stock level."""
-    require_management_access()
     rows = frappe.db.sql("""
         SELECT COUNT(*) FROM `tabBin` b
         INNER JOIN `tabItem` i ON i.name = b.item_code
@@ -54,7 +50,6 @@ def get_kpi_low_stock() -> int:
 @frappe.whitelist()
 def get_kpi_open_jobs() -> int:
     """Number of open/in-progress Workshop Job Cards (or 0 if module absent)."""
-    require_management_access()
     if frappe.db.exists("DocType", "Workshop Job Card"):
         try:
             return frappe.db.count("Workshop Job Card",
@@ -67,7 +62,6 @@ def get_kpi_open_jobs() -> int:
 @frappe.whitelist()
 def get_kpi_pending_quotations() -> int:
     """Number of open/draft quotations not yet converted."""
-    require_management_access()
     return frappe.db.count("Quotation", {
         "docstatus": ["in", [0, 1]],
         "status": ["in", ["Open", "Draft"]],
@@ -77,6 +71,5 @@ def get_kpi_pending_quotations() -> int:
 @frappe.whitelist()
 def get_kpi_new_customers() -> int:
     """Number of new Customer records created this month."""
-    require_management_access()
     m_start = str(get_first_day(today()))
     return frappe.db.count("Customer", {"creation": [">=", m_start]})
