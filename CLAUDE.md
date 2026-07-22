@@ -38,13 +38,43 @@ python -c "import ai_assistant; print(ai_assistant.__version__)"
 ```
 Browser → frappe.call("ai_assistant.api.chat.send_message")
   → chat.py:send_message()
-    → router.py:route()           # builds system prompt, calls AI provider
+    → agent_manager.py             # resolve/validate active AI Agent persona (RBAC-gated)
+    → supervisor.py                # optional: Auto mode classifies message → best agent (System Manager only)
+    → router.py:route()            # builds system prompt (RBAC tools ∩ agent tools + agent prompt), calls AI provider
       → providers/__init__.py:get_provider()   # reads AI Settings, returns provider
         → OpenAICompatibleProvider / AnthropicProvider
-    → executor.py:execute_actions()   # maps intents → tool functions, checks budget
-      → api/tools.py:TOOL_REGISTRY[intent](**params)   # actual ERPNext ORM calls
+    → executor.py:execute_actions()   # budget check → permission_manager RBAC check per intent → dispatch → log
+      → api/tools.py + api/bi_tools.py:TOOL_REGISTRY[intent](**params)   # actual ERPNext ORM calls
+    → chat.py:_interpret_analytics()  # for BI tools with `metrics`, a 2nd LLM call adds findings/risks/recommendations
     → AI Usage Log (written via frappe.new_doc)
 ```
+
+### Multi-Agent Framework (`api/agent_manager.py`, `api/supervisor.py`)
+
+There isn't just one assistant persona — the `AI Agent` DocType defines multiple specialist personas (fixtures: `general`, `sales_manager`, `accounts_manager`, `workshop_advisor`, `ceo_assistant`, `supervisor`, `sales`, `marketing`, `accounts`, `operations`, `bi`), each with its own system prompt, icon/color, optional model/temperature override, a scoped tool subset (`AI Agent Tool` child table), KPIs it tracks (`AI Agent KPI`), and allowed ERPNext roles (`AI Agent Role`).
+
+**Governance is strict and entirely server-side** — never trust `current_agent` from the client:
+- `resolve_active_agent()` — non-System Manager users are always forced to the default/`general` agent, regardless of what the client requested.
+- `validate_agent_switch()` — throws `frappe.PermissionError` if a non-System Manager tries to activate any agent other than `general`.
+- `get_session_agent()` — strips any session-level override for non-System Manager users.
+- `check_system_manager_access()` — gates AI Agent configuration endpoints entirely.
+
+These four checks run in sequence on every `send_message` call (see `chat.py:send_message`), so agent switching is only ever possible for System Manager.
+
+**Auto-routing** (`supervisor.py:route_to_agent`) — when `AI Settings.agent_routing_mode == "Auto"` (System Manager only), an extra lightweight LLM call classifies the user's message against the available agent catalog and picks the best specialist. Uses a tight 5–15s timeout and falls back silently (via `frappe.log_error`, never raises) to the default agent on any failure or invalid response.
+
+`agent_manager.py:build_agent_system_prompt()` prepends the agent's system prompt + KPI list on top of the base ERP-assistant prompt; `filter_tools_for_agent()` intersects the agent's tool list with whatever RBAC already allowed.
+
+### RBAC / Permission System (`api/permission_manager.py`)
+
+A second, independent layer from agent scoping — governs which ERPNext roles may call which tools, regardless of agent:
+
+- `AI Tool Permission` DocType maps a tool name → allowed roles (`AI Tool Permission Role` child table).
+- **Secure by default**: a tool with no `AI Tool Permission` record is denied to everyone except System Manager.
+- System Manager always gets every enabled tool.
+- `get_permitted_tools_schema(user)` pre-filters `TOOLS_SCHEMA` before it ever reaches the AI system prompt — the model never sees, and so never proposes, tools the user isn't allowed to call.
+- `executor.py` calls `validate_tool_permission(user, intent)` again immediately before dispatch — belt-and-suspenders in case a client bypasses the filtered prompt. Denials are logged to `AI Usage Log` with `status="Denied"`.
+- Permission map is cached site-wide for 5 minutes (`_load_permission_map`); call `permission_manager.invalidate_cache()` after editing `AI Tool Permission` records outside the UI (the DocType's own hooks already do this on save/delete).
 
 ### Provider System (`providers/`)
 
@@ -95,20 +125,36 @@ This is a **Frappe Desk Page** (not a `www` page). Accessible via `frappe.set_ro
 
 ### Cost & Budget
 
-`executor.py:_check_budget()` reads `AI Settings.max_monthly_budget` and sums `AI Usage Log.cost` for the current month per user. At 80% a realtime warning is published; at 100% the request is blocked. All usage is logged to `AI Usage Log` regardless of outcome.
+`executor.py:_check_budget()` reads `AI Settings.max_monthly_budget` and sums `AI Usage Log.cost` for the current month per user. At 80% a realtime warning is published; at 100% the request is blocked. All usage is logged to `AI Usage Log` regardless of outcome (including denials and blocks, with `permission_result`, `agent_code`, `agent_name`, `user_roles` recorded per row).
+
+### Business Intelligence Tools (`api/bi_tools.py`)
+
+Separate from `api/tools.py`'s CRUD-style tools — read-only analytical/reporting tools (sales trend, top customers/items, overdue AR, stock alerts, follow-up opportunities, vehicle diagnostics) plus composite cross-module tools (`get_so_invoice_gap`, `get_sales_pipeline_status`, `get_customer_360`, `get_po_receipt_gap`, `get_monthly_pl_bridge`, `get_sales_order_dashboard`). Tools that return a `metrics` key are listed in `chat.py:ANALYTICAL_TOOLS` and get a second AI call to interpret the numbers into findings/risks/recommendations/required_actions — remember to add any new metrics-returning tool's intent to that frozenset.
+
+### Voice Input (`api/voice.py`)
+
+Optional voice-to-text entry point, configured via `AI Settings.enable_voice_input` / `voice_provider` / `voice_api_key` (same `__Auth`-backed password pattern as the main provider keys, via `get_voice_api_key()`).
 
 ## Key Files
 
 | File | Purpose |
 |---|---|
-| `api/tools.py` | All 35 tool functions + TOOL_REGISTRY + TOOLS_SCHEMA |
-| `api/router.py` | Builds system prompt, calls provider, extracts JSON |
-| `api/executor.py` | Budget check, tool dispatch, usage logging |
-| `api/chat.py` | Whitelisted Frappe endpoints (`send_message`, `test_connection`, `get_usage_summary`) |
+| `api/tools.py` | ~80 CRUD/action tool functions + TOOL_REGISTRY + TOOLS_SCHEMA (96 tools total with bi_tools.py) |
+| `api/bi_tools.py` | Read-only BI/analytics tools + composite cross-module reports |
+| `api/router.py` | Builds system prompt (RBAC + agent filtered), calls provider, extracts JSON |
+| `api/executor.py` | Budget check, per-tool RBAC re-check, tool dispatch, usage logging |
+| `api/chat.py` | Whitelisted endpoints (`send_message`, `test_connection`, `get_usage_summary`, `get_agents`, `get_daily_briefing`, `get_settings_status`); analytics interpreter |
+| `api/agent_manager.py` | AI Agent persona loading/caching, governance checks (agent switch lockdown), prompt/tool/KPI merging |
+| `api/supervisor.py` | Auto-routing classifier — picks best specialist agent for a message (System Manager + Auto mode only) |
+| `api/permission_manager.py` | RBAC: tool → allowed-roles map, permission checks, prompt schema filtering |
+| `api/voice.py` | Voice input endpoint |
 | `providers/__init__.py` | Provider factory |
 | `providers/openai_compatible.py` | OpenAI/OpenRouter/Groq/Google implementation |
 | `providers/anthropic_provider.py` | Claude implementation |
-| `ai_assistant/doctype/ai_settings/ai_settings.py` | Single DocType with `get_active_api_key()` fix |
+| `ai_assistant/doctype/ai_settings/ai_settings.py` | Single DocType with `get_active_api_key()` / `get_voice_api_key()` fix |
+| `ai_assistant/doctype/ai_agent/` | Agent persona DocType (+ `ai_agent_tool`, `ai_agent_role`, `ai_agent_kpi` child tables) |
+| `ai_assistant/doctype/ai_tool_permission/` | RBAC DocType (+ `ai_tool_permission_role` child table) |
+| `ai_assistant/fixtures/ai_agent.json` | Shipped agent personas (general, sales_manager, accounts_manager, workshop_advisor, ceo_assistant, supervisor, sales, marketing, accounts, operations, bi) |
 | `public/js/ai_desk_launcher.js` | Floating FAB injected site-wide |
 | `ai_assistant/page/ai_chat/ai_chat.js` | Chat UI class |
 
