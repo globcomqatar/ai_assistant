@@ -166,8 +166,12 @@ def get_session_agent(user: str, session_agent: str) -> str:
     return session_agent
 
 
-def _get_available_agents_for_user(user: str | None = None) -> list[dict]:
-    """Return agents available to a resolved internal user."""
+@frappe.whitelist()
+def get_available_agents(user: str | None = None) -> list[dict]:
+    """
+    Return agents available to the current (or given) user, ordered by display_order.
+    Non-System Manager users receive only the general agent — agent switching is locked.
+    """
     user = user or frappe.session.user
     # PATCH 2 enforcement: non-SM only sees general agent
     if not _is_system_manager(user):
@@ -205,17 +209,6 @@ def _get_available_agents_for_user(user: str | None = None) -> list[dict]:
     return result
 
 
-@frappe.whitelist()
-def get_available_agents(user: str | None = None) -> list[dict]:
-    """
-    Return sanitized agents for the current session user.
-
-    The user argument is accepted only for backward-compatible clients and is
-    intentionally ignored to prevent user impersonation through whitelisted calls.
-    """
-    return _get_available_agents_for_user(frappe.session.user)
-
-
 def get_default_agent_code() -> str:
     default = frappe.db.get_value("AI Agent",
         {"enabled": 1, "default_agent": 1}, "agent_code")
@@ -226,10 +219,7 @@ def invalidate_agent_cache(agent_code: str | None = None) -> None:
     if agent_code:
         frappe.cache().delete_value(f"{_CACHE_PREFIX}{agent_code}")
     else:
-        # Delete individual keys to avoid a Redis KEYS pattern scan (O(N) on large keyspaces).
-        codes = frappe.db.get_all("AI Agent", pluck="agent_code")
-        for code in codes:
-            frappe.cache().delete_value(f"{_CACHE_PREFIX}{code}")
+        frappe.cache().delete_keys(f"{_CACHE_PREFIX}*")
 
 
 def build_agent_system_prompt(agent_code: str, user: str, base_prompt: str) -> str:

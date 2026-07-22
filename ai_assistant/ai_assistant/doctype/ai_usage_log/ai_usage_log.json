@@ -163,6 +163,14 @@
    "read": 1,
    "role": "System Manager",
    "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "read": 1,
+   "role": "All",
+   "write": 0,
+   "if_owner": 1
   }
  ],
  "search_fields": "user,status,tool_used",
