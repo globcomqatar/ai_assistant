@@ -318,6 +318,7 @@ def test_connection() -> dict:
 
 @frappe.whitelist()
 def get_usage_summary() -> dict:
+    frappe.only_for("System Manager")
     user = frappe.session.user
     month_start = frappe.utils.get_first_day(frappe.utils.nowdate())
     row = frappe.db.sql(

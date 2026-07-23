@@ -2552,18 +2552,24 @@ class AIChatPage {
 	}
 
 	_load_usage() {
-		frappe.call({
-			method: "ai_assistant.api.chat.get_usage_summary",
-			callback: (r) => {
-				if (!r.message) return;
-				const d = r.message;
-				const $badge = $("#ai-usage-badge");
-				if (d.budget) {
-					$badge.text(`$${(+d.cost).toFixed(4)} / $${d.budget} (${d.budget_used_pct}%)`);
-					$badge.toggleClass("ai-usage-badge--warn", d.budget_used_pct >= 80);
-				}
-			},
-		});
+		// Cost/budget is a System Manager concern — hide it from everyone
+		// else. get_usage_summary is also locked to System Manager server-side.
+		if (!frappe.user.has_role("System Manager")) {
+			$("#ai-usage-badge").hide();
+		} else {
+			frappe.call({
+				method: "ai_assistant.api.chat.get_usage_summary",
+				callback: (r) => {
+					if (!r.message) return;
+					const d = r.message;
+					const $badge = $("#ai-usage-badge");
+					if (d.budget) {
+						$badge.text(`$${(+d.cost).toFixed(4)} / $${d.budget} (${d.budget_used_pct}%)`);
+						$badge.toggleClass("ai-usage-badge--warn", d.budget_used_pct >= 80);
+					}
+				},
+			});
+		}
 
 		frappe.call({
 			method: "ai_assistant.api.chat.get_settings_status",
