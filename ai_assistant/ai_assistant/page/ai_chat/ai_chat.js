@@ -1304,7 +1304,7 @@ class AIChatPage {
 				<div class="ai-kpi-label">${k.label}</div>
 			</div>`
 		).join("");
-		return `<div class="ai-kpi-strip">${cards}</div>`;
+		return `<div class="ai-kpi-grid">${cards}</div>`;
 	}
 
 	_render_kpi_strip(metrics) {

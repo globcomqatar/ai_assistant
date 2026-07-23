@@ -32,8 +32,12 @@ add_to_apps_screen = [
 ]
 
 # Inject AI chat button JS into every desk page
-app_include_js = "/assets/ai_assistant/js/ai_desk_launcher.js"
-app_include_css = "/assets/ai_assistant/css/ai_chat.css"
+# Version query string busts the browser's static-asset cache (max-age=12h, no hash
+# in the URL otherwise) so a `bench build` + version bump is immediately visible.
+from ai_assistant import __version__ as _app_version
+
+app_include_js = f"/assets/ai_assistant/js/ai_desk_launcher.js?v={_app_version}"
+app_include_css = f"/assets/ai_assistant/css/ai_chat.css?v={_app_version}"
 
 # Scheduled task: reset monthly usage tracking
 scheduler_events = {

@@ -431,6 +431,10 @@
 .ai-result-badge--error { background: #fee2e2; color: #b91c1c; }
 
 .ai-result-body { padding: 12px 14px; font-size: 0.82rem; }
+/* frappe.format()'s Currency fieldtype wraps values in an inline
+   style="text-align: right" div — override so amounts stay left-aligned
+   like the rest of the report text. */
+.ai-result-body [style] { text-align: left !important; }
 .ai-result-message { color: var(--text-color); }
 .ai-result-error { color: #b91c1c; }
 
@@ -540,26 +544,33 @@
 	margin-bottom: 6px;
 }
 
-/* ── KPI card grid ─────────────────────────────────────────────── */
+/* ── KPI card grid — fixed 4-up, equal-size cards, used by every KPI/metrics
+   strip in the app (business analysis, sales trend, aged receivables, etc.) ── */
 .ai-kpi-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+	grid-template-columns: repeat(4, minmax(0, 1fr));
 	gap: 8px;
 	margin-bottom: 10px;
+	align-items: stretch;
 }
 .ai-kpi-card {
+	display: flex;
+	flex-direction: column;
 	background: var(--card-bg);
 	border: 1px solid var(--border-color);
 	border-radius: 8px;
 	padding: 8px 10px;
-	text-align: center;
+	text-align: left;
+	min-width: 0;
 }
 .ai-kpi-value {
 	font-size: 1rem;
 	font-weight: 700;
 	color: var(--heading-color);
 	line-height: 1.2;
+	overflow-wrap: break-word;
 }
+.ai-kpi-value.ai-kpi-danger { color: var(--red-500); }
 .ai-kpi-label {
 	font-size: 0.7rem;
 	color: var(--text-muted);
@@ -638,8 +649,8 @@
 	font-size: 0.8rem;
 }
 .ai-metric-label { color: var(--text-muted); }
-.ai-metric-value { font-weight: 700; color: var(--heading-color); text-align: right; }
-.ai-metric-sub   { font-size: 0.68rem; color: var(--text-muted); text-align: right; min-width: 80px; }
+.ai-metric-value { font-weight: 700; color: var(--heading-color); text-align: left; }
+.ai-metric-sub   { font-size: 0.68rem; color: var(--text-muted); text-align: left; min-width: 80px; }
 
 /* ── Follow-Up Opportunity cards ───────────────────────────────── */
 .ai-opportunities {
@@ -941,23 +952,6 @@
 	font-style: italic;
 }
 .ai-routing-note-icon { font-style: normal; font-size: 0.85rem; }
-
-/* ── Analytical KPI Strip ─────────────────────────────────────────────────── */
-.ai-kpi-strip {
-	display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;
-}
-.ai-kpi-card {
-	flex: 1 1 90px; min-width: 76px;
-	background: var(--card-bg); border: 1px solid var(--border-color);
-	border-radius: 8px; padding: 8px 10px; text-align: center;
-}
-.ai-kpi-value {
-	font-size: 1rem; font-weight: 700; color: var(--text-color); white-space: nowrap;
-}
-.ai-kpi-value.ai-kpi-danger { color: var(--red-500); }
-.ai-kpi-label {
-	font-size: 0.66rem; color: var(--text-muted); margin-top: 2px; white-space: nowrap;
-}
 
 /* ── Chart container ──────────────────────────────────────────────────────── */
 .ai-chart { margin: 8px 0 12px; min-height: 240px; }
