@@ -501,7 +501,7 @@
  },
  {
   "category": "BI Analytics",
-  "description": "Customers with no purchase in the last N days — useful for win-back campaigns.",
+  "description": "Customers with no purchase in the last N days \u2014 useful for win-back campaigns.",
   "docstatus": 0,
   "doctype": "AI Tool",
   "enabled": 1,
@@ -541,7 +541,7 @@
  },
  {
   "category": "BI Analytics",
-  "description": "Composite follow-up intelligence: overdue payments, stale quotations, lapsed customers — prioritised by revenue impact. Use when asked who needs follow-up or attention.",
+  "description": "Composite follow-up intelligence: overdue payments, stale quotations, lapsed customers \u2014 prioritised by revenue impact. Use when asked who needs follow-up or attention.",
   "docstatus": 0,
   "doctype": "AI Tool",
   "enabled": 1,
@@ -928,5 +928,32 @@
   "modified": "2026-06-24 00:00:00",
   "name": "get_sales_order_dashboard",
   "tool_name": "get_sales_order_dashboard"
+ },
+ {
+  "category": "HR",
+  "description": "Get total active employee count and how many joined this month, optionally filtered by department.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "name": "get_employee_count",
+  "tool_name": "get_employee_count"
+ },
+ {
+  "category": "HR",
+  "description": "Get who is on approved leave today and the list of pending leave applications awaiting approval.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "name": "get_leave_summary",
+  "tool_name": "get_leave_summary"
+ },
+ {
+  "category": "HR",
+  "description": "Get outstanding employee advances (paid but not yet claimed/settled), optionally filtered by status.",
+  "docstatus": 0,
+  "doctype": "AI Tool",
+  "enabled": 1,
+  "name": "get_employee_advances",
+  "tool_name": "get_employee_advances"
  }
 ]

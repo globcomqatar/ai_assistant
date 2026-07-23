@@ -113,54 +113,75 @@ class AIChatPage {
 		// TOOLS_SCHEMA) so _sidebar_groups() can be filtered against
 		// this.allowed_tools — the same AI Tool Permission map executor.py
 		// enforces server-side. Items without a `tool` are always shown.
+		//
+		// Groups are one-per-module (Sales / Accounts / Operations / HR),
+		// each gated to that module's own roles only — a Sales User sees
+		// Business Intelligence (shared, every module role) + Sales, never
+		// Accounts/Operations/HR. See ai_tool_permission.json for the role
+		// grants behind each `tool` name.
 		return [
 			{
 				label: __("Business Intelligence"),
 				icon: svg.chart,
 				items: [
-					{ icon: svg.chart,    label: __("Business Analysis"),   msg: "Analyze my business and give me recommendations", tool: "analyze_business" },
-					{ icon: svg.calendar, label: __("Daily Summary"),       msg: "Give me the management daily summary", tool: "get_management_summary" },
-					{ icon: svg.trending, label: __("Monthly Sales Trend"), msg: "Show me the monthly sales trend for 6 months", tool: "get_monthly_sales_trend" },
-					{ icon: svg.star,     label: __("Top Customers"),       msg: "Show top customers this month", tool: "get_top_customers" },
-					{ icon: svg.bag,      label: __("Top Selling Items"),   msg: "Show top selling items this month", tool: "get_top_selling_items" },
+					{ icon: svg.chart,    label: __("Business Analysis"), msg: "Analyze my business and give me recommendations", tool: "analyze_business" },
+					{ icon: svg.calendar, label: __("Daily Summary"),     msg: "Give me the management daily summary", tool: "get_management_summary" },
 				],
 			},
 			{
-				label: __("Collections & AR"),
+				label: __("Sales"),
+				icon: svg.trending,
+				items: [
+					{ icon: svg.trending,  label: __("Monthly Sales Trend"), msg: "Show me the monthly sales trend for 6 months", tool: "get_monthly_sales_trend" },
+					{ icon: svg.star,      label: __("Top Customers"),       msg: "Show top customers this month", tool: "get_top_customers" },
+					{ icon: svg.bag,       label: __("Top Selling Items"),   msg: "Show top selling items this month", tool: "get_top_selling_items" },
+					{ icon: svg.file,      label: __("Pending Quotations"),  msg: "Show pending quotations", tool: "get_pending_quotations" },
+					{ icon: svg.target,    label: __("Follow-Up List"),      msg: "Who needs follow-up? Show me follow-up opportunities", tool: "get_followup_opportunities" },
+					{ icon: svg.leak,      label: __("Revenue Leakage"),     msg: "show me sales orders that have not been invoiced", tool: "get_so_invoice_gap" },
+					{ icon: svg.filter,    label: __("Sales Pipeline"),      msg: "show full sales pipeline from quote to cash", tool: "get_sales_pipeline_status" },
+					{ icon: svg.usercheck, label: __("Customer 360"),        msg: "give me a full customer health check", tool: "get_customer_360" },
+					{ icon: svg.tool,      label: __("Open Job Cards"),      msg: "Show open workshop job cards", tool: "get_open_job_cards" },
+					{ icon: svg.useroff,   label: __("Inactive Customers"),  msg: "Show inactive customers in the last 60 days", tool: "get_inactive_customers" },
+					{ icon: svg.useradd,   label: __("New Customer"),        msg: "Create customer ", tool: "create_customer" },
+					{ icon: svg.fileplus,  label: __("New Quotation"),       msg: "Create quotation for customer ", tool: "create_quotation" },
+				],
+			},
+			{
+				label: __("Accounts & Collections"),
 				icon: svg.warning,
 				items: [
-					{ icon: svg.warning, label: __("Overdue Invoices"),   msg: "Show overdue invoices", tool: "get_overdue_invoices" },
-					{ icon: svg.target,  label: __("Follow-Up List"),     msg: "Who needs follow-up? Show me follow-up opportunities", tool: "get_followup_opportunities" },
-					{ icon: svg.users,   label: __("Overdue Customers"),  msg: "Show customers with overdue balance", tool: "get_customers_with_overdue_balance" },
-					{ icon: svg.file,    label: __("Pending Quotations"), msg: "Show pending quotations", tool: "get_pending_quotations" },
-				],
-			},
-			{
-				label: __("Composite Reports"),
-				icon: svg.pulse,
-				items: [
-					{ icon: svg.leak,      label: __("Revenue Leakage"), msg: "show me sales orders that have not been invoiced", tool: "get_so_invoice_gap" },
-					{ icon: svg.filter,    label: __("Sales Pipeline"),  msg: "show full sales pipeline from quote to cash", tool: "get_sales_pipeline_status" },
-					{ icon: svg.usercheck, label: __("Customer 360"),    msg: "give me a full customer health check", tool: "get_customer_360" },
-					{ icon: svg.truck,     label: __("PO Receipt Gap"),  msg: "show purchase orders not yet received", tool: "get_po_receipt_gap" },
-					{ icon: svg.pulse,     label: __("P&L Bridge"),      msg: "show monthly profit and loss bridge", tool: "get_monthly_pl_bridge" },
+					{ icon: svg.warning,   label: __("Overdue Invoices"),      msg: "Show overdue invoices", tool: "get_overdue_invoices" },
+					{ icon: svg.users,     label: __("Overdue Customers"),     msg: "Show customers with overdue balance", tool: "get_customers_with_overdue_balance" },
+					{ icon: svg.chart,     label: __("Accounts Receivable"),   msg: "Show accounts receivable", tool: "get_accounts_receivable" },
+					{ icon: svg.file,      label: __("Pending Invoices"),      msg: "Show pending invoices", tool: "get_pending_invoices" },
+					{ icon: svg.file,      label: __("Invoice Summary"),       msg: "Show invoice summary this month", tool: "get_invoices_summary" },
+					{ icon: svg.usercheck, label: __("Payment Entries"),       msg: "Show recent payment entries", tool: "get_payment_entries" },
+					{ icon: svg.fileplus,  label: __("Journal Entries"),       msg: "Show journal entries", tool: "get_journal_entries" },
+					{ icon: svg.target,    label: __("Account Balance"),       msg: "Show account balance for ", tool: "get_account_balance" },
+					{ icon: svg.trending,  label: __("Revenue Summary"),       msg: "Show revenue summary this month", tool: "get_sales_summary" },
+					{ icon: svg.leak,      label: __("Payables Analysis"),     msg: "Show accounts payable, what we owe suppliers", tool: "get_payables_analysis" },
+					{ icon: svg.truck,     label: __("Purchase Summary"),      msg: "Show purchase summary this month", tool: "get_purchase_summary" },
+					{ icon: svg.fileplus,  label: __("Expense Claims"),        msg: "Show expense claims", tool: "get_expense_claims" },
+					{ icon: svg.pulse,     label: __("P&L Bridge"),            msg: "show monthly profit and loss bridge", tool: "get_monthly_pl_bridge" },
+					{ icon: svg.filter,    label: __("Revenue Leakage"),       msg: "show me sales orders that have not been invoiced", tool: "get_so_invoice_gap" },
+					{ icon: svg.usercheck, label: __("Customer 360"),          msg: "give me a full customer health check", tool: "get_customer_360" },
 				],
 			},
 			{
 				label: __("Operations"),
 				icon: svg.box,
 				items: [
-					{ icon: svg.box,     label: __("Stock Alerts"),       msg: "Show stock alerts and low stock items", tool: "get_stock_alerts" },
-					{ icon: svg.tool,    label: __("Open Job Cards"),     msg: "Show open workshop job cards", tool: "get_open_job_cards" },
-					{ icon: svg.useroff, label: __("Inactive Customers"), msg: "Show inactive customers in the last 60 days", tool: "get_inactive_customers" },
+					{ icon: svg.box,   label: __("Stock Alerts"),   msg: "Show stock alerts and low stock items", tool: "get_stock_alerts" },
+					{ icon: svg.truck, label: __("PO Receipt Gap"), msg: "show purchase orders not yet received", tool: "get_po_receipt_gap" },
 				],
 			},
 			{
-				label: __("Quick Actions"),
-				icon: svg.bolt,
+				label: __("HR & Payroll"),
+				icon: svg.users,
 				items: [
-					{ icon: svg.useradd,  label: __("New Customer"),  msg: "Create customer ", tool: "create_customer" },
-					{ icon: svg.fileplus, label: __("New Quotation"), msg: "Create quotation for customer ", tool: "create_quotation" },
+					{ icon: svg.users,    label: __("Total Employees"),   msg: "Show total employee count", tool: "get_employee_count" },
+					{ icon: svg.calendar, label: __("Leave Summary"),     msg: "Show leave summary, who is on leave today and pending leave requests", tool: "get_leave_summary" },
+					{ icon: svg.file,     label: __("Employee Advances"), msg: "Show outstanding employee advances", tool: "get_employee_advances" },
 				],
 			},
 		];
@@ -659,6 +680,8 @@ class AIChatPage {
 			create_employee: "👤", get_employees: "👥",
 			create_leave_application: "🌴", get_leave_balance: "📅",
 			get_attendance_summary: "🗓️",
+			get_employee_count: "👥", get_leave_summary: "🌴",
+			get_employee_advances: "💵",
 			// Payroll
 			get_salary_slips: "💵", get_payroll_summary: "💰",
 			// Manufacturing
@@ -810,6 +833,12 @@ class AIChatPage {
 			detail = this._render_leave_balance(result);
 		} else if (intent === "get_attendance_summary") {
 			detail = this._render_attendance_summary(result);
+		} else if (intent === "get_employee_count") {
+			detail = this._render_employee_count(result);
+		} else if (intent === "get_leave_summary") {
+			detail = this._render_leave_summary(result);
+		} else if (intent === "get_employee_advances") {
+			detail = this._render_employee_advances(result);
 		} else if (intent === "get_tasks" && result.tasks) {
 			detail = this._render_doc_table(result.tasks,
 				["name", "subject", "project", "assigned_to", "status", "priority", "exp_end_date"],
@@ -1030,6 +1059,49 @@ class AIChatPage {
 				<table class="ai-mini-table"><thead><tr><th>Customer</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table>`;
 		}
 		return `<div class="ai-kv-grid">${pairs}</div>${topCust}`;
+	}
+
+	_render_employee_count(result) {
+		return this._render_kpi_cards([
+			{ label: __("Total Employees"), value: result.total_employees },
+			{ label: __("New This Month"),  value: result.new_this_month },
+		]);
+	}
+
+	_render_leave_summary(result) {
+		let html = this._render_kpi_cards([
+			{ label: __("On Leave Today"),   value: result.on_leave_today_count },
+			{ label: __("Pending Requests"), value: result.pending_count,
+			  danger: result.pending_count > 0 },
+		]);
+		if (result.on_leave_today && result.on_leave_today.length) {
+			html += `<p style="margin-top:10px"><strong>${__("On Leave Today")}</strong></p>`;
+			html += this._render_doc_table(result.on_leave_today,
+				["employee_name", "leave_type", "from_date", "to_date"],
+				["Employee", "Leave Type", "From", "To"]);
+		}
+		if (result.pending_applications && result.pending_applications.length) {
+			html += `<p style="margin-top:10px"><strong>${__("Pending Requests")}</strong></p>`;
+			html += this._render_doc_table(result.pending_applications,
+				["employee_name", "leave_type", "from_date", "to_date"],
+				["Employee", "Leave Type", "From", "To"]);
+		}
+		return html;
+	}
+
+	_render_employee_advances(result) {
+		const fmt = v => this._fmt_currency(v);
+		let html = this._render_kpi_cards([
+			{ label: __("Outstanding Advances"), value: result.count },
+			{ label: __("Total Outstanding"),    value: fmt(result.total_outstanding),
+			  danger: result.total_outstanding > 0 },
+		]);
+		if (result.advances && result.advances.length) {
+			html += this._render_doc_table(result.advances,
+				["employee_name", "advance_amount", "paid_amount", "claimed_amount", "status"],
+				["Employee", "Advance", "Paid", "Claimed", "Status"]);
+		}
+		return html;
 	}
 
 	_render_customer_history(result) {

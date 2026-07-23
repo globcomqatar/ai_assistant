@@ -621,6 +621,12 @@
     "parentfield": "allowed_roles",
     "parenttype": "AI Tool Permission",
     "role": "Sales User"
+   },
+   {
+    "parent": "get_sales_summary",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts User"
    }
   ],
   "description": "Get total sales, invoice count, and top 5 customers for a date range.",
@@ -724,6 +730,12 @@
     "parentfield": "allowed_roles",
     "parenttype": "AI Tool Permission",
     "role": "Accounts Manager"
+   },
+   {
+    "parent": "get_purchase_summary",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts User"
    }
   ],
   "description": "Get total purchase order amount and count for a date range.",
@@ -1179,13 +1191,13 @@
     "parent": "get_monthly_sales_trend",
     "parentfield": "allowed_roles",
     "parenttype": "AI Tool Permission",
-    "role": "Accounts Manager"
+    "role": "Sales User"
    },
    {
     "parent": "get_monthly_sales_trend",
     "parentfield": "allowed_roles",
     "parenttype": "AI Tool Permission",
-    "role": "Sales User"
+    "role": "Accounts Manager"
    }
   ],
   "description": "Monthly sales totals and invoice counts for the past N months. Use for trend/growth analysis.",
@@ -1208,13 +1220,13 @@
     "parent": "get_top_customers",
     "parentfield": "allowed_roles",
     "parenttype": "AI Tool Permission",
-    "role": "Accounts Manager"
+    "role": "Sales User"
    },
    {
     "parent": "get_top_customers",
     "parentfield": "allowed_roles",
     "parenttype": "AI Tool Permission",
-    "role": "Sales User"
+    "role": "Accounts Manager"
    }
   ],
   "description": "Top customers by sales revenue in the last N days. Use for customer ranking reports.",
@@ -1232,12 +1244,6 @@
     "parentfield": "allowed_roles",
     "parenttype": "AI Tool Permission",
     "role": "Sales Manager"
-   },
-   {
-    "parent": "get_top_selling_items",
-    "parentfield": "allowed_roles",
-    "parenttype": "AI Tool Permission",
-    "role": "Stock Manager"
    },
    {
     "parent": "get_top_selling_items",
@@ -1371,6 +1377,48 @@
     "parentfield": "allowed_roles",
     "parenttype": "AI Tool Permission",
     "role": "Sales User"
+   },
+   {
+    "parent": "analyze_business",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "HR Manager"
+   },
+   {
+    "parent": "analyze_business",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "HR User"
+   },
+   {
+    "parent": "analyze_business",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts User"
+   },
+   {
+    "parent": "analyze_business",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Stock Manager"
+   },
+   {
+    "parent": "analyze_business",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Stock User"
+   },
+   {
+    "parent": "analyze_business",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Purchase Manager"
+   },
+   {
+    "parent": "analyze_business",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Purchase User"
    }
   ],
   "description": "Comprehensive AI business intelligence report: sales KPIs, AR, quotations, stock, workshop. Returns prioritised recommendations. Use when the user asks to analyze or review their business.",
@@ -1400,6 +1448,48 @@
     "parentfield": "allowed_roles",
     "parenttype": "AI Tool Permission",
     "role": "Sales User"
+   },
+   {
+    "parent": "get_management_summary",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "HR Manager"
+   },
+   {
+    "parent": "get_management_summary",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "HR User"
+   },
+   {
+    "parent": "get_management_summary",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts User"
+   },
+   {
+    "parent": "get_management_summary",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Stock Manager"
+   },
+   {
+    "parent": "get_management_summary",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Stock User"
+   },
+   {
+    "parent": "get_management_summary",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Purchase Manager"
+   },
+   {
+    "parent": "get_management_summary",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Purchase User"
    }
   ],
   "description": "Daily management briefing: today/week/month sales, collections, pending quotations, overdue invoices, inventory, and workshop status. Use for 'morning briefing' or 'daily summary' requests.",
@@ -1425,7 +1515,7 @@
     "role": "Sales User"
    }
   ],
-  "description": "Customers with no purchase in the last N days — useful for win-back campaigns.",
+  "description": "Customers with no purchase in the last N days \u2014 useful for win-back campaigns.",
   "docstatus": 0,
   "doctype": "AI Tool Permission",
   "enabled": 1,
@@ -1468,7 +1558,7 @@
     "parent": "get_customers_with_overdue_balance",
     "parentfield": "allowed_roles",
     "parenttype": "AI Tool Permission",
-    "role": "Sales Manager"
+    "role": "Accounts User"
    }
   ],
   "description": "Customers ranked by total overdue amount. Use for collections prioritisation.",
@@ -1517,7 +1607,7 @@
     "role": "Sales User"
    }
   ],
-  "description": "Composite follow-up intelligence: overdue payments, stale quotations, lapsed customers — prioritised by revenue impact. Use when asked who needs follow-up or attention.",
+  "description": "Composite follow-up intelligence: overdue payments, stale quotations, lapsed customers \u2014 prioritised by revenue impact. Use when asked who needs follow-up or attention.",
   "docstatus": 0,
   "doctype": "AI Tool Permission",
   "enabled": 1,
@@ -2040,6 +2130,12 @@
     "parentfield": "allowed_roles",
     "parenttype": "AI Tool Permission",
     "role": "Accounts Manager"
+   },
+   {
+    "parent": "get_expense_claims",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Accounts User"
    }
   ],
   "description": "List Expense Claims, optionally filtered by employee or approval status.",
@@ -2091,13 +2187,13 @@
     "parent": "get_so_invoice_gap",
     "parentfield": "allowed_roles",
     "parenttype": "AI Tool Permission",
-    "role": "Accounts Manager"
+    "role": "Sales User"
    },
    {
     "parent": "get_so_invoice_gap",
     "parentfield": "allowed_roles",
     "parenttype": "AI Tool Permission",
-    "role": "Sales User"
+    "role": "Accounts Manager"
    },
    {
     "parent": "get_so_invoice_gap",
@@ -2126,13 +2222,13 @@
     "parent": "get_sales_pipeline_status",
     "parentfield": "allowed_roles",
     "parenttype": "AI Tool Permission",
-    "role": "Accounts Manager"
+    "role": "Sales User"
    },
    {
     "parent": "get_sales_pipeline_status",
     "parentfield": "allowed_roles",
     "parenttype": "AI Tool Permission",
-    "role": "Sales User"
+    "role": "Accounts Manager"
    }
   ],
   "description": "Sales pipeline funnel from Quote to Cash.",
@@ -2155,13 +2251,13 @@
     "parent": "get_customer_360",
     "parentfield": "allowed_roles",
     "parenttype": "AI Tool Permission",
-    "role": "Accounts Manager"
+    "role": "Sales User"
    },
    {
     "parent": "get_customer_360",
     "parentfield": "allowed_roles",
     "parenttype": "AI Tool Permission",
-    "role": "Sales User"
+    "role": "Accounts Manager"
    },
    {
     "parent": "get_customer_360",
@@ -2246,7 +2342,7 @@
     "role": "System Manager"
    }
   ],
-  "description": "Composite sales order dashboard — open orders, invoice gap, top customers, MTD revenue, 3-month trend.",
+  "description": "Composite sales order dashboard \u2014 open orders, invoice gap, top customers, MTD revenue, 3-month trend.",
   "docstatus": 0,
   "doctype": "AI Tool Permission",
   "enabled": 1,
@@ -2323,5 +2419,71 @@
   "modified": "2026-06-24 12:00:00",
   "name": "get_payables_analysis",
   "tool_name": "get_payables_analysis"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_employee_count",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "HR Manager"
+   },
+   {
+    "parent": "get_employee_count",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "HR User"
+   }
+  ],
+  "description": "Get total active employee count and how many joined this month, optionally filtered by department.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "name": "get_employee_count",
+  "tool_name": "get_employee_count"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_leave_summary",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "HR Manager"
+   },
+   {
+    "parent": "get_leave_summary",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "HR User"
+   }
+  ],
+  "description": "Get who is on approved leave today and the list of pending leave applications awaiting approval.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "name": "get_leave_summary",
+  "tool_name": "get_leave_summary"
+ },
+ {
+  "allowed_roles": [
+   {
+    "parent": "get_employee_advances",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "HR Manager"
+   },
+   {
+    "parent": "get_employee_advances",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "HR User"
+   }
+  ],
+  "description": "Get outstanding employee advances (paid but not yet claimed/settled), optionally filtered by status.",
+  "docstatus": 0,
+  "doctype": "AI Tool Permission",
+  "enabled": 1,
+  "name": "get_employee_advances",
+  "tool_name": "get_employee_advances"
  }
 ]

@@ -1104,6 +1104,64 @@ def get_attendance_summary(employee: str = "", from_date: str = "",
 			"summary": summary, "total": len(rows), "records": rows[:30]}
 
 
+def _require_hrms_doctype(doctype: str) -> dict | None:
+	"""Leave/Attendance/Payroll/Advance doctypes live in the separate `hrms`
+	app. Return a friendly error dict if it isn't installed, instead of
+	letting frappe.get_all raise a raw DoesNotExistError."""
+	if frappe.db.exists("DocType", doctype):
+		return None
+	return {"status": "error",
+			"message": f"'{doctype}' is not available — install the HRMS app to enable this."}
+
+
+def get_employee_count(department: str = "") -> dict:
+	filters: dict = {"status": "Active"}
+	if department:
+		filters["department"] = department
+	total = frappe.db.count("Employee", filters)
+	month_start = get_first_day(today())
+	new_filters = dict(filters, date_of_joining=[">=", month_start])
+	new_this_month = frappe.db.count("Employee", new_filters)
+	return {"status": "ok", "total_employees": total, "new_this_month": new_this_month,
+			"department": department or "All"}
+
+
+def get_leave_summary() -> dict:
+	err = _require_hrms_doctype("Leave Application")
+	if err:
+		return err
+	today_str = today()
+	on_leave = frappe.get_all("Leave Application",
+		filters={"docstatus": 1, "status": "Approved",
+				 "from_date": ["<=", today_str], "to_date": [">=", today_str]},
+		fields=["employee", "employee_name", "leave_type", "from_date", "to_date"])
+	pending = frappe.get_all("Leave Application",
+		filters={"docstatus": 0, "status": "Open"},
+		fields=["name", "employee", "employee_name", "leave_type", "from_date", "to_date"],
+		limit=25, order_by="from_date asc")
+	return {"status": "ok",
+			"on_leave_today_count": len(on_leave), "on_leave_today": on_leave,
+			"pending_count": len(pending), "pending_applications": pending}
+
+
+def get_employee_advances(status: str = "") -> dict:
+	err = _require_hrms_doctype("Employee Advance")
+	if err:
+		return err
+	filters: dict = {"docstatus": 1}
+	if status:
+		filters["status"] = status
+	else:
+		filters["status"] = ["in", ["Unpaid", "Paid", "Partly Claimed"]]
+	rows = frappe.get_all("Employee Advance", filters=filters,
+		fields=["employee", "employee_name", "advance_amount", "paid_amount",
+				"claimed_amount", "status"],
+		limit=25, order_by="posting_date desc")
+	total_outstanding = sum(flt(r.get("paid_amount")) - flt(r.get("claimed_amount")) for r in rows)
+	return {"status": "ok", "count": len(rows),
+			"total_outstanding": total_outstanding, "advances": rows}
+
+
 # ╔══════════════════════════════════════════════════════════════════╗
 # ║  SECTION 14 — PAYROLL                                           ║
 # ╚══════════════════════════════════════════════════════════════════╝
@@ -1482,6 +1540,9 @@ TOOL_REGISTRY: dict[str, callable] = {
 	"create_leave_application":     create_leave_application,
 	"get_leave_balance":            get_leave_balance,
 	"get_attendance_summary":       get_attendance_summary,
+	"get_employee_count":           get_employee_count,
+	"get_leave_summary":            get_leave_summary,
+	"get_employee_advances":        get_employee_advances,
 	# ── Payroll ──────────────────────────────────────────────────────
 	"get_salary_slips":             get_salary_slips,
 	"get_payroll_summary":          get_payroll_summary,
@@ -1909,6 +1970,19 @@ TOOLS_SCHEMA: list[dict] = [
 	 "description": "Get attendance records summary for an employee or all employees in a date range.",
 	 "parameters": {"employee": {"type": "string"},
 					"from_date": {"type": "string"}, "to_date": {"type": "string"}}},
+
+	{"name": "get_employee_count",
+	 "description": "Get total active employee count and how many joined this month, optionally filtered by department.",
+	 "parameters": {"department": {"type": "string"}}},
+
+	{"name": "get_leave_summary",
+	 "description": "Get who is on approved leave today and the list of pending leave applications awaiting approval.",
+	 "parameters": {}},
+
+	{"name": "get_employee_advances",
+	 "description": "Get outstanding employee advances (paid but not yet claimed/settled), optionally filtered by status.",
+	 "parameters": {"status": {"type": "string",
+								"description": "e.g. Unpaid, Paid, Partly Claimed"}}},
 
 	# ── Payroll ──────────────────────────────────────────────────────
 	{"name": "get_salary_slips",
