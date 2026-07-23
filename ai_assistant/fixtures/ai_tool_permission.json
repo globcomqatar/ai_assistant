@@ -736,6 +736,12 @@
     "parentfield": "allowed_roles",
     "parenttype": "AI Tool Permission",
     "role": "Accounts User"
+   },
+   {
+    "parent": "get_purchase_summary",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Purchase User"
    }
   ],
   "description": "Get total purchase order amount and count for a date range.",
@@ -1419,6 +1425,18 @@
     "parentfield": "allowed_roles",
     "parenttype": "AI Tool Permission",
     "role": "Purchase User"
+   },
+   {
+    "parent": "analyze_business",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Manufacturing Manager"
+   },
+   {
+    "parent": "analyze_business",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Manufacturing User"
    }
   ],
   "description": "Comprehensive AI business intelligence report: sales KPIs, AR, quotations, stock, workshop. Returns prioritised recommendations. Use when the user asks to analyze or review their business.",
@@ -1490,6 +1508,18 @@
     "parentfield": "allowed_roles",
     "parenttype": "AI Tool Permission",
     "role": "Purchase User"
+   },
+   {
+    "parent": "get_management_summary",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Manufacturing Manager"
+   },
+   {
+    "parent": "get_management_summary",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Tool Permission",
+    "role": "Manufacturing User"
    }
   ],
   "description": "Daily management briefing: today/week/month sales, collections, pending quotations, overdue invoices, inventory, and workshop status. Use for 'morning briefing' or 'daily summary' requests.",

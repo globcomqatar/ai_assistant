@@ -114,41 +114,30 @@ class AIChatPage {
 		// this.allowed_tools — the same AI Tool Permission map executor.py
 		// enforces server-side. Items without a `tool` are always shown.
 		//
-		// Groups are one-per-module (Sales / Accounts / Operations / HR),
-		// each gated to that module's own roles only — a Sales User sees
-		// Business Intelligence (shared, every module role) + Sales, never
-		// Accounts/Operations/HR. See ai_tool_permission.json for the role
-		// grants behind each `tool` name.
+		// `agent` is the AI Agent code this department routes to — clicking
+		// any item in the group auto-switches the active agent first (see
+		// the .ai-sn-item click handler in _bind_events()), the same way the
+		// top agent-pill bar works, just triggered from the sidebar instead.
+		//
+		// Groups are one-per-module (Sales / Accounts / Purchase / Store /
+		// Operation / HR), each gated to that module's own roles only — a
+		// Sales User sees Business Intelligence (shared, every module role)
+		// + Sales Department, never Accounts/Purchase/Store/Operation/HR.
+		// See ai_tool_permission.json for the role grants behind each `tool`.
 		return [
 			{
 				label: __("Business Intelligence"),
 				icon: svg.chart,
+				agent: "bi",
 				items: [
 					{ icon: svg.chart,    label: __("Business Analysis"), msg: "Analyze my business and give me recommendations", tool: "analyze_business" },
 					{ icon: svg.calendar, label: __("Daily Summary"),     msg: "Give me the management daily summary", tool: "get_management_summary" },
 				],
 			},
 			{
-				label: __("Sales"),
-				icon: svg.trending,
-				items: [
-					{ icon: svg.trending,  label: __("Monthly Sales Trend"), msg: "Show me the monthly sales trend for 6 months", tool: "get_monthly_sales_trend" },
-					{ icon: svg.star,      label: __("Top Customers"),       msg: "Show top customers this month", tool: "get_top_customers" },
-					{ icon: svg.bag,       label: __("Top Selling Items"),   msg: "Show top selling items this month", tool: "get_top_selling_items" },
-					{ icon: svg.file,      label: __("Pending Quotations"),  msg: "Show pending quotations", tool: "get_pending_quotations" },
-					{ icon: svg.target,    label: __("Follow-Up List"),      msg: "Who needs follow-up? Show me follow-up opportunities", tool: "get_followup_opportunities" },
-					{ icon: svg.leak,      label: __("Revenue Leakage"),     msg: "show me sales orders that have not been invoiced", tool: "get_so_invoice_gap" },
-					{ icon: svg.filter,    label: __("Sales Pipeline"),      msg: "show full sales pipeline from quote to cash", tool: "get_sales_pipeline_status" },
-					{ icon: svg.usercheck, label: __("Customer 360"),        msg: "give me a full customer health check", tool: "get_customer_360" },
-					{ icon: svg.tool,      label: __("Open Job Cards"),      msg: "Show open workshop job cards", tool: "get_open_job_cards" },
-					{ icon: svg.useroff,   label: __("Inactive Customers"),  msg: "Show inactive customers in the last 60 days", tool: "get_inactive_customers" },
-					{ icon: svg.useradd,   label: __("New Customer"),        msg: "Create customer ", tool: "create_customer" },
-					{ icon: svg.fileplus,  label: __("New Quotation"),       msg: "Create quotation for customer ", tool: "create_quotation" },
-				],
-			},
-			{
-				label: __("Accounts & Collections"),
+				label: __("Accounts Department"),
 				icon: svg.warning,
+				agent: "accounts",
 				items: [
 					{ icon: svg.warning,   label: __("Overdue Invoices"),      msg: "Show overdue invoices", tool: "get_overdue_invoices" },
 					{ icon: svg.users,     label: __("Overdue Customers"),     msg: "Show customers with overdue balance", tool: "get_customers_with_overdue_balance" },
@@ -168,16 +157,57 @@ class AIChatPage {
 				],
 			},
 			{
-				label: __("Operations"),
+				label: __("Sales Department"),
+				icon: svg.trending,
+				agent: "sales",
+				items: [
+					{ icon: svg.trending,  label: __("Monthly Sales Trend"), msg: "Show me the monthly sales trend for 6 months", tool: "get_monthly_sales_trend" },
+					{ icon: svg.star,      label: __("Top Customers"),       msg: "Show top customers this month", tool: "get_top_customers" },
+					{ icon: svg.bag,       label: __("Top Selling Items"),   msg: "Show top selling items this month", tool: "get_top_selling_items" },
+					{ icon: svg.file,      label: __("Pending Quotations"),  msg: "Show pending quotations", tool: "get_pending_quotations" },
+					{ icon: svg.target,    label: __("Follow-Up List"),      msg: "Who needs follow-up? Show me follow-up opportunities", tool: "get_followup_opportunities" },
+					{ icon: svg.leak,      label: __("Revenue Leakage"),     msg: "show me sales orders that have not been invoiced", tool: "get_so_invoice_gap" },
+					{ icon: svg.filter,    label: __("Sales Pipeline"),      msg: "show full sales pipeline from quote to cash", tool: "get_sales_pipeline_status" },
+					{ icon: svg.usercheck, label: __("Customer 360"),        msg: "give me a full customer health check", tool: "get_customer_360" },
+					{ icon: svg.tool,      label: __("Open Job Cards"),      msg: "Show open workshop job cards", tool: "get_open_job_cards" },
+					{ icon: svg.useroff,   label: __("Inactive Customers"),  msg: "Show inactive customers in the last 60 days", tool: "get_inactive_customers" },
+					{ icon: svg.useradd,   label: __("New Customer"),        msg: "Create customer ", tool: "create_customer" },
+					{ icon: svg.fileplus,  label: __("New Quotation"),       msg: "Create quotation for customer ", tool: "create_quotation" },
+				],
+			},
+			{
+				label: __("Purchase"),
+				icon: svg.truck,
+				agent: "operations",
+				items: [
+					{ icon: svg.truck,  label: __("PO Receipt Gap"),          msg: "show purchase orders not yet received", tool: "get_po_receipt_gap" },
+					{ icon: svg.pulse,  label: __("Purchase Summary"),        msg: "Show purchase summary this month", tool: "get_purchase_summary" },
+					{ icon: svg.file,   label: __("Pending Purchase Orders"), msg: "Show pending purchase orders", tool: "get_pending_purchase_orders" },
+				],
+			},
+			{
+				label: __("Store"),
 				icon: svg.box,
+				agent: "operations",
 				items: [
 					{ icon: svg.box,   label: __("Stock Alerts"),   msg: "Show stock alerts and low stock items", tool: "get_stock_alerts" },
+					{ icon: svg.file,  label: __("Stock Report"),   msg: "Show stock report for all warehouses", tool: "get_stock_report" },
 					{ icon: svg.truck, label: __("PO Receipt Gap"), msg: "show purchase orders not yet received", tool: "get_po_receipt_gap" },
+				],
+			},
+			{
+				label: __("Operation"),
+				icon: svg.tool,
+				agent: "operations",
+				items: [
+					{ icon: svg.tool,  label: __("Work Orders"), msg: "Show work orders", tool: "get_work_orders" },
+					{ icon: svg.file,  label: __("BOM List"),    msg: "Show bill of materials list", tool: "get_bom_list" },
 				],
 			},
 			{
 				label: __("HR & Payroll"),
 				icon: svg.users,
+				agent: "hr",
 				items: [
 					{ icon: svg.users,    label: __("Total Employees"),   msg: "Show total employee count", tool: "get_employee_count" },
 					{ icon: svg.calendar, label: __("Leave Summary"),     msg: "Show leave summary, who is on leave today and pending leave requests", tool: "get_leave_summary" },
@@ -216,6 +246,7 @@ class AIChatPage {
 						${group.items.map(item => `
 							<button class="ai-sn-item"
 									data-msg="${frappe.utils.escape_html(item.msg)}"
+									data-agent="${frappe.utils.escape_html(group.agent || "")}"
 									type="button">
 								<span class="ai-sn-ico">${item.icon}</span>
 								<span class="ai-sn-lbl">${item.label}</span>
@@ -430,9 +461,17 @@ class AIChatPage {
 			$section.find(".ai-sn-section-label").attr("aria-expanded", willOpen);
 		});
 
-		// Sidebar quick-action buttons
+		// Sidebar quick-action buttons — each department routes to its own
+		// agent (see the `agent` field in _sidebar_groups()), so clicking a
+		// Sales shortcut lands on the Sales Agent the same way clicking the
+		// "Sales Agent" pill would. _switch_agent() no-ops if this user's
+		// role doesn't grant that agent, so this is always safe to call.
 		$(document).on("click", ".ai-sn-item", (e) => {
 			const msg = $(e.currentTarget).data("msg");
+			const agentCode = $(e.currentTarget).data("agent");
+			if (agentCode && agentCode !== this.current_agent) {
+				this._switch_agent(agentCode);
+			}
 			this.$input.val(msg).trigger("input").focus();
 			// Auto-send only if message is complete (doesn't end with space)
 			if (!msg.endsWith(" ")) {

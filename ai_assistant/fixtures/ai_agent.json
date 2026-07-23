@@ -639,6 +639,30 @@
     "parentfield": "allowed_roles",
     "parenttype": "AI Agent",
     "role": "System Manager"
+   },
+   {
+    "parent": "operations",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Agent",
+    "role": "Purchase User"
+   },
+   {
+    "parent": "operations",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Agent",
+    "role": "Stock User"
+   },
+   {
+    "parent": "operations",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Agent",
+    "role": "Manufacturing Manager"
+   },
+   {
+    "parent": "operations",
+    "parentfield": "allowed_roles",
+    "parenttype": "AI Agent",
+    "role": "Manufacturing User"
    }
   ],
   "color": "#EA580C",
@@ -756,6 +780,14 @@
     "parenttype": "AI Agent",
     "priority": 10,
     "tool_name": "get_po_receipt_gap"
+   },
+   {
+    "enabled": 1,
+    "parent": "operations",
+    "parentfield": "tools",
+    "parenttype": "AI Agent",
+    "priority": 10,
+    "tool_name": "get_bom_list"
    }
   ]
  },
