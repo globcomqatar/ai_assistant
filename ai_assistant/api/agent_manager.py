@@ -126,12 +126,22 @@ def _safe_general_code() -> str:
 
 def resolve_active_agent(user: str, requested_agent: str | None = None) -> str:
     """
-    PATCH 1: Strict agent resolution.
-    Non-System Manager users are always forced to 'general'.
-    System Manager can use any valid agent.
+    PATCH 1: Resolve which agent a request should run under.
+
+    No requested agent -> the literal 'general' agent, NEVER
+    get_default_agent_code() (whichever agent has default_agent=1, e.g.
+    'supervisor'). That flag is the System Manager's preferred specialist
+    default and is unrelated to this fallback; conflating the two previously
+    made every request with no requested_agent resolve to 'supervisor' and
+    then get rejected by validate_agent_switch, breaking chat for every
+    non-System-Manager user (see _safe_general_code()).
+
+    A requested agent is passed through as-is, for every user — access is
+    enforced by validate_agent_switch() right after this, based on each
+    AI Agent's own allowed_roles (e.g. Sales User -> 'sales' agent), not by
+    blanket-blocking every non-System-Manager from switching at all.
     """
-    if not _is_system_manager(user):
-        return _safe_general_code()
+    requested_agent = (requested_agent or "").strip()
     if not requested_agent:
         return _safe_general_code()
     return requested_agent
@@ -139,12 +149,16 @@ def resolve_active_agent(user: str, requested_agent: str | None = None) -> str:
 
 def validate_agent_switch(user: str, agent: str) -> None:
     """
-    PATCH 2: Raise PermissionError if a non-System Manager tries to switch
-    away from the general agent. Called server-side on every request.
+    PATCH 2: Raise PermissionError if `user`'s roles don't grant access to
+    `agent`, per validate_agent_access() (System Manager and 'general' always
+    pass; anyone else needs a role overlap with that AI Agent's allowed_roles).
+    Called server-side on every request — the real access boundary, so a
+    Sales User can reach the Sales Agent but not the Accounts or Operations
+    Agent, regardless of what the client sends.
     """
-    if not _is_system_manager(user) and agent != "general":
+    if not validate_agent_access(user, agent):
         frappe.throw(
-            _("Agent switching is not allowed for this user."),
+            _("You do not have permission to use the '{0}' agent.").format(agent),
             frappe.PermissionError,
         )
 
@@ -163,36 +177,27 @@ def check_system_manager_access(user: str) -> None:
 
 def get_session_agent(user: str, session_agent: str) -> str:
     """
-    PATCH 4: Session cannot override agent for non-System Manager.
-    Always returns the safe general agent for regular users regardless of stored session value.
+    PATCH 4: Defense-in-depth re-check. By the time chat.py calls this,
+    session_agent already passed validate_agent_switch — but roles (or the
+    AI Agent's allowed_roles) can change between requests, so re-validate
+    here too and fall back to 'general' rather than trust a stale value.
     """
-    if not _is_system_manager(user):
-        return _safe_general_code()
-    return session_agent
+    if validate_agent_access(user, session_agent):
+        return session_agent
+    return _safe_general_code()
 
 
 @frappe.whitelist()
 def get_available_agents(user: str | None = None) -> list[dict]:
     """
-    Return agents available to the current (or given) user, ordered by display_order.
-    Non-System Manager users receive only the general agent — agent switching is locked.
+    Return agents available to the current (or given) user, ordered by
+    display_order, filtered through the same validate_agent_access() check
+    used to enforce switching. System Manager passes for every enabled
+    agent; everyone else only sees 'general' plus agents whose allowed_roles
+    overlap their own roles — e.g. a Sales User sees General + Sales Agent,
+    not Accounts/Operations/Supervisor.
     """
     user = user or frappe.session.user
-    # PATCH 2 enforcement: non-SM only sees general agent
-    if not _is_system_manager(user):
-        row = frappe.db.get_value(
-            "AI Agent", "general",
-            ["agent_code", "agent_name", "description", "icon", "color", "default_agent"],
-            as_dict=True,
-        ) or {}
-        return [{
-            "agent_code":    row.get("agent_code", "general"),
-            "agent_name":    row.get("agent_name", "General ERP Assistant"),
-            "description":   row.get("description", ""),
-            "icon":          row.get("icon", "🤖"),
-            "color":         row.get("color", "#2563EB"),
-            "default_agent": True,
-        }]
     rows = frappe.get_all(
         "AI Agent",
         filters={"enabled": 1},

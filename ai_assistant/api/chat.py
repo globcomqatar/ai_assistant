@@ -181,8 +181,10 @@ def send_message(message: str, history: str = "[]", current_agent: str = "genera
 
     user = frappe.session.user
 
-    # PATCH 5: Strict governance pipeline
-    # Step 1 + 2: Resolve agent — non-SM is always forced to "general"
+    # Governance pipeline — each AI Agent's own allowed_roles is the access
+    # boundary (e.g. Sales User -> Sales Agent, not Accounts/Operations), not
+    # a blanket System-Manager-only lock. See agent_manager.py PATCH 1/2/4.
+    # Step 1: Resolve requested agent, defaulting to "general" if none given.
     from ai_assistant.api.agent_manager import (
         resolve_active_agent,
         validate_agent_switch,
@@ -190,15 +192,17 @@ def send_message(message: str, history: str = "[]", current_agent: str = "genera
     )
     agent_code = resolve_active_agent(user, (current_agent or "general").strip())
 
-    # Step 3: Validate switch — blocks any non-SM attempt to use a non-general agent
+    # Step 2: Validate access — throws unless this user's roles are permitted
+    # for this specific agent (System Manager and "general" always pass).
     validate_agent_switch(user, agent_code)
 
-    # Step 4: Session safety — strips any session-level override for non-SM
+    # Step 3: Re-validate defense-in-depth (roles may have changed).
     agent_code = get_session_agent(user, agent_code)
 
-    # Step 5: Auto-routing — System Manager + Auto mode only.
-    # Non-SM users are already locked to "general" by Steps 1–4; this block
-    # never fires for them.
+    # Step 4: Auto-routing — System Manager + Auto mode only. Regular users
+    # pick their own agent from the roles-filtered list; auto-routing across
+    # departments is a System Manager convenience feature, not part of the
+    # access-control boundary above.
     routing_info: dict | None = None
     from ai_assistant.api.agent_manager import _is_system_manager
     if _is_system_manager(user):
@@ -273,6 +277,21 @@ def get_agents() -> list[dict]:
     """Return available agents for the current user."""
     from ai_assistant.api.agent_manager import get_available_agents
     return get_available_agents(frappe.session.user)
+
+
+@frappe.whitelist()
+def get_allowed_intents() -> list[str]:
+    """Return the tool/intent names the current user may invoke.
+
+    Used by the chat sidebar to hide quick-action shortcuts for tools the
+    user has no AI Tool Permission for, so a department's shortcuts (and the
+    hint that its data exists) don't show up for users outside that
+    department. This reuses the same permission_manager map executor.py
+    enforces server-side, so hiding the button here is a UX layer on top of
+    a real access check, not the only one.
+    """
+    from ai_assistant.api.permission_manager import get_allowed_tools
+    return sorted(get_allowed_tools(frappe.session.user))
 
 
 @frappe.whitelist()

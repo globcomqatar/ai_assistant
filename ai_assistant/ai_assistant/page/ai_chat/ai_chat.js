@@ -26,6 +26,7 @@ class AIChatPage {
 		this.is_loading = false;
 		this.current_agent = "general";
 		this.agents = [];
+		this.allowed_tools = null; // null = unknown yet (sidebar shows everything until resolved)
 
 		this._check_settings_then_render();
 	}
@@ -41,14 +42,35 @@ class AIChatPage {
 			method: "ai_assistant.api.chat.get_settings_status",
 			callback: (r) => {
 				if (r.message && r.message.enabled) {
-					this._render();
-					this._load_usage();
-					this._load_agents();
+					this._load_allowed_tools_then_render();
 				} else {
 					this._render_disabled();
 				}
 			},
 			error: () => this._render_disabled(),
+		});
+	}
+
+	_load_allowed_tools_then_render() {
+		// Resolve which quick-action shortcuts this user's roles permit
+		// *before* the first render, so a restricted department's buttons
+		// never flash on screen and then disappear.
+		frappe.call({
+			method: "ai_assistant.api.chat.get_allowed_intents",
+			callback: (r) => {
+				this.allowed_tools = new Set(r.message || []);
+				this._render();
+				this._load_usage();
+				this._load_agents();
+			},
+			error: () => {
+				// Fail open on a transient API error — real enforcement is
+				// server-side in executor.py regardless of what the sidebar shows.
+				this.allowed_tools = null;
+				this._render();
+				this._load_usage();
+				this._load_agents();
+			},
 		});
 	}
 
@@ -87,75 +109,100 @@ class AIChatPage {
 			bolt:     `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
 		};
 
+		// `tool` maps each shortcut to its backend intent name (see api/tools.py
+		// TOOLS_SCHEMA) so _sidebar_groups() can be filtered against
+		// this.allowed_tools — the same AI Tool Permission map executor.py
+		// enforces server-side. Items without a `tool` are always shown.
 		return [
 			{
 				label: __("Business Intelligence"),
 				icon: svg.chart,
 				items: [
-					{ icon: svg.chart,    label: __("Business Analysis"),   msg: "Analyze my business and give me recommendations" },
-					{ icon: svg.calendar, label: __("Daily Summary"),       msg: "Give me the management daily summary" },
-					{ icon: svg.trending, label: __("Monthly Sales Trend"), msg: "Show me the monthly sales trend for 6 months" },
-					{ icon: svg.star,     label: __("Top Customers"),       msg: "Show top customers this month" },
-					{ icon: svg.bag,      label: __("Top Selling Items"),   msg: "Show top selling items this month" },
+					{ icon: svg.chart,    label: __("Business Analysis"),   msg: "Analyze my business and give me recommendations", tool: "analyze_business" },
+					{ icon: svg.calendar, label: __("Daily Summary"),       msg: "Give me the management daily summary", tool: "get_management_summary" },
+					{ icon: svg.trending, label: __("Monthly Sales Trend"), msg: "Show me the monthly sales trend for 6 months", tool: "get_monthly_sales_trend" },
+					{ icon: svg.star,     label: __("Top Customers"),       msg: "Show top customers this month", tool: "get_top_customers" },
+					{ icon: svg.bag,      label: __("Top Selling Items"),   msg: "Show top selling items this month", tool: "get_top_selling_items" },
 				],
 			},
 			{
 				label: __("Collections & AR"),
 				icon: svg.warning,
 				items: [
-					{ icon: svg.warning, label: __("Overdue Invoices"),   msg: "Show overdue invoices" },
-					{ icon: svg.target,  label: __("Follow-Up List"),     msg: "Who needs follow-up? Show me follow-up opportunities" },
-					{ icon: svg.users,   label: __("Overdue Customers"),  msg: "Show customers with overdue balance" },
-					{ icon: svg.file,    label: __("Pending Quotations"), msg: "Show pending quotations" },
+					{ icon: svg.warning, label: __("Overdue Invoices"),   msg: "Show overdue invoices", tool: "get_overdue_invoices" },
+					{ icon: svg.target,  label: __("Follow-Up List"),     msg: "Who needs follow-up? Show me follow-up opportunities", tool: "get_followup_opportunities" },
+					{ icon: svg.users,   label: __("Overdue Customers"),  msg: "Show customers with overdue balance", tool: "get_customers_with_overdue_balance" },
+					{ icon: svg.file,    label: __("Pending Quotations"), msg: "Show pending quotations", tool: "get_pending_quotations" },
 				],
 			},
 			{
 				label: __("Composite Reports"),
 				icon: svg.pulse,
 				items: [
-					{ icon: svg.leak,      label: __("Revenue Leakage"), msg: "show me sales orders that have not been invoiced" },
-					{ icon: svg.filter,    label: __("Sales Pipeline"),  msg: "show full sales pipeline from quote to cash" },
-					{ icon: svg.usercheck, label: __("Customer 360"),    msg: "give me a full customer health check" },
-					{ icon: svg.truck,     label: __("PO Receipt Gap"),  msg: "show purchase orders not yet received" },
-					{ icon: svg.pulse,     label: __("P&L Bridge"),      msg: "show monthly profit and loss bridge" },
+					{ icon: svg.leak,      label: __("Revenue Leakage"), msg: "show me sales orders that have not been invoiced", tool: "get_so_invoice_gap" },
+					{ icon: svg.filter,    label: __("Sales Pipeline"),  msg: "show full sales pipeline from quote to cash", tool: "get_sales_pipeline_status" },
+					{ icon: svg.usercheck, label: __("Customer 360"),    msg: "give me a full customer health check", tool: "get_customer_360" },
+					{ icon: svg.truck,     label: __("PO Receipt Gap"),  msg: "show purchase orders not yet received", tool: "get_po_receipt_gap" },
+					{ icon: svg.pulse,     label: __("P&L Bridge"),      msg: "show monthly profit and loss bridge", tool: "get_monthly_pl_bridge" },
 				],
 			},
 			{
 				label: __("Operations"),
 				icon: svg.box,
 				items: [
-					{ icon: svg.box,     label: __("Stock Alerts"),       msg: "Show stock alerts and low stock items" },
-					{ icon: svg.tool,    label: __("Open Job Cards"),     msg: "Show open workshop job cards" },
-					{ icon: svg.useroff, label: __("Inactive Customers"), msg: "Show inactive customers in the last 60 days" },
+					{ icon: svg.box,     label: __("Stock Alerts"),       msg: "Show stock alerts and low stock items", tool: "get_stock_alerts" },
+					{ icon: svg.tool,    label: __("Open Job Cards"),     msg: "Show open workshop job cards", tool: "get_open_job_cards" },
+					{ icon: svg.useroff, label: __("Inactive Customers"), msg: "Show inactive customers in the last 60 days", tool: "get_inactive_customers" },
 				],
 			},
 			{
 				label: __("Quick Actions"),
 				icon: svg.bolt,
 				items: [
-					{ icon: svg.useradd,  label: __("New Customer"),  msg: "Create customer " },
-					{ icon: svg.fileplus, label: __("New Quotation"), msg: "Create quotation for customer " },
+					{ icon: svg.useradd,  label: __("New Customer"),  msg: "Create customer ", tool: "create_customer" },
+					{ icon: svg.fileplus, label: __("New Quotation"), msg: "Create quotation for customer ", tool: "create_quotation" },
 				],
 			},
 		];
 	}
 
 	_render() {
-		const sidebarHtml = this._sidebar_groups()
-			.map(group => `
-			<div class="ai-sn-section">
-				<div class="ai-sn-section-label">
-					${group.label}
+		// Hide shortcuts (and whole sections, if every shortcut in them is hidden)
+		// for tools this user's roles have no AI Tool Permission for — see
+		// _load_allowed_tools_then_render() and api/chat.py:get_allowed_intents().
+		const allowed = this.allowed_tools;
+		const visibleGroups = this._sidebar_groups()
+			.map(group => ({
+				...group,
+				items: group.items.filter(item => !item.tool || !allowed || allowed.has(item.tool)),
+			}))
+			.filter(group => group.items.length);
+
+		let firstOpen = false;
+		const sidebarHtml = visibleGroups
+			.map(group => {
+				const isOpen = !firstOpen;
+				firstOpen = true;
+				return `
+			<div class="ai-sn-section ${isOpen ? "ai-sn-section--open" : ""}">
+				<button class="ai-sn-section-label" type="button" aria-expanded="${isOpen}">
+					<span class="ai-sn-ico ai-sn-section-ico">${group.icon}</span>
+					<span class="ai-sn-lbl ai-sn-section-label-text">${group.label}</span>
+					<svg class="ai-sn-section-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+				</button>
+				<div class="ai-sn-section-body">
+					<div class="ai-sn-section-inner">
+						${group.items.map(item => `
+							<button class="ai-sn-item"
+									data-msg="${frappe.utils.escape_html(item.msg)}"
+									type="button">
+								<span class="ai-sn-ico">${item.icon}</span>
+								<span class="ai-sn-lbl">${item.label}</span>
+							</button>`).join("")}
+					</div>
 				</div>
-				${group.items.map(item => `
-					<button class="ai-sn-item"
-							data-msg="${frappe.utils.escape_html(item.msg)}"
-							type="button">
-						<span class="ai-sn-ico">${item.icon}</span>
-						<span class="ai-sn-lbl">${item.label}</span>
-					</button>`).join("")}
-				<div class="ai-sn-divider"></div>
-			</div>`).join("");
+			</div>`;
+			}).join("");
 
 		const html = `
 		<div class="ai-layout" id="ai-layout">
@@ -351,6 +398,17 @@ class AIChatPage {
 		this.$send.on("click", () => this._send());
 		$("#ai-clear-btn").on("click", () => this._clear());
 
+		// Sidebar section accordion — click a department header to open it,
+		// closing whichever one was open before (tab-like, one open at a time).
+		$(document).on("click", ".ai-sn-section-label", (e) => {
+			const $section = $(e.currentTarget).closest(".ai-sn-section");
+			const willOpen = !$section.hasClass("ai-sn-section--open");
+			$section.siblings(".ai-sn-section").removeClass("ai-sn-section--open")
+				.find(".ai-sn-section-label").attr("aria-expanded", "false");
+			$section.toggleClass("ai-sn-section--open", willOpen);
+			$section.find(".ai-sn-section-label").attr("aria-expanded", willOpen);
+		});
+
 		// Sidebar quick-action buttons
 		$(document).on("click", ".ai-sn-item", (e) => {
 			const msg = $(e.currentTarget).data("msg");
@@ -361,9 +419,10 @@ class AIChatPage {
 			}
 		});
 
-		// Agent pill clicks — System Manager only
+		// Agent pill clicks — the pill bar only ever contains agents
+		// get_available_agents already filtered to this user's roles, so any
+		// pill rendered here is safe to switch to (server re-validates anyway).
 		$(document).on("click", ".ai-agent-pill", (e) => {
-			if (!frappe.user.has_role("System Manager")) return;
 			const agent_code = $(e.currentTarget).data("agent");
 			if (agent_code) this._switch_agent(agent_code);
 		});
@@ -2291,18 +2350,20 @@ class AIChatPage {
 	// ── Agent selector ────────────────────────────────────────────────────────
 
 	_load_agents() {
-		// Non-System Manager: hide the agent bar entirely, lock to general
-		if (!frappe.user.has_role("System Manager")) {
-			$("#ai-agent-bar").hide();
-			this.current_agent = "general";
-			return;
-		}
+		// Server filters this list to what the user's roles permit (see
+		// agent_manager.get_available_agents) — e.g. a Sales User gets back
+		// General + Sales Agent only, never Accounts/Operations/Supervisor.
+		// Only hide the bar when there's nothing to switch between.
 		frappe.call({
 			method: "ai_assistant.api.chat.get_agents",
 			callback: (r) => {
-				if (r.message && r.message.length) {
+				if (r.message && r.message.length > 1) {
 					this.agents = r.message;
 					this._render_agent_bar(r.message);
+					$("#ai-agent-bar").show();
+				} else {
+					$("#ai-agent-bar").hide();
+					this.current_agent = "general";
 				}
 			},
 		});
